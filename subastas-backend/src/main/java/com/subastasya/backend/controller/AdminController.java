@@ -78,6 +78,36 @@ public class AdminController {
     }
 
     // ─────────────────────────────────────────────
+    // 2.5. Aprobar a TODOS los usuarios pendientes (Atajo para testing)
+    // ─────────────────────────────────────────────
+    @PostMapping("/aprobar-todos")
+    public ResponseEntity<?> aprobarTodos() {
+        List<Cliente> pendientes = clienteRepository.findAll().stream()
+                .filter(c -> c.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
+                .collect(Collectors.toList());
+
+        int aprobados = 0;
+        int fallidos = 0;
+
+        for (Cliente usuario : pendientes) {
+            String token = UUID.randomUUID().toString();
+            usuario.setActivationToken(token);
+            usuario.setEstadoRegistro(EstadoRegistro.APROBADO_PENDIENTE_CLAVE);
+            usuario.setCategoria("COMUN");
+
+            try {
+                emailService.sendActivationEmail(usuario.getEmail(), token);
+                clienteRepository.save(usuario);
+                aprobados++;
+            } catch (Exception e) {
+                fallidos++;
+            }
+        }
+
+        return ResponseEntity.ok("Proceso masivo completado. Aprobados: " + aprobados + " | Fallidos (error de email): " + fallidos);
+    }
+
+    // ─────────────────────────────────────────────
     // 3. Rechazar un usuario
     // ─────────────────────────────────────────────
     @PostMapping("/rechazar-usuario")
