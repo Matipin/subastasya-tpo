@@ -14,6 +14,7 @@ public class Cliente extends Persona {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "numeroPais")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Pais pais;
 
     @Column(length = 2)
@@ -24,6 +25,7 @@ public class Cliente extends Persona {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "verificador")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private Empleado verificador;
 
     // --- CAMPOS EXTRA AÑADIDOS PARA EL LOGIN Y REGISTRO ---

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { COLORS } from '../theme/colors';
+import { API_BASE_URL } from './api';
 
-const API_BASE = 'http://192.168.0.107:8080/api/v1/users';
+const API_BASE = API_BASE_URL.replace('/auth', '/users');
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);

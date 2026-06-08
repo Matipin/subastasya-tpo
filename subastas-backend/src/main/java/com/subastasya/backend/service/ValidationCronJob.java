@@ -18,8 +18,8 @@ public class ValidationCronJob {
     private final EmailService emailService;
 
     // TODO: Quitar o cambiar esto luego según lo pedido por el profe.
-    // Esto simula que un sistema externo o un humano revisa los pendientes cada 30 segundos.
-    @Scheduled(fixedRate = 30000)
+    // Esto simula que un sistema externo o un humano revisa los pendientes cada 60 segundos.
+    // @Scheduled(fixedRate = 60000)
     public void validatePendingUsers() {
         // Buscamos todos los usuarios que acaban de registrarse y están esperando validación
         List<Cliente> pendingUsers = clienteRepository.findAll().stream()

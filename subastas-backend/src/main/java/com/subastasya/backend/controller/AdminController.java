@@ -58,7 +58,7 @@ public class AdminController {
         String token = UUID.randomUUID().toString();
         usuario.setActivationToken(token);
         usuario.setEstadoRegistro(EstadoRegistro.APROBADO_PENDIENTE_CLAVE);
-        
+
         // Asignar categoría (o por defecto COMUN si no la mandan)
         if (request.getCategoria() != null && !request.getCategoria().isBlank()) {
             usuario.setCategoria(request.getCategoria().toUpperCase());
@@ -104,7 +104,8 @@ public class AdminController {
             }
         }
 
-        return ResponseEntity.ok("Proceso masivo completado. Aprobados: " + aprobados + " | Fallidos (error de email): " + fallidos);
+        return ResponseEntity
+                .ok("Proceso masivo completado. Aprobados: " + aprobados + " | Fallidos (error de email): " + fallidos);
     }
 
     // ─────────────────────────────────────────────
@@ -118,13 +119,25 @@ public class AdminController {
         }
 
         Cliente usuario = opt.get();
-        usuario.setEstadoRegistro(EstadoRegistro.RECHAZADO);
-        clienteRepository.save(usuario);
 
         // Opcional: Mandar email de rechazo al usuario con la razón
         System.out.println("Usuario rechazado: " + usuario.getEmail() + " | Razón: " + request.getRazon());
+        try {
+            emailService.sendRejectionEmail(usuario.getEmail(), request.getRazon());
+        } catch (Exception e) {
+            System.err.println("Error al enviar email de rechazo a " + usuario.getEmail() + ": " + e.getMessage());
+        }
 
-        return ResponseEntity.ok("Usuario rechazado correctamente.");
+        // Eliminamos al usuario en vez de marcarlo como rechazado para que pueda volver a intentar el registro
+        try {
+            clienteRepository.delete(usuario);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body("Error al eliminar usuario: " + e.getMessage() + (e.getCause() != null ? " - Causa: " + e.getCause().getMessage() : ""));
+        }
+
+        return ResponseEntity.ok("Usuario rechazado y eliminado correctamente.");
     }
 
     // ─────────────────────────────────────────────

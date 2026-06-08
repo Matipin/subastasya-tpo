@@ -40,4 +40,17 @@ public class EmailService {
         
         emailSender.send(message);
     }
+
+    public void sendRejectionEmail(String to, String reason) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(to);
+        message.setSubject("SubastasYa - Problemas con tu validación");
+        message.setText("¡Hola!\n\n" +
+                "Tu solicitud de registro en SubastasYa ha sido rechazada por el siguiente motivo:\n\n" +
+                reason + "\n\n" +
+                "Por favor, revisá tus datos e intentá registrarte nuevamente cumpliendo con los requisitos.\n\n" +
+                "El equipo de Sello.");
+
+        emailSender.send(message);
+    }
 }
