@@ -9,6 +9,7 @@ import lombok.EqualsAndHashCode;
 @PrimaryKeyJoinColumn(name = "identificador")
 @Data
 @EqualsAndHashCode(callSuper = true)
+@com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
 public class Cliente extends Persona {
 
     @ManyToOne(fetch = FetchType.LAZY)

@@ -43,8 +43,9 @@ public class DataInitializer implements CommandLineRunner {
             c3.setCategoria("comun");
             clienteRepository.save(c3);
         }
-        
+
         // TODO: Migrar la lógica de inicialización de Subastas, Artículos y demás
-        // al nuevo modelo requerido por el profesor (Subastas, Productos, Catalogos, etc.)
+        // al nuevo modelo requerido por el profesor (Subastas, Productos, Catalogos,
+        // etc.)
     }
 }

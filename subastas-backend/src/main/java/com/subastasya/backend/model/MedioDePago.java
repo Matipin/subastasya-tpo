@@ -15,6 +15,7 @@ public class MedioDePago {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
     private Cliente cliente;
 
     // TARJETA_CREDITO, CUENTA_BANCARIA, CHEQUE

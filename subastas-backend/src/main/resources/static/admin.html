@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración - SubastasYa</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
+        h1 { color: #333; text-align: center; }
+        .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 40px; }
+        h2 { border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff; }
+        .card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
+        .card-header { font-weight: bold; font-size: 1.1em; }
+        .photos { display: flex; gap: 10px; }
+        .photos img { max-width: 200px; max-height: 150px; border: 1px solid #ccc; border-radius: 4px; object-fit: cover; }
+        .actions { margin-top: 10px; display: flex; gap: 10px; align-items: center; }
+        input, select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        button { padding: 8px 15px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
+        .btn-success { background-color: #28a745; }
+        .btn-danger { background-color: #dc3545; }
+        .btn-primary { background-color: #007bff; }
+        button:hover { opacity: 0.9; }
+        .empty { color: #777; font-style: italic; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>👨‍💼 Panel de Administración</h1>
+
+    <!-- SECCIÓN USUARIOS PENDIENTES -->
+    <div class="section">
+        <h2>👥 Usuarios Pendientes de Validación</h2>
+        <div id="usuarios-list">Cargando usuarios...</div>
+    </div>
+
+    <!-- SECCIÓN MEDIOS DE PAGO PENDIENTES -->
+    <div class="section">
+        <h2>💳 Medios de Pago Pendientes</h2>
+        <div id="pagos-list">Cargando medios de pago...</div>
+    </div>
+</div>
+
+<script>
+    const API_BASE = '/api/v1/admin';
+
+    // 1. Cargar y mostrar usuarios pendientes
+    async function loadUsuarios() {
+        const container = document.getElementById('usuarios-list');
+        container.innerHTML = 'Cargando...';
+        try {
+            const res = await fetch(`${API_BASE}/usuarios-pendientes`);
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                container.innerHTML = '<p class="empty">No hay usuarios pendientes.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(user => {
+                let urlFront = null;
+                let urlBack = null;
+                if (user.foto) {
+                    try {
+                        const decoded = decodeURIComponent(escape(atob(user.foto)));
+                        const parts = decoded.split('|||');
+                        urlFront = parts[0] !== 'undefined' ? parts[0] : null;
+                        if (parts.length > 1 && parts[1] !== 'undefined') urlBack = parts[1];
+                    } catch(e) { console.error("Error decodificando foto", e); }
+                }
+
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">${user.nombre} (${user.email})</div>
+                    <div><strong>Documento:</strong> ${user.documento}</div>
+                    <div><strong>Dirección:</strong> ${user.direccion || 'N/A'}</div>
+                    <div class="photos">
+                        <div>
+                            <p style="margin:0; font-size: 0.9em; color: #555;">Frente DNI:</p>
+                            ${urlFront ? `<a href="${urlFront}" target="_blank"><img src="${urlFront}" alt="DNI Frente" /></a>` : '<span class="empty">No adjuntó</span>'}
+                        </div>
+                        <div>
+                            <p style="margin:0; font-size: 0.9em; color: #555;">Dorso DNI:</p>
+                            ${urlBack ? `<a href="${urlBack}" target="_blank"><img src="${urlBack}" alt="DNI Dorso" /></a>` : '<span class="empty">No adjuntó</span>'}
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <select id="cat-${user.email}">
+                            <option value="COMUN">COMÚN</option>
+                            <option value="VIP">VIP</option>
+                            <option value="ESPECIAL">ESPECIAL</option>
+                        </select>
+                        <button class="btn-success" onclick="aprobarUsuario('${user.email}')">✅ Aprobar</button>
+                        <input type="text" id="razon-${user.email}" placeholder="Razón del rechazo..." style="margin-left: 20px; width: 200px;" />
+                        <button class="btn-danger" onclick="rechazarUsuario('${user.email}')">❌ Rechazar</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        } catch (error) {
+            container.innerHTML = `<p class="empty" style="color:red;">Error al cargar usuarios: ${error.message}</p>`;
+        }
+    }
+
+    // 2. Aprobar usuario (Asignar categoría)
+    async function aprobarUsuario(email) {
+        const cat = document.getElementById(`cat-${email}`).value;
+        try {
+            const res = await fetch(`${API_BASE}/aprobar-usuario`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, categoria: cat })
+            });
+            const text = await res.text();
+            alert(res.ok ? text : `Error: ${text}`);
+            loadUsuarios();
+        } catch (error) {
+            alert(`Error de red: ${error.message}`);
+        }
+    }
+
+    // 3. Rechazar usuario
+    async function rechazarUsuario(email) {
+        const razon = document.getElementById(`razon-${email}`).value;
+        if (!razon) {
+            alert('Debes ingresar una razón para rechazar al usuario.');
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE}/rechazar-usuario`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: email, razon: razon })
+            });
+            const text = await res.text();
+            alert(res.ok ? text : `Error: ${text}`);
+            loadUsuarios();
+        } catch (error) {
+            alert(`Error de red: ${error.message}`);
+        }
+    }
+
+    // 4. Cargar y mostrar medios de pago pendientes
+    async function loadPagos() {
+        const container = document.getElementById('pagos-list');
+        container.innerHTML = 'Cargando...';
+        try {
+            const res = await fetch(`${API_BASE}/pagos-pendientes`);
+            const data = await res.json();
+            
+            if (data.length === 0) {
+                container.innerHTML = '<p class="empty">No hay medios de pago pendientes de verificación.</p>';
+                return;
+            }
+
+            container.innerHTML = '';
+            data.forEach(pago => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-header">ID Pago: ${pago.identificador}</div>
+                    <div><strong>Cliente:</strong> ${pago.cliente?.nombre || 'Desconocido'} (${pago.cliente?.email || 'N/A'})</div>
+                    <div><strong>Tipo:</strong> ${pago.tipo}</div>
+                    <div><strong>Número:</strong> ${pago.numero}</div>
+                    <div><strong>Titular:</strong> ${pago.titular}</div>
+                    <div class="actions">
+                        <button class="btn-primary" onclick="verificarPago(${pago.identificador})">✔️ Marcar como Verificado</button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        } catch (error) {
+            container.innerHTML = `<p class="empty" style="color:red;">Error al cargar pagos: ${error.message}</p>`;
+        }
+    }
+
+    // 5. Verificar pago (Cambiar a verificado = true)
+    async function verificarPago(id) {
+        try {
+            const res = await fetch(`${API_BASE}/verificar-pago`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idPago: id })
+            });
+            const text = await res.text();
+            alert(res.ok ? text : `Error: ${text}`);
+            loadPagos();
+        } catch (error) {
+            alert(`Error de red: ${error.message}`);
+        }
+    }
+
+    // Inicializar
+    loadUsuarios();
+    loadPagos();
+</script>
+
+</body>
+</html>

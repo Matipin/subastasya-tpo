@@ -34,6 +34,9 @@ public class AuthController {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private com.subastasya.backend.repository.PaisRepository paisRepository;
+
     // ─────────────────────────────────────────────
     // ETAPA 1: El usuario envía sus datos y fotos
     //          → queda PENDIENTE_VALIDACION
@@ -55,8 +58,27 @@ public class AuthController {
         // El profe pide "documento" obligatorio en la tabla personas, pero no lo pedimos en el front. Lo generamos.
         usuario.setDocumento("DOC-" + System.currentTimeMillis());
         // usuario.setTelefono(request.getTelefono()); // No existe en el modelo del profe
-        // usuario.setPais(null); // Requiere buscar la entidad Pais
-        // usuario.setFoto(null); // Requiere convertir a byte[]
+        
+        // Buscar o crear país
+        if (request.getPais() != null && !request.getPais().isBlank()) {
+            java.util.Optional<com.subastasya.backend.model.Pais> paisOpt = paisRepository.findByNombreIgnoreCase(request.getPais().trim());
+            if (paisOpt.isPresent()) {
+                usuario.setPais(paisOpt.get());
+            } else {
+                com.subastasya.backend.model.Pais nuevoPais = new com.subastasya.backend.model.Pais();
+                nuevoPais.setNombre(request.getPais().trim());
+                nuevoPais.setCapital("No especificada");
+                nuevoPais.setNacionalidad("No especificada");
+                nuevoPais.setIdiomas("No especificados");
+                paisRepository.save(nuevoPais);
+                usuario.setPais(nuevoPais);
+            }
+        }
+
+        // Guardar las dos fotos en el array de bytes que provee Persona
+        String fotosCombinadas = request.getUrlFotoDniFront() + "|||" + request.getUrlFotoDniBack();
+        usuario.setFoto(fotosCombinadas.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        
         usuario.setCategoria("comun");
         
         usuario.setEstadoRegistro(EstadoRegistro.PENDIENTE_VALIDACION);

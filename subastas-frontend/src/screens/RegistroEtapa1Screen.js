@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, ActivityIndicator, ScrollView, Alert, Image
+  StyleSheet, ActivityIndicator, ScrollView, Alert, Image, Modal
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
+
+const PAISES_OPTIONS = ['Argentina', 'Bolivia', 'Brasil', 'Chile', 'Colombia', 'Ecuador', 'Paraguay', 'Perú', 'Uruguay', 'Venezuela'];
 
 const Campo = ({ label, field, keyboard, secure, placeholder, form, setField, errors, setErrors }) => (
   <View style={styles.fieldContainer}>
@@ -38,6 +40,7 @@ export default function RegistroEtapa1Screen({ navigation }) {
   const [isLoading, setIsLoading] = useState(false);
   const [fotoFrenteOk, setFotoFrenteOk] = useState(false);
   const [fotoDorsoOk, setFotoDorsoOk] = useState(false);
+  const [modalPaisVisible, setModalPaisVisible] = useState(false);
 
   const setField = (field, value) => setForm(prev => ({ ...prev, [field]: value }));
 
@@ -167,8 +170,50 @@ export default function RegistroEtapa1Screen({ navigation }) {
       <Campo label="Nombre" field="nombre" placeholder="Ej: Juan" form={form} setField={setField} errors={errors} setErrors={setErrors} />
       <Campo label="Apellido" field="apellido" placeholder="Ej: Juan" form={form} setField={setField} errors={errors} setErrors={setErrors} />
       <Campo label="Domicilio legal" field="domicilio" placeholder="Ej: Av. Corrientes 1234" form={form} setField={setField} errors={errors} setErrors={setErrors} />
-      <Campo label="Pais de Residencia" field="pais" placeholder="Seleccionar..." form={form} setField={setField} errors={errors} setErrors={setErrors} />
+      
+      <View style={styles.fieldContainer}>
+        <Text style={styles.label}>País de Residencia *</Text>
+        <TouchableOpacity 
+          style={[styles.input, { justifyContent: 'center' }, errors.pais && styles.inputError]}
+          onPress={() => setModalPaisVisible(true)}
+        >
+          <Text style={{ color: form.pais ? COLORS.TEXT_MAIN : '#AAAAAA' }}>
+            {form.pais || 'Seleccionar país...'}
+          </Text>
+        </TouchableOpacity>
+        {errors.pais ? <Text style={styles.errorText}>{errors.pais}</Text> : null}
+      </View>
+
       <Campo label="Teléfono *" field="telefono" keyboard="phone-pad" placeholder="Ej: 1122334455" form={form} setField={setField} errors={errors} setErrors={setErrors} />
+
+      {/* Modal para selección de País */}
+      <Modal
+        visible={modalPaisVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setModalPaisVisible(false)}
+      >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setModalPaisVisible(false)}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Seleccioná un País</Text>
+            <ScrollView>
+              {PAISES_OPTIONS.map((paisOption, idx) => (
+                <TouchableOpacity 
+                  key={idx} 
+                  style={styles.modalItem}
+                  onPress={() => {
+                    setField('pais', paisOption);
+                    setModalPaisVisible(false);
+                    if (errors.pais) setErrors(prev => ({ ...prev, pais: undefined }));
+                  }}
+                >
+                  <Text style={styles.modalItemText}>{paisOption}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Fotos DNI */}
       <Text style={styles.dniTitle}>Documentacion de Identidad (DNI/Pasaporte)</Text>
@@ -306,4 +351,9 @@ const styles = StyleSheet.create({
   bannerErrorText: { color: '#7F1D1D', fontSize: 14, lineHeight: 20 },
   linkBtn: { marginTop: 18, alignItems: 'center' },
   linkText: { color: COLORS.PRIMARY, fontSize: 14, fontWeight: '500' },
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 },
+  modalContent: { backgroundColor: '#FFF', borderRadius: 15, padding: 20, maxHeight: '80%' },
+  modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 15, color: COLORS.TEXT_TITLE, textAlign: 'center' },
+  modalItem: { paddingVertical: 15, borderBottomWidth: 1, borderBottomColor: '#EEE' },
+  modalItemText: { fontSize: 16, color: COLORS.TEXT_MAIN, textAlign: 'center' },
 });
