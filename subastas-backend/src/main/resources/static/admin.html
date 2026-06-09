@@ -8,6 +8,11 @@
         body { font-family: Arial, sans-serif; background-color: #f4f4f9; margin: 0; padding: 20px; }
         h1 { color: #333; text-align: center; }
         .container { max-width: 1000px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .login-container { max-width: 400px; margin: 100px auto; background: #fff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center; }
+        .login-container input { width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
+        .login-container button { width: 100%; padding: 10px; background-color: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; margin-top: 10px; }
+        .login-container button:hover { background-color: #0056b3; }
+        .error-message { color: red; margin-top: 10px; display: none; }
         .section { margin-bottom: 40px; }
         h2 { border-bottom: 2px solid #007bff; padding-bottom: 10px; color: #007bff; }
         .card { border: 1px solid #ddd; padding: 15px; border-radius: 5px; margin-bottom: 15px; display: flex; flex-direction: column; gap: 10px; }
@@ -26,7 +31,15 @@
 </head>
 <body>
 
-<div class="container">
+<div id="login-container" class="login-container">
+    <h2>Ingreso al Panel</h2>
+    <input type="text" id="username" placeholder="Usuario" />
+    <input type="password" id="password" placeholder="Contraseña" />
+    <button onclick="login()">Ingresar</button>
+    <div id="login-error" class="error-message">Usuario o contraseña incorrectos.</div>
+</div>
+
+<div id="main-container" class="container" style="display: none;">
     <h1>👨‍💼 Panel de Administración</h1>
 
     <!-- SECCIÓN USUARIOS PENDIENTES -->
@@ -94,7 +107,10 @@
                     <div class="actions">
                         <select id="cat-${user.email}">
                             <option value="COMUN">COMÚN</option>
-                            <option value="VIP">VIP</option>
+                            <option value="BRONCE">BRONCE</option>
+                            <option value="PLATA">PLATA</option>
+                            <option value="ORO">ORO</option>
+                            <option value="PLATINO">PLATINO</option>
                             <option value="ESPECIAL">ESPECIAL</option>
                         </select>
                         <button class="btn-success" onclick="aprobarUsuario('${user.email}')">✅ Aprobar</button>
@@ -215,9 +231,21 @@
         }
     }
 
-    // Inicializar
-    loadUsuarios();
-    loadPagos();
+    // 7. Login
+    function login() {
+        const user = document.getElementById('username').value;
+        const pass = document.getElementById('password').value;
+        const errorMsg = document.getElementById('login-error');
+        
+        if (user === 'admin' && pass === 'admin') {
+            document.getElementById('login-container').style.display = 'none';
+            document.getElementById('main-container').style.display = 'block';
+            loadUsuarios();
+            loadPagos();
+        } else {
+            errorMsg.style.display = 'block';
+        }
+    }
 </script>
 
 </body>

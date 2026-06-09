@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const MP_PUBLIC_KEY = 'TEST-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
+const MP_PUBLIC_KEY = 'TEST-6281816190072559-060820-7f041c2f9c198aa7db0a5c7d8e7a3a26-1436955656';
 
 export default function MercadoPagoBrick({ onSubmit, usuarioEmail }) {
   const webViewRef = useRef(null);
@@ -18,9 +18,11 @@ export default function MercadoPagoBrick({ onSubmit, usuarioEmail }) {
         <style>
           body { margin: 0; padding: 20px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
           #cardPaymentBrick_container { margin-top: 20px; }
+          #loading-info { color: #666; font-size: 16px; text-align: center; margin-top: 40px; font-weight: 500; }
         </style>
       </head>
       <body>
+        <div id="loading-info">Cargando formulario de Mercado Pago...</div>
         <div id="cardPaymentBrick_container"></div>
         <script>
           const mp = new MercadoPago('${MP_PUBLIC_KEY}', { locale: 'es-AR' });
@@ -43,6 +45,7 @@ export default function MercadoPagoBrick({ onSubmit, usuarioEmail }) {
               },
               callbacks: {
                 onReady: () => {
+                  document.getElementById('loading-info').style.display = 'none';
                   window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
                 },
                 onSubmit: (cardFormData) => {

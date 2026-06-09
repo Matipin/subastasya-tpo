@@ -187,6 +187,12 @@ export default function LoginScreen({ navigation }) {
           <Text style={styles.registerLink}>Activá tu cuenta</Text>
         </TouchableOpacity>
       </View>
+
+      <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 25 }}>
+        <TouchableOpacity onPress={() => navigation.replace('Home', { usuario: { isGuest: true, nombre: 'Invitado' } })}>
+          <Text style={[styles.registerLink, { color: '#666', textDecorationLine: 'underline' }]}>Continuar como invitado</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }

@@ -1,8 +1,8 @@
 package com.subastasya.backend.service;
 
 import com.subastasya.backend.model.EstadoRegistro;
-import com.subastasya.backend.model.Cliente;
-import com.subastasya.backend.repository.ClienteRepository;
+import com.subastasya.backend.model.Usuario;
+import com.subastasya.backend.repository.UsuarioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -13,7 +13,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class ValidationCronJob {
 
-    private final ClienteRepository clienteRepository;
+    private final UsuarioRepository usuarioRepository;
     private final EmailService emailService;
 
     // TODO: Quitar o cambiar esto luego según lo pedido por el profe.
@@ -21,11 +21,11 @@ public class ValidationCronJob {
     // @Scheduled(fixedRate = 60000)
     public void validatePendingUsers() {
         // Buscamos todos los usuarios que acaban de registrarse y están esperando validación
-        List<Cliente> pendingUsers = clienteRepository.findAll().stream()
+        List<Usuario> pendingUsers = usuarioRepository.findAll().stream()
                 .filter(u -> u.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
                 .toList();
 
-        for (Cliente usuario : pendingUsers) {
+        for (Usuario usuario : pendingUsers) {
             try {
                 // Generamos un token único de activación
                 String token = UUID.randomUUID().toString();
@@ -33,13 +33,13 @@ public class ValidationCronJob {
                 // Actualizamos el estado del usuario
                 usuario.setActivationToken(token);
                 usuario.setEstadoRegistro(EstadoRegistro.APROBADO_PENDIENTE_CLAVE);
-                usuario.setCategoria("comun"); // Asignamos una categoría base
+                usuario.getCliente().setCategoria("comun"); // Asignamos una categoría base
 
                 // Intentamos mandar el mail
                 emailService.sendActivationEmail(usuario.getEmail(), token);
                 
                 // Si el mail no tira excepción, guardamos los cambios en la DB
-                clienteRepository.save(usuario);
+                usuarioRepository.save(usuario);
                 
                 System.out.println("✅ Usuario validado asincrónicamente y correo enviado a: " + usuario.getEmail());
             } catch (Exception e) {

@@ -28,16 +28,4 @@ public class Cliente extends Persona {
     @com.fasterxml.jackson.annotation.JsonIgnore
     private Empleado verificador;
 
-    // --- CAMPOS EXTRA AÑADIDOS PARA EL LOGIN Y REGISTRO ---
-    @Column(unique = true)
-    private String email;
-
-    private String password;
-
-    @Enumerated(EnumType.STRING)
-    private EstadoRegistro estadoRegistro = EstadoRegistro.PENDIENTE_VALIDACION;
-
-    private String activationToken;
-    private String recoveryToken;
-    // ------------------------------------------------------
 }

@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public abstract class Persona {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "identificador")
     private Long identificador;
 

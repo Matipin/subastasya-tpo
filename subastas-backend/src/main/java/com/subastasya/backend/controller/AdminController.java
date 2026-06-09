@@ -4,9 +4,11 @@ import com.subastasya.backend.controller.dto.AdminAprobarRequest;
 import com.subastasya.backend.controller.dto.AdminRechazarRequest;
 import com.subastasya.backend.controller.dto.AdminVerificarPagoRequest;
 import com.subastasya.backend.model.Cliente;
+import com.subastasya.backend.model.Usuario;
 import com.subastasya.backend.model.EstadoRegistro;
 import com.subastasya.backend.model.MedioDePago;
 import com.subastasya.backend.repository.ClienteRepository;
+import com.subastasya.backend.repository.UsuarioRepository;
 import com.subastasya.backend.repository.MedioDePagoRepository;
 import com.subastasya.backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ import java.util.stream.Collectors;
 public class AdminController {
 
     private final ClienteRepository clienteRepository;
+    private final UsuarioRepository usuarioRepository;
     private final MedioDePagoRepository medioDePagoRepository;
     private final EmailService emailService;
     private final com.subastasya.backend.service.MercadoPagoService mercadoPagoService;
@@ -33,9 +36,9 @@ public class AdminController {
     // 1. Obtener usuarios pendientes de validación
     // ─────────────────────────────────────────────
     @GetMapping("/usuarios-pendientes")
-    public ResponseEntity<List<Cliente>> getUsuariosPendientes() {
-        List<Cliente> pendientes = clienteRepository.findAll().stream()
-                .filter(c -> c.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
+    public ResponseEntity<List<Usuario>> getUsuariosPendientes() {
+        List<Usuario> pendientes = usuarioRepository.findAll().stream()
+                .filter(u -> u.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(pendientes);
     }
@@ -45,12 +48,12 @@ public class AdminController {
     // ─────────────────────────────────────────────
     @PostMapping("/aprobar-usuario")
     public ResponseEntity<?> aprobarUsuario(@RequestBody AdminAprobarRequest request) {
-        Optional<Cliente> opt = clienteRepository.findByEmail(request.getEmail());
+        Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail());
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
         }
 
-        Cliente usuario = opt.get();
+        Usuario usuario = opt.get();
         if (usuario.getEstadoRegistro() != EstadoRegistro.PENDIENTE_VALIDACION) {
             return ResponseEntity.badRequest().body("El usuario no está pendiente de validación");
         }
@@ -62,9 +65,9 @@ public class AdminController {
 
         // Asignar categoría (o por defecto COMUN si no la mandan)
         if (request.getCategoria() != null && !request.getCategoria().isBlank()) {
-            usuario.setCategoria(request.getCategoria().toUpperCase());
+            usuario.getCliente().setCategoria(request.getCategoria().toUpperCase());
         } else {
-            usuario.setCategoria("COMUN");
+            usuario.getCliente().setCategoria("COMUN");
         }
 
         try {
@@ -74,7 +77,7 @@ public class AdminController {
                     .body("Error al enviar el email al usuario. Revisa las credenciales SMTP en application.properties");
         }
 
-        clienteRepository.save(usuario);
+        usuarioRepository.save(usuario);
         return ResponseEntity.ok("Usuario aprobado correctamente. Correo enviado.");
     }
 
@@ -83,22 +86,22 @@ public class AdminController {
     // ─────────────────────────────────────────────
     @PostMapping("/aprobar-todos")
     public ResponseEntity<?> aprobarTodos() {
-        List<Cliente> pendientes = clienteRepository.findAll().stream()
-                .filter(c -> c.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
+        List<Usuario> pendientes = usuarioRepository.findAll().stream()
+                .filter(u -> u.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION)
                 .collect(Collectors.toList());
 
         int aprobados = 0;
         int fallidos = 0;
 
-        for (Cliente usuario : pendientes) {
+        for (Usuario usuario : pendientes) {
             String token = UUID.randomUUID().toString();
             usuario.setActivationToken(token);
             usuario.setEstadoRegistro(EstadoRegistro.APROBADO_PENDIENTE_CLAVE);
-            usuario.setCategoria("COMUN");
+            usuario.getCliente().setCategoria("COMUN");
 
             try {
                 emailService.sendActivationEmail(usuario.getEmail(), token);
-                clienteRepository.save(usuario);
+                usuarioRepository.save(usuario);
                 aprobados++;
             } catch (Exception e) {
                 fallidos++;
@@ -114,12 +117,12 @@ public class AdminController {
     // ─────────────────────────────────────────────
     @PostMapping("/rechazar-usuario")
     public ResponseEntity<?> rechazarUsuario(@RequestBody AdminRechazarRequest request) {
-        Optional<Cliente> opt = clienteRepository.findByEmail(request.getEmail());
+        Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail());
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado");
         }
 
-        Cliente usuario = opt.get();
+        Usuario usuario = opt.get();
 
         // Opcional: Mandar email de rechazo al usuario con la razón
         System.out.println("Usuario rechazado: " + usuario.getEmail() + " | Razón: " + request.getRazon());
@@ -131,7 +134,7 @@ public class AdminController {
 
         // Eliminamos al usuario en vez de marcarlo como rechazado para que pueda volver a intentar el registro
         try {
-            clienteRepository.delete(usuario);
+            usuarioRepository.delete(usuario);
         } catch (Exception e) {
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

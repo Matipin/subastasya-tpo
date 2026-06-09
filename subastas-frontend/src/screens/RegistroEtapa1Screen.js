@@ -72,7 +72,8 @@ export default function RegistroEtapa1Screen({ navigation }) {
             }
             let result = await ImagePicker.launchCameraAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.5,
+              allowsEditing: true,
+              quality: 0.2,
               base64: true,
             });
             if (!result.canceled) {
@@ -93,7 +94,8 @@ export default function RegistroEtapa1Screen({ navigation }) {
             }
             let result = await ImagePicker.launchImageLibraryAsync({
               mediaTypes: ImagePicker.MediaTypeOptions.Images,
-              quality: 0.5,
+              allowsEditing: true,
+              quality: 0.2,
               base64: true,
             });
             if (!result.canceled) {

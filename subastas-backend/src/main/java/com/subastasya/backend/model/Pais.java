@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class Pais {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "numero")
     private Long identificador;
 

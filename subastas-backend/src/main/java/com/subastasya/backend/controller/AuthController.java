@@ -6,9 +6,11 @@ import com.subastasya.backend.controller.dto.LoginRequest;
 import com.subastasya.backend.controller.dto.MedioPagoRequest;
 import com.subastasya.backend.controller.dto.RegistroEtapa1Request;
 import com.subastasya.backend.model.Cliente;
+import com.subastasya.backend.model.Usuario;
 import com.subastasya.backend.model.EstadoRegistro;
 import com.subastasya.backend.model.MedioDePago;
 import com.subastasya.backend.repository.ClienteRepository;
+import com.subastasya.backend.repository.UsuarioRepository;
 import com.subastasya.backend.repository.MedioDePagoRepository;
 import com.subastasya.backend.service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +31,9 @@ public class AuthController {
     private ClienteRepository clienteRepository;
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
     private MedioDePagoRepository medioDePagoRepository;
 
     @Autowired
@@ -47,23 +52,26 @@ public class AuthController {
             return ResponseEntity.badRequest().body("El email es obligatorio.");
         }
 
-        if (clienteRepository.findByEmail(request.getEmail()).isPresent()) {
+        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Ya existe una cuenta con este email.");
         }
 
-        Cliente usuario = new Cliente();
+        Usuario usuario = new Usuario();
         usuario.setEmail(request.getEmail());
-        usuario.setNombre(request.getNombre() + " " + request.getApellido());
-        usuario.setDireccion(request.getDomicilio());
+        usuario.setEstadoRegistro(EstadoRegistro.PENDIENTE_VALIDACION);
+
+        Cliente cliente = new Cliente();
+        cliente.setNombre(request.getNombre() + " " + request.getApellido());
+        cliente.setDireccion(request.getDomicilio());
         // El profe pide "documento" obligatorio en la tabla personas, pero no lo pedimos en el front. Lo generamos.
-        usuario.setDocumento("DOC-" + System.currentTimeMillis());
-        // usuario.setTelefono(request.getTelefono()); // No existe en el modelo del profe
+        cliente.setDocumento("DOC-" + System.currentTimeMillis());
+        // cliente.setTelefono(request.getTelefono()); // No existe en el modelo del profe
         
         // Buscar o crear país
         if (request.getPais() != null && !request.getPais().isBlank()) {
             java.util.Optional<com.subastasya.backend.model.Pais> paisOpt = paisRepository.findByNombreIgnoreCase(request.getPais().trim());
             if (paisOpt.isPresent()) {
-                usuario.setPais(paisOpt.get());
+                cliente.setPais(paisOpt.get());
             } else {
                 com.subastasya.backend.model.Pais nuevoPais = new com.subastasya.backend.model.Pais();
                 nuevoPais.setNombre(request.getPais().trim());
@@ -71,19 +79,19 @@ public class AuthController {
                 nuevoPais.setNacionalidad("No especificada");
                 nuevoPais.setIdiomas("No especificados");
                 paisRepository.save(nuevoPais);
-                usuario.setPais(nuevoPais);
+                cliente.setPais(nuevoPais);
             }
         }
 
         // Guardar las dos fotos en el array de bytes que provee Persona
         String fotosCombinadas = request.getUrlFotoDniFront() + "|||" + request.getUrlFotoDniBack();
-        usuario.setFoto(fotosCombinadas.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        cliente.setFoto(fotosCombinadas.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         
-        usuario.setCategoria("comun");
+        cliente.setCategoria("comun");
         
-        usuario.setEstadoRegistro(EstadoRegistro.PENDIENTE_VALIDACION);
+        usuario.setCliente(cliente);
 
-        clienteRepository.save(usuario);
+        usuarioRepository.save(usuario);
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body("Registro recibido. Pendiente de validación por un administrador.");
@@ -99,13 +107,13 @@ public class AuthController {
             return ResponseEntity.badRequest().body("Token de activación inválido.");
         }
 
-        Optional<Cliente> opt = clienteRepository.findByActivationToken(request.getToken());
+        Optional<Usuario> opt = usuarioRepository.findByActivationToken(request.getToken());
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Token inválido o expirado.");
         }
 
-        Cliente usuario = opt.get();
+        Usuario usuario = opt.get();
 
         // Acepta tanto activación inicial (APROBADO_PENDIENTE_CLAVE)
         // como recuperación de contraseña (ACTIVO con token temporal)
@@ -126,7 +134,7 @@ public class AuthController {
             usuario.setEstadoRegistro(EstadoRegistro.ACTIVO);
         }
         usuario.setActivationToken(null); // Consumir el token (no reutilizable)
-        clienteRepository.save(usuario);
+        usuarioRepository.save(usuario);
 
         return ResponseEntity.ok("¡Contraseña actualizada! Ya podés iniciar sesión.");
     }
@@ -136,10 +144,10 @@ public class AuthController {
     // ─────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
-        Optional<Cliente> usuarioOpt = clienteRepository.findByEmail(request.getEmail());
+        Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(request.getEmail());
 
         if (usuarioOpt.isPresent()) {
-            Cliente usuario = usuarioOpt.get();
+            Usuario usuario = usuarioOpt.get();
 
             if (usuario.getEstadoRegistro() == EstadoRegistro.PENDIENTE_VALIDACION) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -170,7 +178,7 @@ public class AuthController {
     // ─────────────────────────────────────────────
     @PostMapping("/medio-pago")
     public ResponseEntity<?> registrarMedioPago(@RequestBody MedioPagoRequest request) {
-        Optional<Cliente> opt = clienteRepository.findByEmail(request.getEmail());
+        Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail());
         if (opt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND)
                     .body("Usuario no encontrado.");
@@ -181,10 +189,10 @@ public class AuthController {
                     .body("Todos los campos del medio de pago son obligatorios.");
         }
 
-        Cliente usuario = opt.get();
+        Usuario usuario = opt.get();
         
         MedioDePago medioPago = new MedioDePago();
-        medioPago.setCliente(usuario);
+        medioPago.setCliente(usuario.getCliente());
         medioPago.setTipo(request.getTipo());
         medioPago.setNumero(request.getNumero());
         medioPago.setTitular(request.getTitular());
@@ -208,9 +216,9 @@ public class AuthController {
         }
 
         // Por seguridad, siempre respondemos OK aunque el email no exista
-        Optional<Cliente> opt = clienteRepository.findByEmail(request.getEmail().trim());
+        Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail().trim());
         if (opt.isPresent()) {
-            Cliente usuario = opt.get();
+            Usuario usuario = opt.get();
 
             // Solo permitir recuperación si la cuenta está activa
             if (usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO) {
@@ -218,7 +226,7 @@ public class AuthController {
                 // infraestructura nueva. El paso 2 usa /activar igual que en registro.
                 String token = UUID.randomUUID().toString();
                 usuario.setActivationToken(token);
-                clienteRepository.save(usuario);
+                usuarioRepository.save(usuario);
 
                 try {
                     emailService.sendRecoveryEmail(usuario.getEmail(), token);

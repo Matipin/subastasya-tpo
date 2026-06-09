@@ -9,7 +9,7 @@ import java.time.LocalDate;
 @Data
 public class Producto {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "identificador")
     private Long identificador;
 

@@ -4,8 +4,10 @@ import com.mercadopago.exceptions.MPApiException;
 import com.mercadopago.exceptions.MPException;
 import com.mercadopago.resources.customer.CustomerCard;
 import com.subastasya.backend.model.Cliente;
+import com.subastasya.backend.model.Usuario;
 import com.subastasya.backend.model.MedioDePago;
 import com.subastasya.backend.repository.ClienteRepository;
+import com.subastasya.backend.repository.UsuarioRepository;
 import com.subastasya.backend.repository.MedioDePagoRepository;
 import com.subastasya.backend.service.MercadoPagoService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,18 +28,22 @@ public class MediosDePagoController {
     private ClienteRepository clienteRepository;
 
     @Autowired
+    private UsuarioRepository usuarioRepository;
+
+    @Autowired
     private MedioDePagoRepository medioDePagoRepository;
 
     @PostMapping("/tarjeta")
     @SuppressWarnings("unchecked")
     public ResponseEntity<?> agregarTarjeta(@RequestParam String email, @RequestBody Map<String, Object> request) {
         try {
-            Optional<Cliente> optCliente = clienteRepository.findByEmail(email);
-            if (optCliente.isEmpty()) {
+            Optional<Usuario> optUsuario = usuarioRepository.findByEmail(email);
+            if (optUsuario.isEmpty()) {
                 return ResponseEntity.badRequest().body("Cliente no encontrado");
             }
 
-            Cliente cliente = optCliente.get();
+            Usuario usuario = optUsuario.get();
+            Cliente cliente = usuario.getCliente();
             String token = (String) request.get("token");
             String paymentMethodId = (String) request.get("payment_method_id"); // ej. "visa", "master"
 

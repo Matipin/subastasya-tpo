@@ -1,19 +1,25 @@
 package com.subastasya.backend.model;
 
 import jakarta.persistence.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 @Data
 @Entity
 @Table(name = "subastas")
 public class Subasta {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "identificador")
     private Long identificador;
     
+    @Transient
+    private String nombre;
+
+    @JsonProperty("fechaInicio")
     @Column(nullable = false)
     private LocalDate fecha; // constraint chkFecha check (fecha > dateAdd(dd, 10, getdate()))
     
@@ -40,4 +46,7 @@ public class Subasta {
     
     @Column(length = 10)
     private String categoria; // ('comun', 'especial', 'plata', 'oro', 'platino')
+    
+    @Transient
+    private List<com.subastasya.backend.controller.dto.ArticuloDTO> articulos;
 }

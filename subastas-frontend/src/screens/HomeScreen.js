@@ -62,7 +62,20 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.cardDesc}>Estado: {item.estado}</Text>
           <Text style={styles.cardDesc}>Fecha: {fechaInicio}</Text>
           <Text style={styles.cardPrice}>{item.articulos?.length || 0} Lotes disponibles</Text>
-          <TouchableOpacity style={styles.pujaBtn} onPress={() => {}}>
+          <TouchableOpacity style={styles.pujaBtn} onPress={() => {
+            if (usuario?.isGuest) {
+              Alert.alert(
+                'Modo Invitado',
+                'Para ver los lotes o participar en la subasta tenés que iniciar sesión o registrarte.',
+                [
+                  { text: 'Cancelar', style: 'cancel' },
+                  { text: 'Iniciar Sesión', onPress: () => navigation.replace('Login') }
+                ]
+              );
+            } else {
+              // Funcionalidad en desarrollo
+            }
+          }}>
             <Text style={styles.pujaBtnText}>Ver Lotes</Text>
           </TouchableOpacity>
         </View>
@@ -89,7 +102,7 @@ export default function HomeScreen({ navigation, route }) {
           )}
         </View>
         <View style={styles.headerRight}>
-          {!usuario?.medioPagoRegistrado && (
+          {!usuario?.isGuest && !usuario?.medioPagoRegistrado && (
             <TouchableOpacity
               style={styles.warnBadge}
               onPress={() => navigation.navigate('MedioPago', { usuario })}
@@ -97,12 +110,14 @@ export default function HomeScreen({ navigation, route }) {
               <Text style={styles.warnBadgeText}>⚠️ Pago</Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity 
-            style={styles.profileBtn}
-            onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
-          >
-            <Text style={styles.profileBtnText}>👤</Text>
-          </TouchableOpacity>
+          {!usuario?.isGuest && (
+            <TouchableOpacity 
+              style={styles.profileBtn}
+              onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
+            >
+              <Text style={styles.profileBtnText}>👤</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity 
             style={[styles.profileBtn, {marginLeft: 10, backgroundColor: '#FEE2E2'}]}
             onPress={() => navigation.replace('Login')}
@@ -113,7 +128,7 @@ export default function HomeScreen({ navigation, route }) {
       </View>
 
       {/* Banner de aviso si no tiene medio de pago */}
-      {!usuario?.medioPagoRegistrado && (
+      {!usuario?.isGuest && !usuario?.medioPagoRegistrado && (
         <TouchableOpacity
           style={styles.banner}
           onPress={() => navigation.navigate('MedioPago', { usuario })}
@@ -124,9 +139,18 @@ export default function HomeScreen({ navigation, route }) {
         </TouchableOpacity>
       )}
 
+      {/* Banner de aviso si es invitado */}
+      {usuario?.isGuest && (
+        <View style={[styles.banner, { backgroundColor: '#E0F2FE', borderBottomColor: '#0284C7' }]}>
+          <Text style={[styles.bannerText, { color: '#075985' }]}>
+            👋 Estás en modo invitado. Solo podés ver el catálogo. Para participar o ver detalles, iniciá sesión.
+          </Text>
+        </View>
+      )}
+
       <FlatList
         data={subastas}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => (item.identificador || item.id || index).toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
