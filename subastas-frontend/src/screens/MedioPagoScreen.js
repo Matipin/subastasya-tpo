@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
+import MercadoPagoBrick from '../components/MercadoPagoBrick';
 
 const TIPOS_PAGO = [
   { key: 'TARJETA', label: '💳 Tarjeta de Crédito/Débito' },
@@ -31,7 +32,43 @@ export default function MedioPagoScreen({ navigation, route }) {
     return Object.keys(e).length === 0;
   };
 
+  const handleMercadoPagoSubmit = async (cardFormData) => {
+    setMensajeError('');
+    if (!usuario?.email) {
+      setMensajeError('No se pudo identificar al usuario. Cerrá sesión y volvé a ingresar.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${API_BASE_URL}/medios-de-pago/tarjeta?email=${encodeURIComponent(usuario.email)}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cardFormData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Return home on success
+        navigation.replace('Home', { usuario });
+      } else {
+        const text = await response.text();
+        setMensajeError(text || 'No se pudo guardar la tarjeta.');
+      }
+    } catch (error) {
+      console.error(error);
+      setMensajeError('No se pudo conectar con el servidor.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleGuardar = async () => {
+    if (tipoSeleccionado === 'TARJETA') {
+      // The MP Brick handles its own submit
+      return;
+    }
+
     if (!validate()) return;
     setMensajeError('');
     if (!usuario?.email) {
@@ -54,7 +91,6 @@ export default function MedioPagoScreen({ navigation, route }) {
 
       if (response.ok) {
         const usuarioActualizado = await response.json();
-        // En web, Alert con callback no funciona bien, así que redirigimos directo al Home
         navigation.replace('Home', { usuario: usuarioActualizado });
       } else {
         const text = await response.text();
@@ -102,41 +138,44 @@ export default function MedioPagoScreen({ navigation, route }) {
         ))}
       </View>
 
-      {/* Número */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>
-          {tipoSeleccionado === 'TARJETA' ? 'Número de tarjeta *' :
-            tipoSeleccionado === 'CUENTA_BANCARIA' ? 'CBU *' :
-              tipoSeleccionado === 'CHEQUE' ? 'Número de cheque *' : 'Número *'}
-        </Text>
-        <TextInput
-          style={[styles.input, errors.numero && styles.inputError]}
-          placeholder={
-            tipoSeleccionado === 'TARJETA' ? '1234 5678 9012 3456' :
-              tipoSeleccionado === 'CUENTA_BANCARIA' ? '0000000000000000000000' :
-                'Nro. de cheque'
-          }
-          placeholderTextColor="#AAAAAA"
-          value={numero}
-          onChangeText={v => { setNumero(v); setErrors(p => ({ ...p, numero: undefined })); }}
-          keyboardType="numeric"
-        />
-        {errors.numero ? <Text style={styles.errorText}>{errors.numero}</Text> : null}
-      </View>
+      {/* MP Brick or standard inputs */}
+      {tipoSeleccionado === 'TARJETA' ? (
+        <MercadoPagoBrick onSubmit={handleMercadoPagoSubmit} usuarioEmail={usuario?.email} />
+      ) : tipoSeleccionado ? (
+        <>
+          {/* Número */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>
+              {tipoSeleccionado === 'CUENTA_BANCARIA' ? 'CBU *' : 'Número de cheque *'}
+            </Text>
+            <TextInput
+              style={[styles.input, errors.numero && styles.inputError]}
+              placeholder={
+                tipoSeleccionado === 'CUENTA_BANCARIA' ? '0000000000000000000000' : 'Nro. de cheque'
+              }
+              placeholderTextColor="#AAAAAA"
+              value={numero}
+              onChangeText={v => { setNumero(v); setErrors(p => ({ ...p, numero: undefined })); }}
+              keyboardType="numeric"
+            />
+            {errors.numero ? <Text style={styles.errorText}>{errors.numero}</Text> : null}
+          </View>
 
-      {/* Titular */}
-      <View style={styles.fieldContainer}>
-        <Text style={styles.label}>Nombre del titular *</Text>
-        <TextInput
-          style={[styles.input, errors.titular && styles.inputError]}
-          placeholder="Nombre Apellido"
-          placeholderTextColor="#AAAAAA"
-          value={titular}
-          onChangeText={v => { setTitular(v); setErrors(p => ({ ...p, titular: undefined })); }}
-          autoCapitalize="words"
-        />
-        {errors.titular ? <Text style={styles.errorText}>{errors.titular}</Text> : null}
-      </View>
+          {/* Titular */}
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Nombre del titular *</Text>
+            <TextInput
+              style={[styles.input, errors.titular && styles.inputError]}
+              placeholder="Nombre Apellido"
+              placeholderTextColor="#AAAAAA"
+              value={titular}
+              onChangeText={v => { setTitular(v); setErrors(p => ({ ...p, titular: undefined })); }}
+              autoCapitalize="words"
+            />
+            {errors.titular ? <Text style={styles.errorText}>{errors.titular}</Text> : null}
+          </View>
+        </>
+      ) : null}
 
       {mensajeError ? (
         <View style={styles.bannerError}>
@@ -144,16 +183,18 @@ export default function MedioPagoScreen({ navigation, route }) {
         </View>
       ) : null}
 
-      <TouchableOpacity
-        style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
-        onPress={handleGuardar}
-        disabled={isLoading}
-      >
-        {isLoading
-          ? <ActivityIndicator color="#FFF" />
-          : <Text style={styles.submitText}>Guardar Medio de Pago</Text>
-        }
-      </TouchableOpacity>
+      {tipoSeleccionado !== 'TARJETA' && (
+        <TouchableOpacity
+          style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+          onPress={handleGuardar}
+          disabled={isLoading}
+        >
+          {isLoading
+            ? <ActivityIndicator color="#FFF" />
+            : <Text style={styles.submitText}>Guardar Medio de Pago</Text>
+          }
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         style={styles.skipBtn}

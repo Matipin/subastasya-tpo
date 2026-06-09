@@ -1,5 +1,5 @@
-// IMPORTANTE: IP correcta para tu Wi-Fi
-export const API_BASE_URL = 'https://wild-memes-fly.loca.lt/api/v1/auth';
+// IMPORTANTE: IP correcta para tu Wi-Fi u URL del tunnel
+export const API_BASE_URL = 'http://YOUR_LOCAL_IP:8080/api/v1/auth';
 
 // Interceptor global para saltear las pantallas de advertencia de los túneles (Localtunnel, Ngrok, etc.)
 const originalFetch = global.fetch;

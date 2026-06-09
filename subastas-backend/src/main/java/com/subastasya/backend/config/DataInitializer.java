@@ -1,7 +1,6 @@
 package com.subastasya.backend.config;
 
 import com.subastasya.backend.model.EstadoRegistro;
-import com.subastasya.backend.model.Subasta;
 import com.subastasya.backend.model.Cliente;
 import com.subastasya.backend.repository.ClienteRepository;
 import lombok.RequiredArgsConstructor;

@@ -172,6 +172,7 @@
                     <div><strong>Titular:</strong> ${pago.titular}</div>
                     <div class="actions">
                         <button class="btn-primary" onclick="verificarPago(${pago.identificador})">✔️ Marcar como Verificado</button>
+                        <button class="btn-danger" style="margin-left: 10px;" onclick="rechazarPago(${pago.identificador})">❌ Rechazar</button>
                     </div>
                 `;
                 container.appendChild(card);
@@ -185,6 +186,23 @@
     async function verificarPago(id) {
         try {
             const res = await fetch(`${API_BASE}/verificar-pago`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ idPago: id })
+            });
+            const text = await res.text();
+            alert(res.ok ? text : `Error: ${text}`);
+            loadPagos();
+        } catch (error) {
+            alert(`Error de red: ${error.message}`);
+        }
+    }
+
+    // 6. Rechazar pago (Eliminar)
+    async function rechazarPago(id) {
+        if (!confirm('¿Estás seguro de que deseas rechazar y eliminar este medio de pago?')) return;
+        try {
+            const res = await fetch(`${API_BASE}/rechazar-pago`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ idPago: id })

@@ -11,6 +11,7 @@ import RegistroEtapa2Screen from './src/screens/RegistroEtapa2Screen';
 import MedioPagoScreen from './src/screens/MedioPagoScreen';
 import ProfileDashboardScreen from './src/screens/ProfileDashboardScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
+import GestionarMediosPagoScreen from './src/screens/GestionarMediosPagoScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -29,9 +30,9 @@ export default function App() {
         <Stack.Screen name="MedioPago" component={MedioPagoScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="ProfileDashboard" component={ProfileDashboardScreen} />
+        <Stack.Screen name="GestionarMediosPago" component={GestionarMediosPagoScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
-

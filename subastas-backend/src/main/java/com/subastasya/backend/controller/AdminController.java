@@ -27,6 +27,7 @@ public class AdminController {
     private final ClienteRepository clienteRepository;
     private final MedioDePagoRepository medioDePagoRepository;
     private final EmailService emailService;
+    private final com.subastasya.backend.service.MercadoPagoService mercadoPagoService;
 
     // ─────────────────────────────────────────────
     // 1. Obtener usuarios pendientes de validación
@@ -166,5 +167,30 @@ public class AdminController {
         medioDePagoRepository.save(pago);
 
         return ResponseEntity.ok("Medio de pago verificado y habilitado correctamente.");
+    }
+
+    // ─────────────────────────────────────────────
+    // 6. Rechazar un medio de pago (Eliminar de MP)
+    // ─────────────────────────────────────────────
+    @PostMapping("/rechazar-pago")
+    public ResponseEntity<?> rechazarPago(@RequestBody AdminVerificarPagoRequest request) {
+        Optional<MedioDePago> opt = medioDePagoRepository.findById(request.getIdPago());
+        if (opt.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Medio de pago no encontrado");
+        }
+
+        MedioDePago pago = opt.get();
+
+        if ("TARJETA_CREDITO".equalsIgnoreCase(pago.getTipo()) && pago.getNumero() != null) {
+            try {
+                // Borrar tarjeta de MP
+                mercadoPagoService.deleteCard(pago.getCliente(), pago.getNumero());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+        
+        medioDePagoRepository.delete(pago);
+        return ResponseEntity.ok("Medio de pago rechazado y eliminado.");
     }
 }

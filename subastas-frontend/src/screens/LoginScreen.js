@@ -3,6 +3,7 @@ import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, ActivityIndicator, Image, Platform
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -15,6 +16,7 @@ export default function LoginScreen({ navigation }) {
   const [errorGeneral, setErrorGeneral] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const loadCredentials = async () => {
@@ -127,14 +129,22 @@ export default function LoginScreen({ navigation }) {
       </View>
 
       <View style={styles.inputContainer}>
-        <TextInput
-          style={[styles.input, errorPassword && styles.inputError]}
-          placeholder="Contraseña"
-          placeholderTextColor="#888"
-          value={password}
-          onChangeText={t => { setPassword(t); setErrorPassword(''); }}
-          secureTextEntry
-        />
+        <View style={[styles.passwordContainer, errorPassword && styles.inputError]}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Contraseña"
+            placeholderTextColor="#888"
+            value={password}
+            onChangeText={t => { setPassword(t); setErrorPassword(''); }}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity
+            onPress={() => setShowPassword(!showPassword)}
+            style={{ paddingHorizontal: 10 }}
+          >
+            <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={24} color="#888" />
+          </TouchableOpacity>
+        </View>
         {errorPassword ? <Text style={styles.errorText}>{errorPassword}</Text> : null}
       </View>
 
@@ -216,6 +226,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 5, fontSize: 16, color: COLORS.TEXT_MAIN,
   },
   inputError: { borderBottomColor: COLORS.ERROR, borderBottomWidth: 2 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', borderBottomWidth: 1, borderBottomColor: '#000' },
+  passwordInput: { flex: 1, paddingVertical: 10, paddingHorizontal: 5, fontSize: 16, color: COLORS.TEXT_MAIN },
   errorText: { color: COLORS.ERROR, fontSize: 13, marginTop: 4 },
   optionsRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',

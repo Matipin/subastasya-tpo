@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
@@ -25,6 +26,8 @@ export default function ForgotPasswordScreen({ navigation }) {
   const [errorToken, setErrorToken] = useState('');
   const [errorNewPassword, setErrorNewPassword] = useState('');
   const [errorConfirmPassword, setErrorConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Estado general
   const [step, setStep] = useState(1); // 1 = email, 2 = token+clave, 3 = éxito
@@ -242,29 +245,45 @@ export default function ForgotPasswordScreen({ navigation }) {
 
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>Nueva contraseña</Text>
-              <TextInput
-                style={[styles.input, errorNewPassword ? styles.inputError : null]}
-                placeholder="Mínimo 6 caracteres"
-                placeholderTextColor="#AAAAAA"
-                value={newPassword}
-                onChangeText={(t) => { setNewPassword(t); setErrorNewPassword(''); }}
-                secureTextEntry
-              />
+              <View style={[styles.passwordContainer, errorNewPassword ? styles.inputError : null]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Mínimo 6 caracteres"
+                  placeholderTextColor="#AAAAAA"
+                  value={newPassword}
+                  onChangeText={(t) => { setNewPassword(t); setErrorNewPassword(''); }}
+                  secureTextEntry={!showNewPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowNewPassword(!showNewPassword)}
+                  style={{ paddingHorizontal: 10 }}
+                >
+                  <Ionicons name={showNewPassword ? 'eye-off' : 'eye'} size={24} color={COLORS.TEXT_MAIN} />
+                </TouchableOpacity>
+              </View>
               {errorNewPassword ? <Text style={styles.errorText}>⚠ {errorNewPassword}</Text> : null}
             </View>
 
             <View style={styles.fieldContainer}>
               <Text style={styles.label}>Confirmar contraseña</Text>
-              <TextInput
-                style={[styles.input, errorConfirmPassword ? styles.inputError : null]}
-                placeholder="Repetí tu nueva contraseña"
-                placeholderTextColor="#AAAAAA"
-                value={confirmPassword}
-                onChangeText={(t) => { setConfirmPassword(t); setErrorConfirmPassword(''); }}
-                secureTextEntry
-                returnKeyType="done"
-                onSubmitEditing={handleResetPassword}
-              />
+              <View style={[styles.passwordContainer, errorConfirmPassword ? styles.inputError : null]}>
+                <TextInput
+                  style={styles.passwordInput}
+                  placeholder="Repetí tu nueva contraseña"
+                  placeholderTextColor="#AAAAAA"
+                  value={confirmPassword}
+                  onChangeText={(t) => { setConfirmPassword(t); setErrorConfirmPassword(''); }}
+                  secureTextEntry={!showConfirmPassword}
+                  returnKeyType="done"
+                  onSubmitEditing={handleResetPassword}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{ paddingHorizontal: 10 }}
+                >
+                  <Ionicons name={showConfirmPassword ? 'eye-off' : 'eye'} size={24} color={COLORS.TEXT_MAIN} />
+                </TouchableOpacity>
+              </View>
               {errorConfirmPassword ? <Text style={styles.errorText}>⚠ {errorConfirmPassword}</Text> : null}
             </View>
 
@@ -383,6 +402,8 @@ const styles = StyleSheet.create({
     fontSize: 15, color: COLORS.TEXT_MAIN,
   },
   inputError: { borderColor: COLORS.ERROR, borderWidth: 1.5 },
+  passwordContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderWidth: 1, borderColor: '#C0C0C0', borderRadius: 12 },
+  passwordInput: { flex: 1, paddingVertical: 14, paddingHorizontal: 16, fontSize: 15, color: COLORS.TEXT_MAIN },
   errorText: { color: COLORS.ERROR, fontSize: 12, marginTop: 5 },
 
   // ── Banners ──
