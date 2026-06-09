@@ -2,7 +2,7 @@ import React, { useRef } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const MP_PUBLIC_KEY = 'TEST-6281816190072559-060820-7f041c2f9c198aa7db0a5c7d8e7a3a26-1436955656';
+const MP_PUBLIC_KEY = 'TEST-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
 
 export default function MercadoPagoBrick({ onSubmit, usuarioEmail }) {
   const webViewRef = useRef(null);
