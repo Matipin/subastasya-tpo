@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 public class MedioDePago {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long identificador;
 
     @ManyToOne(fetch = FetchType.LAZY)

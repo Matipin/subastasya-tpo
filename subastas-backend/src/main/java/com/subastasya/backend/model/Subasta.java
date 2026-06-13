@@ -12,7 +12,7 @@ import java.util.List;
 @Table(name = "subastas")
 public class Subasta {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
     

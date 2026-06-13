@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class Foto {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
 
@@ -16,7 +16,6 @@ public class Foto {
     @JoinColumn(name = "producto", nullable = false)
     private Producto producto;
 
-    @Lob
-    @Column(nullable = false, columnDefinition="LONGBLOB")
+    @Column(nullable = false, columnDefinition="BYTEA")
     private byte[] foto;
 }

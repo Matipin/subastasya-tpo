@@ -9,7 +9,7 @@ import lombok.Data;
 @Data
 public abstract class Persona {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
 
@@ -25,7 +25,6 @@ public abstract class Persona {
     @Column(length = 15)
     private String estado;
 
-    @Lob
-    @Column(columnDefinition="LONGBLOB")
+    @Column(columnDefinition="BYTEA")
     private byte[] foto;
 }

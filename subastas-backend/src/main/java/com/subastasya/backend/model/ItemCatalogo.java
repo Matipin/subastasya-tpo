@@ -9,7 +9,7 @@ import java.math.BigDecimal;
 @Data
 public class ItemCatalogo {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
 

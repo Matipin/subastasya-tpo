@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class Asistente {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
 

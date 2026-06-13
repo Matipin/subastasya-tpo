@@ -8,7 +8,7 @@ import lombok.Data;
 @Data
 public class Sector {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "identificador")
     private Long identificador;
 

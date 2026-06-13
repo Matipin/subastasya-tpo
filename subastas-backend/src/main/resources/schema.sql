@@ -1,22 +1,22 @@
-SET FOREIGN_KEY_CHECKS=0;
-DROP TABLE IF EXISTS registroDeSubasta;
-DROP TABLE IF EXISTS pujos;
-DROP TABLE IF EXISTS asistentes;
-DROP TABLE IF EXISTS itemsCatalogo;
-DROP TABLE IF EXISTS catalogos;
-DROP TABLE IF EXISTS fotos;
-DROP TABLE IF EXISTS productos;
-DROP TABLE IF EXISTS subastas;
-DROP TABLE IF EXISTS subastadores;
-DROP TABLE IF EXISTS duenios;
-DROP TABLE IF EXISTS usuarios;
-DROP TABLE IF EXISTS clientes;
-DROP TABLE IF EXISTS seguros;
-DROP TABLE IF EXISTS sectores;
-DROP TABLE IF EXISTS empleados;
-DROP TABLE IF EXISTS personas;
-DROP TABLE IF EXISTS paises;
-DROP TABLE IF EXISTS medio_de_pago;
+-- SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS registroDeSubasta CASCADE;
+DROP TABLE IF EXISTS pujos CASCADE;
+DROP TABLE IF EXISTS asistentes CASCADE;
+DROP TABLE IF EXISTS itemsCatalogo CASCADE;
+DROP TABLE IF EXISTS catalogos CASCADE;
+DROP TABLE IF EXISTS fotos CASCADE;
+DROP TABLE IF EXISTS productos CASCADE;
+DROP TABLE IF EXISTS subastas CASCADE;
+DROP TABLE IF EXISTS subastadores CASCADE;
+DROP TABLE IF EXISTS duenios CASCADE;
+DROP TABLE IF EXISTS usuarios CASCADE;
+DROP TABLE IF EXISTS clientes CASCADE;
+DROP TABLE IF EXISTS seguros CASCADE;
+DROP TABLE IF EXISTS sectores CASCADE;
+DROP TABLE IF EXISTS empleados CASCADE;
+DROP TABLE IF EXISTS personas CASCADE;
+DROP TABLE IF EXISTS paises CASCADE;
+DROP TABLE IF EXISTS medio_de_pago CASCADE;
 
 create table paises(
 	numero bigint not null,
@@ -29,12 +29,12 @@ create table paises(
 );
 
 create table personas(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	documento varchar(20) not null,
 	nombre varchar(150) not null,
 	direccion varchar(250),
 	estado varchar(15),
-	foto LONGBLOB,
+	foto BYTEA,
 	constraint pk_personas primary key (identificador),
 	constraint chkEstado check (estado in ('activo', 'incativo'))
 );
@@ -47,7 +47,7 @@ create table empleados(
 );
 
 create table sectores(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	nombreSector varchar(150) not null,
 	codigoSector varchar(10) null,
 	responsableSector bigint null,
@@ -103,7 +103,7 @@ create table subastadores(
 );
 
 create table subastas(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	fecha date, 
 	hora time not null,
 	estado varchar(10),
@@ -122,7 +122,7 @@ create table subastas(
 );
 
 create table productos(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	fecha date,
 	disponible varchar(2),
 	descripcionCatalogo varchar(500) null default 'No Posee',
@@ -137,15 +137,15 @@ create table productos(
 );
 
 create table fotos(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	producto bigint not null,
-	foto LONGBLOB not null,
+	foto BYTEA not null,
 	constraint pk_fotos primary key (identificador),
 	constraint fk_fotos_productos foreign key (producto) references productos(identificador)
 );
 
 create table catalogos(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	descripcion varchar(250) not null,
 	subasta bigint null,
 	responsable bigint not null,
@@ -155,7 +155,7 @@ create table catalogos(
 );
 
 create table itemsCatalogo(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	catalogo bigint not null,
 	producto bigint not null,
 	precioBase decimal(18,2) not null,
@@ -170,7 +170,7 @@ create table itemsCatalogo(
 );
 
 create table asistentes(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	numeroPostor int not null,
 	cliente bigint not null,
 	subasta bigint not null,
@@ -180,7 +180,7 @@ create table asistentes(
 );
 
 create table pujos(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	asistente bigint not null,
 	item bigint not null,
 	importe decimal(18,2) not null,
@@ -193,7 +193,7 @@ create table pujos(
 );
 
 create table registroDeSubasta(
-	identificador bigint not null AUTO_INCREMENT,
+	identificador BIGSERIAL not null,
 	subasta bigint not null,
 	duenio bigint not null,
 	producto bigint not null,
@@ -208,4 +208,4 @@ create table registroDeSubasta(
 	constraint chkImportePagado check (importe > 0.01),
 	constraint chkComisionPagada check (comision > 0.01)
 );
-SET FOREIGN_KEY_CHECKS=1;
+-- SET FOREIGN_KEY_CHECKS=1;
