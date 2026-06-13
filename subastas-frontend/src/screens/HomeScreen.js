@@ -134,7 +134,7 @@ export default function HomeScreen({ navigation, route }) {
 
       <FlatList
         data={subastas}
-        keyExtractor={(item, index) => (item.identificador || item.id || index).toString()}
+        keyExtractor={(item, index) => (item.articulos?.[0]?.id || item.identificador || index).toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
