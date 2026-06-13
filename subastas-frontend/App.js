@@ -17,6 +17,10 @@ import SubastaEnVivoScreen from './src/screens/SubastaEnVivoScreen';
 import PropuestaArticuloScreen from './src/screens/PropuestaArticuloScreen';
 import DeudasScreen from './src/screens/DeudasScreen';
 import NotificacionesScreen from './src/screens/NotificacionesScreen';
+import MisSubastasScreen from './src/screens/MisSubastasScreen';
+import SubastasGanadasScreen from './src/screens/SubastasGanadasScreen';
+import MisProductosScreen from './src/screens/MisProductosScreen';
+import MiCategoriaScreen from './src/screens/MiCategoriaScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -42,6 +46,10 @@ export default function App() {
         <Stack.Screen name="PropuestaArticulo" component={PropuestaArticuloScreen} />
         <Stack.Screen name="Deudas" component={DeudasScreen} />
         <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
+        <Stack.Screen name="MisSubastas" component={MisSubastasScreen} />
+        <Stack.Screen name="SubastasGanadas" component={SubastasGanadasScreen} />
+        <Stack.Screen name="MisProductos" component={MisProductosScreen} />
+        <Stack.Screen name="MiCategoria" component={MiCategoriaScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

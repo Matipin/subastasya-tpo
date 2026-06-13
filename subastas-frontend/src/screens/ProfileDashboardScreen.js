@@ -60,14 +60,14 @@ export default function ProfileDashboardScreen({ route, navigation }) {
     <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', left: 0, top: 0}}>
-          <Text style={{color: COLORS.TEXT_TITLE, fontWeight: 'bold', fontSize: 16}}>← Home / Perfil</Text>
+          <Text style={{color: COLORS.TEXT_TITLE, fontWeight: 'bold', fontSize: 16}}>Volver</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
           onPress={() => navigation.navigate('Notificaciones', { usuario })}
           style={{position: 'absolute', right: 0, top: 0}}
         >
-          <Text style={{color: COLORS.PRIMARY, fontWeight: 'bold', fontSize: 16}}>🔔 Avisos</Text>
+          <Text style={{color: COLORS.PRIMARY, fontWeight: 'bold', fontSize: 16}}>Avisos</Text>
         </TouchableOpacity>
         
         <View style={styles.avatar}>
@@ -78,10 +78,10 @@ export default function ProfileDashboardScreen({ route, navigation }) {
 
       {/* Botones Superiores */}
       <View style={styles.rowButtons}>
-        <TouchableOpacity style={styles.halfButton}>
+        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('MisSubastas', { usuario })}>
           <Text style={styles.btnText}>Mis subastas</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.halfButton}>
+        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('SubastasGanadas', { usuario })}>
           <Text style={styles.btnText}>Subastas ganadas</Text>
         </TouchableOpacity>
       </View>
@@ -90,7 +90,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         style={styles.fullButton} 
         onPress={() => navigation.navigate('GestionarMediosPago', { usuario })}
       >
-        <Text style={styles.btnText}>Gestionar metodos de pago</Text>
+        <Text style={styles.btnText}>Gestionar métodos de pago</Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
@@ -100,12 +100,12 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         <Text style={styles.btnText}>Postular venta de producto</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fullButton}>
+      <TouchableOpacity style={styles.fullButton} onPress={() => navigation.navigate('MisProductos', { usuario })}>
         <Text style={styles.btnText}>Mis Productos</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Mi categoria</Text>
+      <TouchableOpacity style={styles.fullButton} onPress={() => navigation.navigate('MiCategoria', { usuario })}>
+        <Text style={styles.btnText}>Mi categoría</Text>
       </TouchableOpacity>
 
       {/* Estadísticas */}

@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
-import { Ionicons } from '@expo/vector-icons';
 
 
 export default function HomeScreen({ navigation, route }) {
@@ -143,25 +142,17 @@ export default function HomeScreen({ navigation, route }) {
           )}
           {!usuario?.isGuest && (
             <TouchableOpacity 
-              style={[styles.profileBtn, {marginRight: 10}]}
-              onPress={() => navigation.navigate('Notificaciones', { usuario })}
-            >
-              <Ionicons name="notifications-outline" size={22} color="#333" />
-            </TouchableOpacity>
-          )}
-          {!usuario?.isGuest && (
-            <TouchableOpacity 
               style={styles.profileBtn}
               onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
             >
-              <Ionicons name="person-outline" size={22} color="#333" />
+              <Text style={styles.profileBtnText}>👤</Text>
             </TouchableOpacity>
           )}
           <TouchableOpacity 
             style={[styles.profileBtn, {marginLeft: 10, backgroundColor: '#FEE2E2'}]}
             onPress={() => navigation.replace('Login')}
           >
-            <Ionicons name="log-out-outline" size={22} color="#DC2626" />
+            <Text style={styles.profileBtnText}>🚪</Text>
           </TouchableOpacity>
         </View>
       </View>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
@@ -8,7 +9,7 @@ export default function PropuestaArticuloScreen({ navigation }) {
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [categoria, setCategoria] = useState('');
-  const [fotoUrl, setFotoUrl] = useState('');
+  const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
@@ -28,7 +29,7 @@ export default function PropuestaArticuloScreen({ navigation }) {
           nombre,
           descripcion,
           categoria,
-          fotoUrl
+          fotoUrl: fotos.length > 0 ? fotos[0] : '' // Sending first photo as URL or keeping API intact
         })
       });
 
@@ -44,6 +45,29 @@ export default function PropuestaArticuloScreen({ navigation }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const pickImage = async () => {
+    if (fotos.length >= 6) {
+      Alert.alert('Límite', 'Podés subir hasta 6 fotos como máximo.');
+      return;
+    }
+    let result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      quality: 0.5,
+      base64: true,
+    });
+
+    if (!result.canceled) {
+      setFotos([...fotos, `data:image/jpeg;base64,${result.assets[0].base64}`]);
+    }
+  };
+
+  const removeFoto = (index) => {
+    const newFotos = [...fotos];
+    newFotos.splice(index, 1);
+    setFotos(newFotos);
   };
 
   return (
@@ -96,13 +120,21 @@ export default function PropuestaArticuloScreen({ navigation }) {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>URL de Fotografía</Text>
-          <TextInput 
-            style={styles.input} 
-            placeholder="https://ejemplo.com/foto.jpg"
-            value={fotoUrl}
-            onChangeText={setFotoUrl}
-          />
+          <Text style={styles.label}>Fotografías (Hasta 6) *</Text>
+          <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
+            <Ionicons name="camera-outline" size={24} color={COLORS.PRIMARY} />
+            <Text style={styles.uploadBtnText}>Seleccionar Foto</Text>
+          </TouchableOpacity>
+          <View style={styles.fotosContainer}>
+            {fotos.map((uri, index) => (
+              <View key={index} style={styles.fotoWrapper}>
+                <Image source={{ uri }} style={styles.fotoThumbnail} />
+                <TouchableOpacity style={styles.removeFotoBtn} onPress={() => removeFoto(index)}>
+                  <Ionicons name="close-circle" size={24} color="#FF3B30" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
         </View>
 
         <TouchableOpacity 
@@ -189,5 +221,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     letterSpacing: 1,
+  },
+  uploadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 15,
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: COLORS.PRIMARY,
+    borderRadius: 12,
+    backgroundColor: '#F8F9FA',
+    marginBottom: 10,
+  },
+  uploadBtnText: {
+    color: COLORS.PRIMARY,
+    fontWeight: 'bold',
+    marginLeft: 10,
+    fontSize: 16,
+  },
+  fotosContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  fotoWrapper: {
+    position: 'relative',
+    width: 100,
+    height: 100,
+  },
+  fotoThumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 8,
+  },
+  removeFotoBtn: {
+    position: 'absolute',
+    top: -10,
+    right: -10,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
   }
 });
