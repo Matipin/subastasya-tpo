@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
+import { Ionicons } from '@expo/vector-icons';
 
 
 export default function HomeScreen({ navigation, route }) {
@@ -19,7 +20,44 @@ export default function HomeScreen({ navigation, route }) {
   const fetchSubastas = async () => {
     try {
       const response = await fetch(API_BASE_URL.replace('/auth', '/subastas'));
-      const data = await response.json();
+      let data = await response.json();
+      
+      // Si no hay subastas en la base de datos, mostramos 2 de ejemplo para el demo
+      if (!data || data.length === 0) {
+        data = [
+          {
+            identificador: 999,
+            nombre: 'Subasta de Arte Moderno',
+            estado: 'abierta',
+            fechaInicio: new Date().toISOString(),
+            articulos: [
+              {
+                id: 1,
+                nombre: 'El Grito de la Noche',
+                descripcion: 'Pintura al óleo sobre lienzo, estilo expresionista. Certificado de autenticidad incluido.',
+                precioBase: 2500,
+                urlImagen: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400'
+              }
+            ]
+          },
+          {
+            identificador: 998,
+            nombre: 'Colección de Joyas Vintage',
+            estado: 'programada',
+            fechaInicio: new Date(Date.now() + 86400000).toISOString(),
+            articulos: [
+              {
+                id: 2,
+                nombre: 'Anillo de Diamantes 18k',
+                descripcion: 'Anillo de compromiso clásico de 1970 con un diamante central de 1 quilate. Estado impecable.',
+                precioBase: 12000,
+                urlImagen: 'https://images.unsplash.com/photo-1605100804763-247f66126e28?q=80&w=400'
+              }
+            ]
+          }
+        ];
+      }
+      
       setSubastas(data);
     } catch (error) {
       console.error('Error fetching subastas:', error);
@@ -108,7 +146,7 @@ export default function HomeScreen({ navigation, route }) {
               style={[styles.profileBtn, {marginRight: 10}]}
               onPress={() => navigation.navigate('Notificaciones', { usuario })}
             >
-              <Text style={styles.profileBtnText}>🔔</Text>
+              <Ionicons name="notifications-outline" size={22} color="#333" />
             </TouchableOpacity>
           )}
           {!usuario?.isGuest && (
@@ -116,14 +154,14 @@ export default function HomeScreen({ navigation, route }) {
               style={styles.profileBtn}
               onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
             >
-              <Text style={styles.profileBtnText}>👤</Text>
+              <Ionicons name="person-outline" size={22} color="#333" />
             </TouchableOpacity>
           )}
           <TouchableOpacity 
             style={[styles.profileBtn, {marginLeft: 10, backgroundColor: '#FEE2E2'}]}
             onPress={() => navigation.replace('Login')}
           >
-            <Text style={styles.profileBtnText}>🚪</Text>
+            <Ionicons name="log-out-outline" size={22} color="#DC2626" />
           </TouchableOpacity>
         </View>
       </View>
