@@ -6,7 +6,7 @@ import { COLORS } from '../theme/colors';
 const { width } = Dimensions.get('window');
 
 export default function DetalleArticuloScreen({ route, navigation }) {
-  const { articulo, subasta } = route.params;
+  const { articulo, subasta, usuario } = route.params;
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -32,9 +32,11 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       <View style={styles.detailsContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{articulo.nombre}</Text>
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>USD {articulo.precioBase || '100'}</Text>
-          </View>
+          {!usuario?.isGuest && (
+            <View style={styles.priceBadge}>
+              <Text style={styles.priceBadgeText}>USD {articulo.precioBase || '100'}</Text>
+            </View>
+          )}
         </View>
 
         <View style={styles.infoRow}>
@@ -67,15 +69,27 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       </View>
 
       {/* Fixed Bottom Action */}
-      <View style={styles.bottomActionContainer}>
-        <TouchableOpacity 
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('SubastaEnVivo', { articulo, subasta })}
-        >
-          <Text style={styles.actionButtonText}>Ingresar a Sala en Vivo</Text>
-          <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />
-        </TouchableOpacity>
-      </View>
+      {!usuario?.isGuest ? (
+        <View style={styles.bottomActionContainer}>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('SubastaEnVivo', { articulo, subasta, usuario })}
+          >
+            <Text style={styles.actionButtonText}>Ingresar a Sala en Vivo</Text>
+            <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.bottomActionContainer}>
+          <TouchableOpacity 
+            style={[styles.actionButton, { backgroundColor: '#852221' }]}
+            onPress={() => navigation.navigate('Login')}
+          >
+            <Text style={styles.actionButtonText}>Iniciar Sesión para Participar</Text>
+            <Ionicons name="person-outline" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+          </TouchableOpacity>
+        </View>
+      )}
     </ScrollView>
   );
 }

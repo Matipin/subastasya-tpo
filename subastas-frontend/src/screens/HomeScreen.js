@@ -63,21 +63,10 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.cardDesc}>Fecha: {fechaInicio}</Text>
           <Text style={styles.cardPrice}>{item.articulos?.length || 0} Lotes disponibles</Text>
           <TouchableOpacity style={styles.pujaBtn} onPress={() => {
-            if (usuario?.isGuest) {
-              Alert.alert(
-                'Modo Invitado',
-                'Para ver los lotes o participar en la subasta tenés que iniciar sesión o registrarte.',
-                [
-                  { text: 'Cancelar', style: 'cancel' },
-                  { text: 'Iniciar Sesión', onPress: () => navigation.replace('Login') }
-                ]
-              );
+            if (firstArticulo) {
+              navigation.navigate('DetalleArticulo', { articulo: firstArticulo, subasta: item, usuario });
             } else {
-              if (firstArticulo) {
-                navigation.navigate('DetalleArticulo', { articulo: firstArticulo, subasta: item, usuario });
-              } else {
-                Alert.alert('Subasta Vacía', 'Aún no hay artículos disponibles.');
-              }
+              Alert.alert('Subasta Vacía', 'Aún no hay artículos disponibles.');
             }
           }}>
             <Text style={styles.pujaBtnText}>Ver Lotes</Text>
