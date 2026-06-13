@@ -71,7 +71,15 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         <Text style={styles.name}>{usuario?.nombre}</Text>
       </View>
 
-      {/* Botones Superiores Eliminados porque están en estadísticas */}
+      {/* Botones Superiores */}
+      <View style={styles.rowButtons}>
+        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('MisSubastas', { usuario })}>
+          <Text style={styles.btnText}>Mis subastas</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('SubastasGanadas', { usuario })}>
+          <Text style={styles.btnText}>Subastas ganadas</Text>
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity 
         style={styles.fullButton} 

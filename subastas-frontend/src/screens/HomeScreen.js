@@ -19,7 +19,7 @@ export default function HomeScreen({ navigation, route }) {
 
   const fetchSubastas = async () => {
     try {
-      const response = await fetch(API_BASE_URL.replace('/auth', '/subastas'));
+      const response = await fetch(API_BASE_URL.replace('/auth', '/auctions'));
       let data = await response.json();
       
       if (data && data.length > 0) {
