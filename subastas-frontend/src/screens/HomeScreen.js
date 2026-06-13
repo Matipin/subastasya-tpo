@@ -22,67 +22,20 @@ export default function HomeScreen({ navigation, route }) {
       const response = await fetch(API_BASE_URL.replace('/auth', '/subastas'));
       let data = await response.json();
       
-      if (!data || data.length === 0) {
-        // Dummy data to match the Figma mockup exactly
-        data = [
-          {
-            identificador: 1,
-            articulos: [{
-              id: 1,
-              nombre: 'Reloj vintage',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=200'
-            }]
-          },
-          {
-            identificador: 2,
-            articulos: [{
-              id: 2,
-              nombre: 'Telefono vintage',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200'
-            }]
-          },
-          {
-            identificador: 3,
-            articulos: [{
-              id: 3,
-              nombre: 'Muñeca vintage',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1560961811-9a742878d672?q=80&w=200'
-            }]
-          },
-          {
-            identificador: 4,
-            articulos: [{
-              id: 4,
-              nombre: 'Juego de tazas vintage',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1577416390772-aeb4f9408bcf?q=80&w=200'
-            }]
-          },
-          {
-            identificador: 5,
-            articulos: [{
-              id: 5,
-              nombre: 'Maquina de coser vintage',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1590425712128-4ceb6ba3fdfc?q=80&w=200'
-            }]
-          },
-          {
-            identificador: 6,
-            articulos: [{
-              id: 6,
-              nombre: 'Palos de golf usados por Tiger Woods',
-              precioBase: 1000000,
-              urlImagen: 'https://images.unsplash.com/photo-1593111774240-d529f12eb416?q=80&w=200'
-            }]
+      if (data && data.length > 0) {
+        let allItems = [];
+        data.forEach(subasta => {
+          if (subasta.articulos && subasta.articulos.length > 0) {
+            subasta.articulos.forEach(articulo => {
+              // Creating a pseudo-subasta object for each item so navigation works
+              allItems.push({ ...subasta, articulos: [articulo] });
+            });
           }
-        ];
+        });
+        setSubastas(allItems);
+      } else {
+        setSubastas([]);
       }
-      
-      setSubastas(data);
     } catch (error) {
       console.error('Error fetching subastas:', error);
     } finally {
@@ -142,17 +95,27 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.headerTitle}>Menu / Home</Text>
         </View>
         <View style={styles.headerRight}>
+          {!usuario?.isGuest && (
+            <>
+              <TouchableOpacity 
+                style={styles.iconBtn}
+                onPress={() => navigation.navigate('Notificaciones', { usuario })}
+              >
+                <Ionicons name="notifications-outline" size={28} color="#222" />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.iconBtn}
+                onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
+              >
+                <Ionicons name="person-circle" size={32} color="#222" />
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity 
             style={styles.iconBtn}
-            onPress={() => navigation.navigate('Notificaciones', { usuario })}
+            onPress={() => navigation.replace('Login')}
           >
-            <Ionicons name="notifications-outline" size={28} color="#222" />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.iconBtn}
-            onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
-          >
-            <Ionicons name="person-circle" size={32} color="#222" />
+            <Ionicons name="log-out-outline" size={28} color="#DC2626" />
           </TouchableOpacity>
         </View>
       </View>
@@ -200,7 +163,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', paddingHorizontal: 20,
-    paddingTop: 55, paddingBottom: 15,
+    paddingTop: 20, paddingBottom: 15,
     backgroundColor: '#FFF',
     borderBottomWidth: 1, borderBottomColor: '#EEE',
   },

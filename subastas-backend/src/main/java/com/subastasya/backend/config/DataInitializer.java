@@ -108,26 +108,37 @@ public class DataInitializer implements CommandLineRunner {
             c1.setSubasta(s1);
             catalogoRepository.save(c1);
 
-            Producto p1 = new Producto();
-            p1.setDescripcionCompleta("Anillo de Diamantes 18k");
-            p1.setDisponible("si");
-            p1.setRevisor(admin);
-            p1.setDuenio(duenio);
-            p1.setFecha(LocalDate.now());
-            productoRepository.save(p1);
+            String[][] mockItems = {
+                {"Reloj vintage", "https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=200"},
+                {"Telefono vintage", "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200"},
+                {"Muñeca vintage", "https://images.unsplash.com/photo-1560961811-9a742878d672?q=80&w=200"},
+                {"Juego de tazas vintage", "https://images.unsplash.com/photo-1577416390772-aeb4f9408bcf?q=80&w=200"},
+                {"Maquina de coser vintage", "https://images.unsplash.com/photo-1590425712128-4ceb6ba3fdfc?q=80&w=200"},
+                {"Palos de golf usados por Tiger Woods", "https://images.unsplash.com/photo-1593111774240-d529f12eb416?q=80&w=200"}
+            };
 
-            Foto f1 = new Foto();
-            f1.setProducto(p1);
-            f1.setFoto("https://images.unsplash.com/photo-1599643478524-fb66f70d00f8?auto=format&fit=crop&q=80&w=600".getBytes(StandardCharsets.UTF_8));
-            fotoRepository.save(f1);
+            for (String[] mock : mockItems) {
+                Producto p = new Producto();
+                p.setDescripcionCompleta(mock[0]);
+                p.setDisponible("si");
+                p.setRevisor(admin);
+                p.setDuenio(duenio);
+                p.setFecha(LocalDate.now());
+                productoRepository.save(p);
 
-            ItemCatalogo ic1 = new ItemCatalogo();
-            ic1.setCatalogo(c1);
-            ic1.setProducto(p1);
-            ic1.setPrecioBase(new BigDecimal("5000.00"));
-            ic1.setComision(new BigDecimal("500.00"));
-            ic1.setSubastado("no");
-            itemCatalogoRepository.save(ic1);
+                Foto f = new Foto();
+                f.setProducto(p);
+                f.setFoto(mock[1].getBytes(StandardCharsets.UTF_8));
+                fotoRepository.save(f);
+
+                ItemCatalogo ic = new ItemCatalogo();
+                ic.setCatalogo(c1);
+                ic.setProducto(p);
+                ic.setPrecioBase(new BigDecimal("1000000.00"));
+                ic.setComision(new BigDecimal("10000.00"));
+                ic.setSubastado("no");
+                itemCatalogoRepository.save(ic);
+            }
         }
     }
 }
