@@ -54,7 +54,9 @@ public class AuthController {
 
         Usuario usuario = new Usuario();
         usuario.setEmail(request.getEmail());
-        usuario.setEstadoRegistro(EstadoRegistro.PENDIENTE_VALIDACION);
+        usuario.setEstadoRegistro(EstadoRegistro.APROBADO_PENDIENTE_CLAVE);
+        String token = UUID.randomUUID().toString();
+        usuario.setActivationToken(token);
 
         Cliente cliente = new Cliente();
         cliente.setNombre(request.getNombre() + " " + request.getApellido());
@@ -86,8 +88,14 @@ public class AuthController {
 
         usuarioRepository.save(usuario);
 
+        try {
+            emailService.sendActivationEmail(usuario.getEmail(), token);
+        } catch (Exception e) {
+            System.err.println("Error enviando email: " + e.getMessage());
+        }
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body("Registro recibido. Pendiente de validación por un administrador.");
+                .body("¡Registro exitoso! Revisa tu correo electrónico para obtener tu código de activación.");
     }
 
     @PostMapping("/activar")
