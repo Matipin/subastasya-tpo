@@ -66,9 +66,9 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         </TouchableOpacity>
         
         <View style={styles.avatar}>
-           <Ionicons name="person-circle" size={140} color="#222" />
+           <Text style={styles.avatarText}>{usuario?.nombre?.charAt(0) || 'U'}</Text>
         </View>
-        <Text style={styles.name}>{usuario?.nombre || 'Juan Perez'}</Text>
+        <Text style={styles.name}>{usuario?.nombre}</Text>
       </View>
 
       {/* Botones Superiores */}
@@ -104,25 +104,30 @@ export default function ProfileDashboardScreen({ route, navigation }) {
       </TouchableOpacity>
 
       {/* Estadísticas */}
-      <Text style={styles.sectionTitle}>Estadisticas</Text>
+      <Text style={styles.sectionTitle}>Estadísticas</Text>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Total de pujas realizadas</Text>
-      </TouchableOpacity>
+      <View style={styles.metricsContainer}>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.totalPujas : '-'}</Text>
+          <Text style={styles.metricLabel}>Pujas Realizadas</Text>
+        </View>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Historial de subastas</Text>
-      </TouchableOpacity>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.subastasParticipadas : '-'}</Text>
+          <Text style={styles.metricLabel}>Subastas (Participadas)</Text>
+        </View>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Ventas Realizadas (vendedor)</Text>
-      </TouchableOpacity>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.ventasRealizadas : '-'}</Text>
+          <Text style={styles.metricLabel}>Ventas (Catálogo)</Text>
+        </View>
+      </View>
 
       <TouchableOpacity 
-        style={styles.fullButton}
+        style={[styles.fullButton, { backgroundColor: '#FEE2E2', marginTop: 15 }]}
         onPress={() => navigation.navigate('Deudas', { usuario })}
       >
-        <Text style={styles.btnText}>Deudas</Text>
+        <Text style={[styles.btnText, { color: '#B91C1C' }]}>Deudas Pendientes</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -136,9 +141,10 @@ const styles = StyleSheet.create({
   
   header: { alignItems: 'center', marginVertical: 30, paddingTop: 20 },
   avatar: {
-    width: 140, height: 140, 
-    justifyContent: 'center', alignItems: 'center', marginBottom: 5,
+    width: 140, height: 140, borderRadius: 70, backgroundColor: '#222',
+    justifyContent: 'center', alignItems: 'center', marginBottom: 15,
   },
+  avatarText: { fontSize: 60, color: '#FFF', fontWeight: 'bold' },
   name: { fontSize: 26, fontWeight: 'bold', color: '#000', marginBottom: 10 },
   
   sectionTitle: { fontSize: 26, fontWeight: 'bold', color: '#000', marginBottom: 15, marginTop: 10 },
