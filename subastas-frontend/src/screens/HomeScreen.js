@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, Image,
-  ActivityIndicator, TouchableOpacity, Alert
+  ActivityIndicator, TouchableOpacity, Alert, TextInput
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
@@ -21,38 +22,62 @@ export default function HomeScreen({ navigation, route }) {
       const response = await fetch(API_BASE_URL.replace('/auth', '/subastas'));
       let data = await response.json();
       
-      // Si no hay subastas en la base de datos, mostramos 2 de ejemplo para el demo
       if (!data || data.length === 0) {
+        // Dummy data to match the Figma mockup exactly
         data = [
           {
-            identificador: 999,
-            nombre: 'Subasta de Arte Moderno',
-            estado: 'abierta',
-            fechaInicio: new Date().toISOString(),
-            articulos: [
-              {
-                id: 1,
-                nombre: 'El Grito de la Noche',
-                descripcion: 'Pintura al óleo sobre lienzo, estilo expresionista. Certificado de autenticidad incluido.',
-                precioBase: 2500,
-                urlImagen: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=400'
-              }
-            ]
+            identificador: 1,
+            articulos: [{
+              id: 1,
+              nombre: 'Reloj vintage',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=200'
+            }]
           },
           {
-            identificador: 998,
-            nombre: 'Colección de Joyas Vintage',
-            estado: 'programada',
-            fechaInicio: new Date(Date.now() + 86400000).toISOString(),
-            articulos: [
-              {
-                id: 2,
-                nombre: 'Anillo de Diamantes 18k',
-                descripcion: 'Anillo de compromiso clásico de 1970 con un diamante central de 1 quilate. Estado impecable.',
-                precioBase: 12000,
-                urlImagen: 'https://images.unsplash.com/photo-1605100804763-247f66126e28?q=80&w=400'
-              }
-            ]
+            identificador: 2,
+            articulos: [{
+              id: 2,
+              nombre: 'Telefono vintage',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=200'
+            }]
+          },
+          {
+            identificador: 3,
+            articulos: [{
+              id: 3,
+              nombre: 'Muñeca vintage',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1560961811-9a742878d672?q=80&w=200'
+            }]
+          },
+          {
+            identificador: 4,
+            articulos: [{
+              id: 4,
+              nombre: 'Juego de tazas vintage',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1577416390772-aeb4f9408bcf?q=80&w=200'
+            }]
+          },
+          {
+            identificador: 5,
+            articulos: [{
+              id: 5,
+              nombre: 'Maquina de coser vintage',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1590425712128-4ceb6ba3fdfc?q=80&w=200'
+            }]
+          },
+          {
+            identificador: 6,
+            articulos: [{
+              id: 6,
+              nombre: 'Palos de golf usados por Tiger Woods',
+              precioBase: 1000000,
+              urlImagen: 'https://images.unsplash.com/photo-1593111774240-d529f12eb416?q=80&w=200'
+            }]
           }
         ];
       }
@@ -84,32 +109,20 @@ export default function HomeScreen({ navigation, route }) {
   };
 
   const renderItem = ({ item }) => {
-    // Tomamos la imagen del primer articulo si existe, sino un placeholder
-    const firstArticulo = item.articulos && item.articulos.length > 0 ? item.articulos[0] : null;
-    const imageUrl = firstArticulo ? firstArticulo.urlImagen : 'https://images.unsplash.com/photo-1584727638096-042c45049ebe?q=80&w=200&auto=format&fit=crop';
-    
-    // Formatear fechas si vienen como string
-    const fechaInicio = item.fechaInicio ? new Date(item.fechaInicio).toLocaleDateString() : '';
+    const articulo = item.articulos && item.articulos.length > 0 ? item.articulos[0] : null;
+    if (!articulo) return null;
 
     return (
-      <View style={styles.card}>
-        <Image source={{ uri: imageUrl }} style={styles.image} />
+      <TouchableOpacity 
+        style={styles.card}
+        onPress={() => navigation.navigate('DetalleArticulo', { articulo, subasta: item, usuario })}
+      >
+        <Image source={{ uri: articulo.urlImagen }} style={styles.image} />
         <View style={styles.cardContent}>
-          <Text style={styles.cardTitle}>{item.nombre}</Text>
-          <Text style={styles.cardDesc}>Estado: {item.estado}</Text>
-          <Text style={styles.cardDesc}>Fecha: {fechaInicio}</Text>
-          <Text style={styles.cardPrice}>{item.articulos?.length || 0} Lotes disponibles</Text>
-          <TouchableOpacity style={styles.pujaBtn} onPress={() => {
-            if (firstArticulo) {
-              navigation.navigate('DetalleArticulo', { articulo: firstArticulo, subasta: item, usuario });
-            } else {
-              Alert.alert('Subasta Vacía', 'Aún no hay artículos disponibles.');
-            }
-          }}>
-            <Text style={styles.pujaBtnText}>Ver Lotes</Text>
-          </TouchableOpacity>
+          <Text style={styles.cardTitle}>{articulo.nombre}</Text>
+          <Text style={styles.cardPrice}>Precio base: {articulo.precioBase}$</Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -126,57 +139,35 @@ export default function HomeScreen({ navigation, route }) {
       {/* Header */}
       <View style={styles.header}>
         <View>
-          <Text style={styles.headerTitle}>Subastas</Text>
-          {usuario && (
-            <Text style={styles.headerSub}>Hola, {usuario.nombre} 👋</Text>
-          )}
+          <Text style={styles.headerTitle}>Menu / Home</Text>
         </View>
         <View style={styles.headerRight}>
-          {!usuario?.isGuest && !usuario?.medioPagoRegistrado && (
-            <TouchableOpacity
-              style={styles.warnBadge}
-              onPress={() => navigation.navigate('MedioPago', { usuario })}
-            >
-              <Text style={styles.warnBadgeText}>⚠️ Pago</Text>
-            </TouchableOpacity>
-          )}
-          {!usuario?.isGuest && (
-            <TouchableOpacity 
-              style={styles.profileBtn}
-              onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
-            >
-              <Text style={styles.profileBtnText}>👤</Text>
-            </TouchableOpacity>
-          )}
           <TouchableOpacity 
-            style={[styles.profileBtn, {marginLeft: 10, backgroundColor: '#FEE2E2'}]}
-            onPress={() => navigation.replace('Login')}
+            style={styles.iconBtn}
+            onPress={() => navigation.navigate('Notificaciones', { usuario })}
           >
-            <Text style={styles.profileBtnText}>🚪</Text>
+            <Ionicons name="notifications-outline" size={28} color="#222" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.iconBtn}
+            onPress={() => navigation.navigate('ProfileDashboard', { usuario })}
+          >
+            <Ionicons name="person-circle" size={32} color="#222" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Banner de aviso si no tiene medio de pago */}
-      {!usuario?.isGuest && !usuario?.medioPagoRegistrado && (
-        <TouchableOpacity
-          style={styles.banner}
-          onPress={() => navigation.navigate('MedioPago', { usuario })}
-        >
-          <Text style={styles.bannerText}>
-            ⚠️  Podés ver las subastas, pero para pujar necesitás registrar un medio de pago. Tocá aquí para hacerlo.
-          </Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.searchContainer}>
+        <Ionicons name="menu-outline" size={20} color="#666" style={{ marginRight: 10 }} />
+        <TextInput 
+          style={styles.searchInput}
+          placeholder="Buscar..."
+          placeholderTextColor="#999"
+        />
+        <Ionicons name="search-outline" size={20} color="#666" style={{ marginLeft: 10 }} />
+      </View>
 
-      {/* Banner de aviso si es invitado */}
-      {usuario?.isGuest && (
-        <View style={[styles.banner, { backgroundColor: '#E0F2FE', borderBottomColor: '#0284C7' }]}>
-          <Text style={[styles.bannerText, { color: '#075985' }]}>
-            👋 Estás en modo invitado. Solo podés ver el catálogo. Para participar o ver detalles, iniciá sesión.
-          </Text>
-        </View>
-      )}
+      <Text style={styles.sectionTitle}>Item Destacadas</Text>
 
       <FlatList
         data={subastas}
@@ -201,54 +192,61 @@ export default function HomeScreen({ navigation, route }) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.BACKGROUND },
+  container: { flex: 1, backgroundColor: '#FFF' },
   loaderContainer: {
     flex: 1, justifyContent: 'center',
-    alignItems: 'center', backgroundColor: COLORS.BACKGROUND,
+    alignItems: 'center', backgroundColor: '#FFF',
   },
   header: {
     flexDirection: 'row', justifyContent: 'space-between',
     alignItems: 'center', paddingHorizontal: 20,
-    paddingTop: 55, paddingBottom: 12,
-    backgroundColor: COLORS.CARD_BG,
+    paddingTop: 55, paddingBottom: 15,
+    backgroundColor: '#FFF',
     borderBottomWidth: 1, borderBottomColor: '#EEE',
   },
-  headerTitle: { fontSize: 24, fontWeight: 'bold', color: COLORS.TEXT_TITLE },
-  headerSub: { fontSize: 13, color: '#777', marginTop: 2 },
+  headerTitle: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#02529C', 
+    textDecorationLine: 'underline'
+  },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
-  warnBadge: {
-    backgroundColor: '#FEF3C7', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 6,
-    borderWidth: 1, borderColor: '#F59E0B', marginRight: 10
+  iconBtn: {
+    marginLeft: 12,
   },
-  warnBadgeText: { fontSize: 12, color: '#92400E', fontWeight: '600' },
-  profileBtn: {
-    backgroundColor: '#EEE', width: 40, height: 40,
-    borderRadius: 20, alignItems: 'center', justifyContent: 'center'
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 20,
+    marginTop: 15,
+    paddingHorizontal: 15,
+    height: 45,
+    borderRadius: 25,
   },
-  profileBtnText: { fontSize: 20 },
-  banner: {
-    backgroundColor: '#FFF8E1', borderRadius: 0,
-    padding: 14, borderBottomWidth: 1, borderBottomColor: '#F59E0B',
+  searchInput: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
   },
-  bannerText: { fontSize: 13, color: '#78350F', lineHeight: 18 },
-  listContainer: { padding: 10 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  listContainer: { paddingHorizontal: 15, paddingBottom: 20 },
   card: {
-    backgroundColor: COLORS.CARD_BG, borderRadius: 14,
-    margin: 8, flex: 1, overflow: 'hidden', maxWidth: '46%',
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
+    backgroundColor: '#F8F9FA', borderRadius: 20,
+    margin: 5, flex: 1, overflow: 'hidden', maxWidth: '48%',
+    paddingBottom: 15,
   },
-  image: { width: '100%', height: 130, backgroundColor: '#EEE', resizeMode: 'cover' },
-  cardContent: { padding: 12 },
-  cardTitle: { fontSize: 15, fontWeight: 'bold', color: COLORS.TEXT_TITLE, marginBottom: 4 },
-  cardDesc: { fontSize: 12, color: '#666', marginBottom: 6 },
-  cardPrice: { fontSize: 13, color: COLORS.PRIMARY, fontWeight: '700', marginBottom: 10 },
-  pujaBtn: {
-    backgroundColor: COLORS.PRIMARY, paddingVertical: 10,
-    borderRadius: 8, alignItems: 'center',
-  },
-  pujaBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  image: { width: '100%', height: 140, resizeMode: 'cover', borderTopLeftRadius: 20, borderTopRightRadius: 20 },
+  cardContent: { padding: 12, paddingTop: 10 },
+  cardTitle: { fontSize: 10, color: '#333', marginBottom: 2 },
+  cardPrice: { fontSize: 9, color: '#666' },
   fab: {
     position: 'absolute',
     bottom: 30,
