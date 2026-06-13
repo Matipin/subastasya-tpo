@@ -1,5 +1,5 @@
 // IMPORTANTE: IP correcta para tu Wi-Fi u URL del tunnel
-export const API_BASE_URL = 'https://https://subastasya-tpo.onrender.com//api/v1/auth';
+export const API_BASE_URL = 'https://subastasya-tpo.onrender.com/api/v1/auth';
 
 // Interceptor global para saltear las pantallas de advertencia de los túneles (Localtunnel, Ngrok, etc.)
 const originalFetch = global.fetch;
