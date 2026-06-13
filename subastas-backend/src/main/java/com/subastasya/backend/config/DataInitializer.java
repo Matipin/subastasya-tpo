@@ -69,8 +69,11 @@ public class DataInitializer implements CommandLineRunner {
             usuarioRepository.save(u3);
         }
 
-        // Crear Subastas y Catálogos si no existen
-        if (subastaRepository.count() == 0) {
+        // Check if demo products exist
+        boolean hasDemoProducts = productoRepository.findAll().stream()
+                .anyMatch(p -> "Reloj vintage".equals(p.getDescripcionCompleta()));
+
+        if (!hasDemoProducts) {
             Empleado admin = new Empleado();
             admin.setDocumento("99999999");
             admin.setNombre("Admin Revisor");
@@ -93,14 +96,6 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("platino");
             subastaRepository.save(s1);
-
-            Subasta s2 = new Subasta();
-            s2.setFecha(LocalDate.now().plusDays(20));
-            s2.setHora(LocalTime.of(20, 0));
-            s2.setEstado("abierta");
-            s2.setUbicacion("Córdoba, Argentina");
-            s2.setCategoria("oro");
-            subastaRepository.save(s2);
 
             Catalogo c1 = new Catalogo();
             c1.setDescripcion("Joyas Exclusivas");

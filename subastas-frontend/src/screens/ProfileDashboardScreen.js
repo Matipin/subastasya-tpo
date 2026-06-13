@@ -71,15 +71,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         <Text style={styles.name}>{usuario?.nombre}</Text>
       </View>
 
-      {/* Botones Superiores */}
-      <View style={styles.rowButtons}>
-        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('MisSubastas', { usuario })}>
-          <Text style={styles.btnText}>Mis subastas</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.halfButton} onPress={() => navigation.navigate('SubastasGanadas', { usuario })}>
-          <Text style={styles.btnText}>Subastas ganadas</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Botones Superiores Eliminados porque están en estadísticas */}
 
       <TouchableOpacity 
         style={styles.fullButton} 
@@ -106,22 +98,26 @@ export default function ProfileDashboardScreen({ route, navigation }) {
       {/* Estadísticas */}
       <Text style={styles.sectionTitle}>Estadísticas</Text>
 
-      <View style={styles.metricsContainer}>
-        <View style={styles.metricBox}>
-          <Text style={styles.metricValue}>{metrics ? metrics.totalPujas : '-'}</Text>
-          <Text style={styles.metricLabel}>Pujas Realizadas</Text>
-        </View>
+      <TouchableOpacity 
+        style={styles.fullButton} 
+        onPress={() => navigation.navigate('MisSubastas', { usuario })}
+      >
+        <Text style={styles.btnText}>Total de pujas realizadas</Text>
+      </TouchableOpacity>
 
-        <View style={styles.metricBox}>
-          <Text style={styles.metricValue}>{metrics ? metrics.subastasParticipadas : '-'}</Text>
-          <Text style={styles.metricLabel}>Subastas (Participadas)</Text>
-        </View>
+      <TouchableOpacity 
+        style={styles.fullButton} 
+        onPress={() => navigation.navigate('SubastasGanadas', { usuario })}
+      >
+        <Text style={styles.btnText}>Historial de subastas</Text>
+      </TouchableOpacity>
 
-        <View style={styles.metricBox}>
-          <Text style={styles.metricValue}>{metrics ? metrics.ventasRealizadas : '-'}</Text>
-          <Text style={styles.metricLabel}>Ventas (Catálogo)</Text>
-        </View>
-      </View>
+      <TouchableOpacity 
+        style={styles.fullButton} 
+        onPress={() => navigation.navigate('MisProductos', { usuario })}
+      >
+        <Text style={styles.btnText}>Ventas Realizadas (vendedor)</Text>
+      </TouchableOpacity>
 
       <TouchableOpacity 
         style={[styles.fullButton, { backgroundColor: '#FEE2E2', marginTop: 15 }]}

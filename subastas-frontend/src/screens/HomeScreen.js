@@ -170,8 +170,7 @@ const styles = StyleSheet.create({
   headerTitle: { 
     fontSize: 16, 
     fontWeight: 'bold', 
-    color: '#02529C', 
-    textDecorationLine: 'underline'
+    color: '#333'
   },
   headerRight: { flexDirection: 'row', alignItems: 'center' },
   iconBtn: {
