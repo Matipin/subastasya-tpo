@@ -62,6 +62,13 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()} style={{position: 'absolute', left: 0, top: 0}}>
           <Text style={{color: COLORS.TEXT_TITLE, fontWeight: 'bold', fontSize: 16}}>← Home / Perfil</Text>
         </TouchableOpacity>
+
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('Notificaciones', { usuario })}
+          style={{position: 'absolute', right: 0, top: 0}}
+        >
+          <Text style={{color: COLORS.PRIMARY, fontWeight: 'bold', fontSize: 16}}>🔔 Avisos</Text>
+        </TouchableOpacity>
         
         <View style={styles.avatar}>
            <Text style={styles.avatarText}>{usuario?.nombre?.charAt(0) || 'U'}</Text>
@@ -86,7 +93,10 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         <Text style={styles.btnText}>Gestionar metodos de pago</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fullButton}>
+      <TouchableOpacity 
+        style={styles.fullButton}
+        onPress={() => navigation.navigate('PropuestaArticulo', { usuario })}
+      >
         <Text style={styles.btnText}>Postular venta de producto</Text>
       </TouchableOpacity>
 
@@ -99,22 +109,30 @@ export default function ProfileDashboardScreen({ route, navigation }) {
       </TouchableOpacity>
 
       {/* Estadísticas */}
-      <Text style={styles.sectionTitle}>Estadisticas</Text>
+      <Text style={styles.sectionTitle}>Estadísticas</Text>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Total de pujas realizadas</Text>
-      </TouchableOpacity>
+      <View style={styles.metricsContainer}>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.totalPujas : '-'}</Text>
+          <Text style={styles.metricLabel}>Pujas Realizadas</Text>
+        </View>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Historial de subastas</Text>
-      </TouchableOpacity>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.subastasParticipadas : '-'}</Text>
+          <Text style={styles.metricLabel}>Subastas (Participadas)</Text>
+        </View>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Ventas Realizadas (vendedor)</Text>
-      </TouchableOpacity>
+        <View style={styles.metricBox}>
+          <Text style={styles.metricValue}>{metrics ? metrics.ventasRealizadas : '-'}</Text>
+          <Text style={styles.metricLabel}>Ventas (Catálogo)</Text>
+        </View>
+      </View>
 
-      <TouchableOpacity style={styles.fullButton}>
-        <Text style={styles.btnText}>Deudas</Text>
+      <TouchableOpacity 
+        style={[styles.fullButton, { backgroundColor: '#FEE2E2', marginTop: 15 }]}
+        onPress={() => navigation.navigate('Deudas', { usuario })}
+      >
+        <Text style={[styles.btnText, { color: '#B91C1C' }]}>Deudas Pendientes</Text>
       </TouchableOpacity>
     </ScrollView>
   );
@@ -146,4 +164,13 @@ const styles = StyleSheet.create({
     borderRadius: 8, alignItems: 'center', marginBottom: 10 
   },
   btnText: { fontSize: 16, fontWeight: '600', color: '#111' },
+  metricsContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
+  metricBox: { 
+    flex: 1, backgroundColor: COLORS.CARD_BG, padding: 15, 
+    borderRadius: 12, alignItems: 'center', marginHorizontal: 4,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05, shadowRadius: 4, elevation: 2
+  },
+  metricValue: { fontSize: 24, fontWeight: 'bold', color: COLORS.PRIMARY, marginBottom: 5 },
+  metricLabel: { fontSize: 11, color: '#666', textAlign: 'center', fontWeight: '500' }
 });

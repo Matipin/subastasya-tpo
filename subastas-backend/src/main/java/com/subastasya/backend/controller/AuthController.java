@@ -42,10 +42,6 @@ public class AuthController {
     @Autowired
     private com.subastasya.backend.repository.PaisRepository paisRepository;
 
-    // ─────────────────────────────────────────────
-    // ETAPA 1: El usuario envía sus datos y fotos
-    //          → queda PENDIENTE_VALIDACION
-    // ─────────────────────────────────────────────
     @PostMapping("/registro")
     public ResponseEntity<?> registroEtapa1(@RequestBody RegistroEtapa1Request request) {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
@@ -63,11 +59,8 @@ public class AuthController {
         Cliente cliente = new Cliente();
         cliente.setNombre(request.getNombre() + " " + request.getApellido());
         cliente.setDireccion(request.getDomicilio());
-        // El profe pide "documento" obligatorio en la tabla personas, pero no lo pedimos en el front. Lo generamos.
         cliente.setDocumento("DOC-" + System.currentTimeMillis());
-        // cliente.setTelefono(request.getTelefono()); // No existe en el modelo del profe
         
-        // Buscar o crear país
         if (request.getPais() != null && !request.getPais().isBlank()) {
             java.util.Optional<com.subastasya.backend.model.Pais> paisOpt = paisRepository.findByNombreIgnoreCase(request.getPais().trim());
             if (paisOpt.isPresent()) {
@@ -83,7 +76,6 @@ public class AuthController {
             }
         }
 
-        // Guardar las dos fotos en el array de bytes que provee Persona
         String fotosCombinadas = request.getUrlFotoDniFront() + "|||" + request.getUrlFotoDniBack();
         cliente.setFoto(fotosCombinadas.getBytes(java.nio.charset.StandardCharsets.UTF_8));
         
@@ -97,10 +89,6 @@ public class AuthController {
                 .body("Registro recibido. Pendiente de validación por un administrador.");
     }
 
-    // ─────────────────────────────────────────────
-    // ETAPA 2: El usuario aprobado genera su contraseña
-    //          → queda ACTIVO con password seteado
-    // ─────────────────────────────────────────────
     @PostMapping("/activar")
     public ResponseEntity<?> activarCuenta(@RequestBody ActivarCuentaRequest request) {
         if (request.getToken() == null || request.getToken().isBlank()) {
@@ -115,8 +103,6 @@ public class AuthController {
 
         Usuario usuario = opt.get();
 
-        // Acepta tanto activación inicial (APROBADO_PENDIENTE_CLAVE)
-        // como recuperación de contraseña (ACTIVO con token temporal)
         if (usuario.getEstadoRegistro() != EstadoRegistro.APROBADO_PENDIENTE_CLAVE
                 && usuario.getEstadoRegistro() != EstadoRegistro.ACTIVO) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
@@ -129,19 +115,15 @@ public class AuthController {
         }
 
         usuario.setPassword(request.getPassword());
-        // Si era activación inicial, pasar a ACTIVO; si ya era ACTIVO, mantenerlo
         if (usuario.getEstadoRegistro() == EstadoRegistro.APROBADO_PENDIENTE_CLAVE) {
             usuario.setEstadoRegistro(EstadoRegistro.ACTIVO);
         }
-        usuario.setActivationToken(null); // Consumir el token (no reutilizable)
+        usuario.setActivationToken(null);
         usuarioRepository.save(usuario);
 
         return ResponseEntity.ok("¡Contraseña actualizada! Ya podés iniciar sesión.");
     }
 
-    // ─────────────────────────────────────────────
-    // LOGIN: Solo usuarios ACTIVOS con password
-    // ─────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         Optional<Usuario> usuarioOpt = usuarioRepository.findByEmail(request.getEmail());
@@ -173,9 +155,6 @@ public class AuthController {
                 .body("Credenciales incorrectas.");
     }
 
-    // ─────────────────────────────────────────────
-    // MEDIO DE PAGO: Obligatorio para poder pujar
-    // ─────────────────────────────────────────────
     @PostMapping("/medio-pago")
     public ResponseEntity<?> registrarMedioPago(@RequestBody MedioPagoRequest request) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail());
@@ -196,7 +175,6 @@ public class AuthController {
         medioPago.setTipo(request.getTipo());
         medioPago.setNumero(request.getNumero());
         medioPago.setTitular(request.getTitular());
-        // Por defecto, lo dejamos sin verificar hasta que la empresa lo valide
         medioPago.setVerificado(false);
         
         medioDePagoRepository.save(medioPago);
@@ -204,26 +182,17 @@ public class AuthController {
         return ResponseEntity.ok(usuario);
     }
 
-    // ─────────────────────────────────────────────
-    // FORGOT PASSWORD: Genera token y envía email
-    // Guarda en activationToken (campo existente) para
-    // que el paso 2 reutilice el endpoint /activar
-    // ─────────────────────────────────────────────
     @PostMapping("/forgot-password")
     public ResponseEntity<?> forgotPassword(@RequestBody ForgotPasswordRequest request) {
         if (request.getEmail() == null || request.getEmail().isBlank()) {
             return ResponseEntity.badRequest().body("El email es obligatorio.");
         }
 
-        // Por seguridad, siempre respondemos OK aunque el email no exista
         Optional<Usuario> opt = usuarioRepository.findByEmail(request.getEmail().trim());
         if (opt.isPresent()) {
             Usuario usuario = opt.get();
 
-            // Solo permitir recuperación si la cuenta está activa
             if (usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO) {
-                // Reutilizamos activationToken (campo existente) para no crear
-                // infraestructura nueva. El paso 2 usa /activar igual que en registro.
                 String token = UUID.randomUUID().toString();
                 usuario.setActivationToken(token);
                 usuarioRepository.save(usuario);

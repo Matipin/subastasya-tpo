@@ -30,4 +30,9 @@ public class Usuario {
     @JoinColumn(name = "cliente_id")
     @JsonUnwrapped
     private Cliente cliente;
+
+    @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "duenio_id")
+    @JsonIgnore
+    private Duenio duenio;
 }

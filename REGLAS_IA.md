@@ -9,7 +9,7 @@ Este documento contiene reglas estrictas establecidas por el usuario que todo ag
 
 ## 2. REGLA DE BASE DE DATOS (`EstructuraActual.sql`)
 - El esquema de base de datos dictado en `info-de-mas/EstructuraActual.sql` **se tiene que cumplir a raja tabla**.
-- **Excepción / Flexibilidad:** Sí está permitido crear nuevas tablas auxiliares (por ejemplo, para relacionar autenticación de Spring Security o medios de pago si no están definidos) o agregar más campos a las tablas o entidades de Java si el frontend los necesita (como el campo `nombre` o `fechaInicio` en las subastas), siempre y cuando la estructura principal que pide el profesor se respete.
+- **Excepción / Flexibilidad:** Sí está permitido crear nuevas tablas auxiliares (por ejemplo, para relacionar autenticación de Spring Security o medios de pago si no están definidos)
 - Todo el código debe reestructurarse para amoldarse a este SQL sin romper el frontend y sin crear nuevos endpoints.
 
 ---

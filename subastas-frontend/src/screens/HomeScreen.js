@@ -73,7 +73,11 @@ export default function HomeScreen({ navigation, route }) {
                 ]
               );
             } else {
-              // Funcionalidad en desarrollo
+              if (firstArticulo) {
+                navigation.navigate('DetalleArticulo', { articulo: firstArticulo, subasta: item, usuario });
+              } else {
+                Alert.alert('Subasta Vacía', 'Aún no hay artículos disponibles.');
+              }
             }
           }}>
             <Text style={styles.pujaBtnText}>Ver Lotes</Text>
@@ -108,6 +112,14 @@ export default function HomeScreen({ navigation, route }) {
               onPress={() => navigation.navigate('MedioPago', { usuario })}
             >
               <Text style={styles.warnBadgeText}>⚠️ Pago</Text>
+            </TouchableOpacity>
+          )}
+          {!usuario?.isGuest && (
+            <TouchableOpacity 
+              style={[styles.profileBtn, {marginRight: 10}]}
+              onPress={() => navigation.navigate('Notificaciones', { usuario })}
+            >
+              <Text style={styles.profileBtnText}>🔔</Text>
             </TouchableOpacity>
           )}
           {!usuario?.isGuest && (
@@ -154,7 +166,18 @@ export default function HomeScreen({ navigation, route }) {
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
+        numColumns={2}
       />
+
+      {/* Botón Flotante para Proponer Artículo */}
+      {!usuario?.isGuest && (
+        <TouchableOpacity 
+          style={styles.fab}
+          onPress={() => navigation.navigate('PropuestaArticulo', { usuario })}
+        >
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -191,21 +214,43 @@ const styles = StyleSheet.create({
     padding: 14, borderBottomWidth: 1, borderBottomColor: '#F59E0B',
   },
   bannerText: { fontSize: 13, color: '#78350F', lineHeight: 18 },
-  listContainer: { padding: 20 },
+  listContainer: { padding: 10 },
   card: {
     backgroundColor: COLORS.CARD_BG, borderRadius: 14,
-    marginBottom: 18, overflow: 'hidden',
+    margin: 8, flex: 1, overflow: 'hidden', maxWidth: '46%',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.08, shadowRadius: 6, elevation: 3,
   },
-  image: { width: '100%', height: 180, backgroundColor: '#EEE', resizeMode: 'cover' },
-  cardContent: { padding: 16 },
-  cardTitle: { fontSize: 18, fontWeight: 'bold', color: COLORS.TEXT_TITLE, marginBottom: 4 },
-  cardDesc: { fontSize: 13, color: '#666', marginBottom: 8 },
-  cardPrice: { fontSize: 17, color: COLORS.PRIMARY, fontWeight: '700', marginBottom: 14 },
+  image: { width: '100%', height: 130, backgroundColor: '#EEE', resizeMode: 'cover' },
+  cardContent: { padding: 12 },
+  cardTitle: { fontSize: 15, fontWeight: 'bold', color: COLORS.TEXT_TITLE, marginBottom: 4 },
+  cardDesc: { fontSize: 12, color: '#666', marginBottom: 6 },
+  cardPrice: { fontSize: 13, color: COLORS.PRIMARY, fontWeight: '700', marginBottom: 10 },
   pujaBtn: {
     backgroundColor: COLORS.PRIMARY, paddingVertical: 10,
     borderRadius: 8, alignItems: 'center',
   },
   pujaBtnText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  fab: {
+    position: 'absolute',
+    bottom: 30,
+    right: 30,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: COLORS.PRIMARY,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  fabText: {
+    color: '#FFF',
+    fontSize: 32,
+    fontWeight: 'bold',
+    lineHeight: 34,
+  }
 });

@@ -12,6 +12,11 @@ import MedioPagoScreen from './src/screens/MedioPagoScreen';
 import ProfileDashboardScreen from './src/screens/ProfileDashboardScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import GestionarMediosPagoScreen from './src/screens/GestionarMediosPagoScreen';
+import DetalleArticuloScreen from './src/screens/DetalleArticuloScreen';
+import SubastaEnVivoScreen from './src/screens/SubastaEnVivoScreen';
+import PropuestaArticuloScreen from './src/screens/PropuestaArticuloScreen';
+import DeudasScreen from './src/screens/DeudasScreen';
+import NotificacionesScreen from './src/screens/NotificacionesScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -32,6 +37,11 @@ export default function App() {
         <Stack.Screen name="ProfileDashboard" component={ProfileDashboardScreen} />
         <Stack.Screen name="GestionarMediosPago" component={GestionarMediosPagoScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+        <Stack.Screen name="DetalleArticulo" component={DetalleArticuloScreen} />
+        <Stack.Screen name="SubastaEnVivo" component={SubastaEnVivoScreen} />
+        <Stack.Screen name="PropuestaArticulo" component={PropuestaArticuloScreen} />
+        <Stack.Screen name="Deudas" component={DeudasScreen} />
+        <Stack.Screen name="Notificaciones" component={NotificacionesScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
