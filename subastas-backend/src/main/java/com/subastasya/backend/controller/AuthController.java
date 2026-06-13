@@ -67,6 +67,7 @@ public class AuthController {
                 cliente.setPais(paisOpt.get());
             } else {
                 com.subastasya.backend.model.Pais nuevoPais = new com.subastasya.backend.model.Pais();
+                nuevoPais.setIdentificador(paisRepository.findMaxId() + 1);
                 nuevoPais.setNombre(request.getPais().trim());
                 nuevoPais.setCapital("No especificada");
                 nuevoPais.setNacionalidad("No especificada");
