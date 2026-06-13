@@ -73,12 +73,11 @@ public class AdminController {
         try {
             emailService.sendActivationEmail(usuario.getEmail(), token);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Error al enviar el email al usuario. Revisa las credenciales SMTP en application.properties");
+            System.err.println("Aviso: No se pudo enviar el correo (" + e.getMessage() + "), pero el usuario será aprobado.");
         }
 
         usuarioRepository.save(usuario);
-        return ResponseEntity.ok("Usuario aprobado correctamente. Correo enviado.");
+        return ResponseEntity.ok("Usuario aprobado correctamente.\n\nEL TOKEN DE ACTIVACIÓN ES:\n" + token + "\n\nCópialo y envíaselo al usuario si el correo falló.");
     }
 
     // ─────────────────────────────────────────────
@@ -101,15 +100,15 @@ public class AdminController {
 
             try {
                 emailService.sendActivationEmail(usuario.getEmail(), token);
-                usuarioRepository.save(usuario);
-                aprobados++;
             } catch (Exception e) {
                 fallidos++;
             }
+            usuarioRepository.save(usuario);
+            aprobados++;
         }
 
         return ResponseEntity
-                .ok("Proceso masivo completado. Aprobados: " + aprobados + " | Fallidos (error de email): " + fallidos);
+                .ok("Proceso masivo completado. Aprobados exitosamente: " + aprobados + " | Fallos de correo (igual fueron aprobados): " + fallidos);
     }
 
     // ─────────────────────────────────────────────
