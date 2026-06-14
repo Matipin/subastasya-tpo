@@ -203,19 +203,15 @@ public class AuthController {
         if (opt.isPresent()) {
             Usuario usuario = opt.get();
 
-            if (usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO || usuario.getEstadoRegistro() == EstadoRegistro.APROBADO_PENDIENTE_CLAVE) {
+            if (usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO) {
                 String token = UUID.randomUUID().toString();
                 usuario.setActivationToken(token);
                 usuarioRepository.save(usuario);
 
                 try {
-                    if (usuario.getEstadoRegistro() == EstadoRegistro.ACTIVO) {
-                        emailService.sendRecoveryEmail(usuario.getEmail(), token);
-                    } else {
-                        emailService.sendActivationEmail(usuario.getEmail(), token);
-                    }
+                    emailService.sendRecoveryEmail(usuario.getEmail(), token);
                 } catch (Exception e) {
-                    System.err.println("Error enviando email: " + e.getMessage());
+                    System.err.println("Error enviando email de recuperación: " + e.getMessage());
                 }
             }
         }
