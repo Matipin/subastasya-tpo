@@ -13,6 +13,7 @@ public class EmailService {
 
     public void sendActivationEmail(String to, String token) {
         SimpleMailMessage message = new SimpleMailMessage(); 
+        message.setFrom("subastasya.sistema@gmail.com");
         message.setTo(to); 
         message.setSubject("SubastasYa - Tu cuenta ha sido validada"); 
         message.setText("¡Hola!\n\n" +
@@ -28,6 +29,7 @@ public class EmailService {
 
     public void sendRecoveryEmail(String to, String token) {
         SimpleMailMessage message = new SimpleMailMessage(); 
+        message.setFrom("subastasya.sistema@gmail.com");
         message.setTo(to); 
         message.setSubject("SubastasYa - Recuperación de contraseña"); 
         message.setText("¡Hola!\n\n" +
@@ -43,6 +45,7 @@ public class EmailService {
 
     public void sendRejectionEmail(String to, String reason) {
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom("subastasya.sistema@gmail.com");
         message.setTo(to);
         message.setSubject("SubastasYa - Problemas con tu validación");
         message.setText("¡Hola!\n\n" +
