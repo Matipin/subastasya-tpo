@@ -109,7 +109,7 @@ public class UserController {
                         Map<String, Object> map = new HashMap<>();
                         map.put("id", p.getIdentificador());
                         map.put("monto", p.getImporte());
-                        map.put("itemNombre", p.getItem().getProducto().getDescripcionCompleta());
+                        map.put("itemNombre", p.getItem().getProducto().getDescripcionCatalogo());
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
                         
@@ -172,7 +172,7 @@ public class UserController {
                 for (Pujo p : pujos) {
                     Map<String, Object> map = new HashMap<>();
                     map.put("id", p.getIdentificador().toString());
-                    map.put("articulo", p.getItem().getProducto().getDescripcionCompleta());
+                    map.put("articulo", p.getItem().getProducto().getDescripcionCatalogo());
                     map.put("subasta", p.getItem().getCatalogo().getDescripcion());
                     map.put("monto", p.getImporte());
                     map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());

@@ -55,7 +55,8 @@ public class AuctionController {
                 for (ItemCatalogo item : items) {
                     ArticuloDTO dto = new ArticuloDTO();
                     dto.setId(item.getProducto().getIdentificador());
-                    dto.setNombre(item.getProducto().getDescripcionCompleta());
+                    dto.setNombre(item.getProducto().getDescripcionCatalogo());
+                    dto.setDescripcion(item.getProducto().getDescripcionCompleta());
                     dto.setPrecioBase(item.getPrecioBase().doubleValue());
                     List<Foto> fotos = fotoRepository.findByProductoIdentificador(item.getProducto().getIdentificador());
                     if (!fotos.isEmpty() && fotos.get(0).getFoto() != null) {

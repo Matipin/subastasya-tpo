@@ -295,13 +295,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private Producto createDemoItem(Catalogo c, String nombre, Empleado admin, Duenio duenio, String estado) {
         Producto p = new Producto();
+        p.setDescripcionCatalogo(nombre); // <- This is now the TITLE in the UI
         if (nombre.contains("Reloj Vintage")) {
             p.setDescripcionCompleta("Atractivo reloj de pulsera vintage [Años 1960-1969] en muy buen estado de conservación. Una pieza clásica y elegante, perfecta para coleccionistas o para uso diario con un toque distinguido.");
         } else {
-            p.setDescripcionCompleta("Excelente pieza de colección en muy buen estado. " + nombre + " listo para ser adquirido en subasta.");
+            p.setDescripcionCompleta("Estado: " + estado + ". Excelente pieza de colección en muy buen estado. " + nombre + " listo para ser adquirido en subasta.");
         }
         p.setDisponible("no"); // En inventario o subasta no está "disponible" para uso normal
-        p.setDescripcionCatalogo(estado);
+        // Ya no sobrescribimos descripcionCatalogo con el estado.
         p.setRevisor(admin);
         p.setDuenio(duenio);
         p.setFecha(LocalDate.now());

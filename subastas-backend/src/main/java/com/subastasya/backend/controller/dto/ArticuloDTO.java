@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 public class ArticuloDTO {
     private Long id;
     private String nombre; // Descripcion del catalogo o similar
+    private String descripcion; // Descripcion completa
     private String urlImagen;
     private Double precioBase;
 }
