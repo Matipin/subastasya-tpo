@@ -9,6 +9,8 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
   const [status, setStatus] = useState(null);
   const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
+  const [customBid, setCustomBid] = useState('');
+  const [timeLeft, setTimeLeft] = useState(0);
 
   const fetchStatus = async () => {
     try {
@@ -42,7 +44,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
     websocket.onmessage = (e) => {
       const msg = JSON.parse(e.data);
-      if (msg.type === 'BID') {
+      if (msg.type === 'BID' || msg.type === 'STATE') {
         setStatus(prev => ({
           ...prev,
           monto_actual: msg.amount,
@@ -50,8 +52,14 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           puja_maxima: msg.maxBid,
           ultimo_postor: msg.user,
         }));
+        setCustomBid(msg.minBid.toString());
+        setTimeLeft(30); // reset local timer 30s
       } else if (msg.type === 'CHAT') {
         setChatMessages(prev => [...prev, msg]);
+      } else if (msg.type === 'ENDED') {
+        setStatus(prev => ({ ...prev, isEnded: true }));
+        setTimeLeft(0);
+        Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con $${msg.amount}`);
       }
     };
 
@@ -59,15 +67,34 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
     setWs(websocket);
 
+    const timerInterval = setInterval(() => {
+      setTimeLeft(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+
     return () => {
+      clearInterval(timerInterval);
       websocket.close();
     };
   }, []);
 
   const handleBid = () => {
     if (!status || !ws) return;
+    if (status.isEnded || timeLeft === 0) {
+      Alert.alert('Error', 'La subasta ha finalizado.');
+      return;
+    }
+    if (status.ultimo_postor === (usuario?.nombre || 'Usuario App')) {
+      Alert.alert('Error', 'Ya eres el líder actual de la puja.');
+      return;
+    }
+
+    const amountToBid = parseFloat(customBid);
+    if (isNaN(amountToBid) || amountToBid < status.puja_minima || amountToBid > status.puja_maxima) {
+      Alert.alert('Error', `La puja debe estar entre USD ${status.puja_minima} y USD ${status.puja_maxima}`);
+      return;
+    }
+
     setBidding(true);
-    const amountToBid = status.puja_minima;
 
     const bidMsg = {
       auctionId: subasta?.identificador || 1,
@@ -137,6 +164,13 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
             <Ionicons name="person" size={16} color="#852221" />
             <Text style={styles.postorText}>Líder: {status?.ultimo_postor || 'Nadie'}</Text>
           </View>
+
+          <View style={styles.timerBadge}>
+            <Ionicons name="time-outline" size={18} color="#852221" />
+            <Text style={styles.timerText}>
+              {timeLeft > 0 ? `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}` : 'FINALIZADO'}
+            </Text>
+          </View>
         </View>
 
         <View style={styles.bidControls}>
@@ -172,16 +206,27 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
       {/* Action Footer */}
       <View style={styles.footer}>
+        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 10}}>
+          <Text style={{fontWeight: 'bold', marginRight: 10}}>Tu Puja:</Text>
+          <TextInput 
+            style={styles.customBidInput}
+            keyboardType="numeric"
+            value={customBid}
+            onChangeText={setCustomBid}
+            placeholder={`Mín: ${status?.puja_minima || '0'}`}
+          />
+        </View>
+
         <TouchableOpacity 
-          style={styles.bidButton} 
+          style={[styles.bidButton, (status?.isEnded || timeLeft === 0) && {backgroundColor: '#CCC'}]} 
           onPress={handleBid}
-          disabled={bidding}
+          disabled={bidding || status?.isEnded || timeLeft === 0}
         >
           {bidding ? (
             <ActivityIndicator color="#FFF" />
           ) : (
             <>
-              <Text style={styles.bidButtonText}>PUJAR POR USD {status?.puja_minima?.toFixed(2) || '0'}</Text>
+              <Text style={styles.bidButtonText}>PUJAR AHORA</Text>
               <Ionicons name="flash" size={20} color="#FFF" style={{ marginLeft: 8 }} />
             </>
           )}
@@ -198,9 +243,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F7FA',
   },
   header: {
-    backgroundColor: '#1B263B',
-    paddingTop: 50,
-    paddingBottom: 20,
+    backgroundColor: '#852221',
+    paddingTop: 40,
+    paddingBottom: 15,
     paddingHorizontal: 15,
     flexDirection: 'row',
     alignItems: 'center',
@@ -232,6 +277,21 @@ const styles = StyleSheet.create({
     color: 'red',
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  timerBadge: {
+    marginTop: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF0F0',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  timerText: {
+    color: '#852221',
+    fontWeight: 'bold',
+    marginLeft: 8,
+    fontSize: 16,
   },
   itemCard: {
     backgroundColor: '#FFF',
@@ -318,7 +378,7 @@ const styles = StyleSheet.create({
   },
   bidButton: {
     backgroundColor: '#852221',
-    paddingVertical: 18,
+    paddingVertical: 14,
     borderRadius: 30,
     flexDirection: 'row',
     justifyContent: 'center',
@@ -328,6 +388,17 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 8,
+  },
+  customBidInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
   },
   bidButtonText: {
     color: '#FFF',

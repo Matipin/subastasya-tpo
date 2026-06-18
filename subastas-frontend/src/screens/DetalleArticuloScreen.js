@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 
@@ -7,6 +7,32 @@ const { width } = Dimensions.get('window');
 
 export default function DetalleArticuloScreen({ route, navigation }) {
   const { articulo, subasta, usuario } = route.params;
+  const isGuest = !usuario || usuario.isGuest;
+  const [isRegistered, setIsRegistered] = useState(subasta?.identificador === 1); // Mock initial state based on DataInitializer
+
+  const handleRegister = () => {
+    // 1. Verificar Medio de Pago
+    // Como no tenemos garantizado el flag exacto en la respuesta actual, simulamos la validación
+    // o verificamos si el usuario tiene el perfil completo.
+    if (!usuario?.mediosDePago && !usuario?.hasPaymentMethod && usuario?.estadoRegistro !== 'ACTIVO') {
+      Alert.alert(
+        'Medio de Pago Requerido', 
+        'Debes registrar un medio de pago habilitado antes de poder anotarte a una subasta.',
+        [{ text: 'Registrar', onPress: () => navigation.navigate('GestionarMediosPago') }, { text: 'Cancelar', style: 'cancel' }]
+      );
+      return;
+    }
+
+    // 2. Verificar Categoría
+    if (subasta?.categoria === 'oro' && usuario?.cliente?.categoria !== 'oro') {
+      Alert.alert('Acceso Denegado', 'Esta subasta es exclusiva para la categoría ORO.');
+      return;
+    }
+    
+    // Simulate successful registration
+    Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');
+    setIsRegistered(true);
+  };
   
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -32,9 +58,9 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       <View style={styles.detailsContainer}>
         <View style={styles.titleRow}>
           <Text style={styles.title}>{articulo.nombre}</Text>
-          {!usuario?.isGuest && (
+          {!isGuest && (
             <View style={styles.priceBadge}>
-              <Text style={styles.priceBadgeText}>USD {articulo.precioBase || '100'}</Text>
+              <Text style={styles.priceBadgeText}>USD {articulo.precioBase || '100.00'}</Text>
             </View>
           )}
         </View>
@@ -69,15 +95,37 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       </View>
 
       {/* Fixed Bottom Action */}
-      {!usuario?.isGuest ? (
+      {!isGuest ? (
         <View style={styles.bottomActionContainer}>
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => navigation.navigate('SubastaEnVivo', { articulo, subasta, usuario })}
-          >
-            <Text style={styles.actionButtonText}>Ingresar a Sala en Vivo</Text>
-            <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />
-          </TouchableOpacity>
+          {isRegistered ? (
+            <TouchableOpacity 
+              style={[
+                styles.actionButton, 
+                subasta?.estado !== 'abierta' && { backgroundColor: '#CCC' }
+              ]}
+              onPress={() => {
+                if (subasta?.estado === 'abierta') {
+                  navigation.navigate('SubastaEnVivo', { articulo, subasta, usuario });
+                } else {
+                  Alert.alert('Subasta Cerrada', 'Esta subasta aún no ha comenzado o ya finalizó.');
+                }
+              }}
+              disabled={subasta?.estado !== 'abierta'}
+            >
+              <Text style={styles.actionButtonText}>
+                {subasta?.estado === 'abierta' ? 'Ingresar a Sala en Vivo' : 'Subasta Programada'}
+              </Text>
+              {subasta?.estado === 'abierta' && <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />}
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={handleRegister}
+            >
+              <Text style={styles.actionButtonText}>Anotarse a la Subasta</Text>
+              <Ionicons name="create-outline" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+            </TouchableOpacity>
+          )}
         </View>
       ) : (
         <View style={styles.bottomActionContainer}>
@@ -203,13 +251,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   actionButton: {
-    backgroundColor: '#1B263B',
+    backgroundColor: '#852221',
     paddingVertical: 18,
     borderRadius: 30,
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#1B263B',
+    shadowColor: '#852221',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 5,
