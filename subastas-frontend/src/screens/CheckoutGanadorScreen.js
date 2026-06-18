@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Alert } fr
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
+import MercadoPagoBrick from '../components/MercadoPagoBrick';
 
 export default function CheckoutGanadorScreen({ route, navigation }) {
   const { articulo, checkoutDetails, usuario } = route.params || {};
@@ -17,6 +18,24 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
   const isFinalizado = item.estado_pago === 'finalizado';
 
   const [metodoEntrega, setMetodoEntrega] = useState('domicilio');
+  const [mediosPago, setMediosPago] = useState([]);
+  const [selectedMedioId, setSelectedMedioId] = useState(null);
+  const [showMPBrick, setShowMPBrick] = useState(false);
+  const [mpLoading, setMpLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isFinalizado && usuario?.email) {
+      fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/medios-de-pago?email=${encodeURIComponent(usuario.email)}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data && data.length > 0) {
+            setMediosPago(data);
+            setSelectedMedioId(data[0].idMedioDePago);
+          }
+        })
+        .catch(e => console.error(e));
+    }
+  }, [isFinalizado, usuario]);
   
   const details = checkoutDetails || {
     valorPujado: 15000,
@@ -30,29 +49,30 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
   const costoEnvio = metodoEntrega === 'domicilio' ? details.costoEnvioDomicilio : 0;
   const totalPagado = valorPujado + comision + costoEnvio;
 
-  const handleConfirmar = async () => {
-    if (metodoEntrega === 'retiro') {
-      Alert.alert(
-        'Atención',
-        'Al retirar personalmente perderás la cobertura del seguro. ¿Estás de acuerdo?',
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Aceptar y Confirmar', onPress: () => procesarPago() }
-        ]
-      );
-    } else {
-      procesarPago();
+  const handleConfirmar = () => {
+    if (!selectedMedioId && !showMPBrick && mediosPago.length > 0) {
+      Alert.alert('Error', 'Debes seleccionar un método de pago.');
+      return;
     }
+    if (showMPBrick) {
+      // If showing MP brick, they must submit through the brick
+      Alert.alert('Info', 'Por favor completa el formulario de Mercado Pago para continuar.');
+      return;
+    }
+    procesarPago();
   };
 
-  const procesarPago = async () => {
-    try {
-      Alert.alert('Pago realizado', 'El pago se procesó exitosamente con su medio predeterminado.', [
-        { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
-      ]);
-    } catch (e) {
-      Alert.alert('Error', 'Hubo un error procesando el pago. Intente nuevamente.');
-    }
+  const procesarPago = () => {
+    Alert.alert('Pago realizado', 'El pago se procesó exitosamente con tu medio de pago.', [
+      { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
+    ]);
+  };
+
+  const handleMPSubmit = (cardFormData) => {
+    // Faking success to bypass MP internal issues as requested
+    console.log("MP Form Data received:", cardFormData);
+    setMpLoading(false);
+    procesarPago();
   };
 
   if (isFinalizado) {
@@ -70,7 +90,6 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
             <Text style={styles.summaryTitle}>Objeto Recibido</Text>
             <Text style={styles.summaryText}>Articulo: <Text style={{fontWeight:'bold'}}>{item.nombre}</Text></Text>
             <Text style={styles.summaryText}>Importe Abonado: <Text style={{fontWeight:'bold'}}>${valorPujado}</Text></Text>
-            <Text style={styles.summaryText}>Método de Pago: <Text style={{fontWeight:'bold'}}>Tarjeta Visa terminada en 1234</Text></Text>
             <Text style={[styles.summaryText, {marginTop: 20, fontStyle:'italic', textAlign:'center'}]}>La transacción se ha completado y has recibido tu artículo correctamente.</Text>
           </View>
         </ScrollView>
@@ -147,16 +166,42 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
 
       <View style={styles.paymentMethodSection}>
         <Text style={[styles.sectionTitle, { marginLeft: 20 }]}>Método de Pago</Text>
-        <View style={[styles.card, styles.paymentCard]}>
-          <Ionicons name="card" size={24} color="#555" />
-          <Text style={styles.paymentText}>Tarjeta Visa terminada en 1234</Text>
-          <Ionicons name="checkmark-circle" size={24} color={COLORS.PRIMARY} />
-        </View>
+        
+        {mediosPago.map(mp => (
+          <TouchableOpacity 
+            key={mp.idMedioDePago} 
+            style={[styles.card, styles.paymentCard, selectedMedioId === mp.idMedioDePago && !showMPBrick && { borderColor: COLORS.PRIMARY, borderWidth: 2 }]}
+            onPress={() => { setSelectedMedioId(mp.idMedioDePago); setShowMPBrick(false); }}
+          >
+            <Ionicons name={mp.tipo === 'TARJETA' ? 'card' : 'business'} size={24} color="#555" />
+            <Text style={styles.paymentText}>
+              {mp.tipo === 'TARJETA' ? `Tarjeta terminada en ${mp.numero?.slice(-4) || '****'}` : `Cuenta terminada en ${mp.numero?.slice(-4) || '****'}`}
+            </Text>
+            {selectedMedioId === mp.idMedioDePago && !showMPBrick && <Ionicons name="checkmark-circle" size={24} color={COLORS.PRIMARY} />}
+          </TouchableOpacity>
+        ))}
+
+        <TouchableOpacity 
+          style={[styles.card, styles.paymentCard, showMPBrick && { borderColor: COLORS.PRIMARY, borderWidth: 2 }]}
+          onPress={() => { setShowMPBrick(true); setSelectedMedioId(null); }}
+        >
+          <Ionicons name="add-circle" size={24} color={COLORS.PRIMARY} />
+          <Text style={[styles.paymentText, { color: COLORS.PRIMARY }]}>Pagar con una nueva tarjeta (MercadoPago)</Text>
+        </TouchableOpacity>
+        
+        {showMPBrick && (
+          <View style={{ marginHorizontal: 20, marginTop: 10, borderRadius: 10, overflow: 'hidden' }}>
+            {mpLoading && <ActivityIndicator color={COLORS.PRIMARY} style={{ margin: 20 }} />}
+            <MercadoPagoBrick onSubmit={handleMPSubmit} usuarioEmail={usuario?.email} />
+          </View>
+        )}
       </View>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
-        <Text style={styles.submitButtonText}>Confirmar compra</Text>
-      </TouchableOpacity>
+      {!showMPBrick && (
+        <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
+          <Text style={styles.submitButtonText}>Confirmar compra</Text>
+        </TouchableOpacity>
+      )}
     </ScrollView>
   );
 }
