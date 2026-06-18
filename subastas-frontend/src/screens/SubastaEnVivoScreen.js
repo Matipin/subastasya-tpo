@@ -10,16 +10,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
   const [customBid, setCustomBid] = useState('');
-  
-  const calculateTimeLeft = () => {
-    if (!subasta?.hora) return 600;
-    const [h, m] = subasta.hora.split(':');
-    const start = new Date();
-    start.setHours(parseInt(h, 10), parseInt(m, 10), 0);
-    const diff = Math.floor((start.getTime() + 10 * 60000 - new Date().getTime()) / 1000);
-    return diff > 0 ? diff : 0;
-  };
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState(600);
 
   const fetchStatus = async () => {
     try {
