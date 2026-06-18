@@ -185,8 +185,14 @@ public class DataInitializer implements CommandLineRunner {
         // -------------------------
         // HISTORIAL Y ESTADISTICAS
         // -------------------------
-        // Generar Historial Ganado y Deuda para Usuario TEST
-        if (pujoRepository.findByAsistenteIdentificador(u1.getCliente().getIdentificador()).isEmpty() && deudaRepository.findByUsuarioIdUsuario(u1.getIdUsuario()).isEmpty()) {
+        // Limpiar deudas accidentales viejas del usuario Test
+        List<Deuda> testDebts = deudaRepository.findByUsuarioIdUsuario(u1.getIdUsuario());
+        for (Deuda d : testDebts) {
+            deudaRepository.delete(d);
+        }
+
+        // Generar Historial Ganado para Usuario TEST
+        if (pujoRepository.findByAsistenteIdentificador(u1.getCliente().getIdentificador()).isEmpty()) {
             Subasta sh1 = createHistoricalSubasta("Subasta Pasada 1", admin);
             Asistente ah1 = createAsistente(u1.getCliente(), sh1);
             ItemCatalogo ih1 = createHistoricalItem(sh1, "Jarrón Dinastía Ming", admin, duenioBase);
