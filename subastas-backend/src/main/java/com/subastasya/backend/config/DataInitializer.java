@@ -295,7 +295,10 @@ public class DataInitializer implements CommandLineRunner {
 
     private Producto createDemoItem(Catalogo c, String nombre, Empleado admin, Duenio duenio, String estado) {
         Producto p = new Producto();
-        p.setDescripcionCompleta(nombre);
+        String[] autores = {"Juan Pérez", "Marta Minujín", "Antonio Berni", "Salvador Dalí", "Picasso"};
+        String autor = autores[(int)(Math.random() * autores.length)];
+        int anio = 1850 + (int)(Math.random() * 150);
+        p.setDescripcionCompleta(nombre + ". Obra original de " + autor + ". Creado en el año " + anio + ". Pieza certificada en excelente estado de conservación, con gran valor histórico.");
         p.setDisponible("no"); // En inventario o subasta no está "disponible" para uso normal
         p.setDescripcionCatalogo(estado);
         p.setRevisor(admin);

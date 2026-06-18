@@ -50,7 +50,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
       // const response = await fetch(`${API_BASE_URL}/users/me/items/won/${item.id}/checkout`, { method: 'POST', ... });
       
       Alert.alert('Pago realizado', 'El pago se procesó exitosamente con su medio predeterminado.', [
-        { text: 'Volver al menu', onPress: () => navigation.navigate('Home') }
+        { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
       ]);
     } catch (e) {
       Alert.alert('Error', 'Hubo un error procesando el pago. Intente nuevamente.');
@@ -117,7 +117,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         onPress={() => setMetodoEntrega('retiro')}
       >
         <Text style={styles.deliveryTitle}>Retirar personalmente</Text>
-        <Text style={styles.deliverySubtitle}>Sin costo</Text>
+        <Text style={styles.deliverySubtitle}>Sin costo - Retirar en Av. Libertador 1234, CABA</Text>
         {metodoEntrega === 'retiro' && (
           <View style={styles.warningBox}>
              <Ionicons name="warning-outline" size={16} color="#B45309" />
@@ -126,9 +126,11 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         )}
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
-        <Text style={styles.submitButtonText}>Confirmar compra</Text>
-      </TouchableOpacity>
+      {item.estado_pago !== 'finalizado' && (
+        <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
+          <Text style={styles.submitButtonText}>Confirmar compra</Text>
+        </TouchableOpacity>
+      )}
 
     </ScrollView>
   );

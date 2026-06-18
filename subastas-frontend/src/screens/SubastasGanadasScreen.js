@@ -37,17 +37,17 @@ export default function SubastasGanadasScreen({ route, navigation }) {
         <Text style={styles.itemName}>{item.itemNombre}</Text>
         <Text style={styles.dateText}>Ganado el {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
         <Text style={styles.montoText}>Por USD {item.monto?.toFixed(2)}</Text>
-        <View style={[styles.badge, item.estado_pago === 'pagado' ? styles.badgePagado : styles.badgePendiente]}>
-          <Text style={[styles.badgeText, item.estado_pago === 'pagado' ? styles.badgeTextPagado : styles.badgeTextPendiente]}>
-            {item.estado_pago === 'pagado' ? 'Pagado' : 'Para Pagar'}
+        <View style={[styles.badge, item.estado_pago === 'finalizado' ? styles.badgeFinalizado : (item.estado_pago === 'pagado' ? styles.badgePagado : styles.badgePendiente)]}>
+          <Text style={[styles.badgeText, item.estado_pago === 'finalizado' ? styles.badgeTextFinalizado : (item.estado_pago === 'pagado' ? styles.badgeTextPagado : styles.badgeTextPendiente)]}>
+            {item.estado_pago === 'finalizado' ? 'Finalizado' : (item.estado_pago === 'pagado' ? 'Pagado' : 'Para Pagar')}
           </Text>
         </View>
       </View>
       <TouchableOpacity 
-        style={styles.actionButton}
+        style={[styles.actionButton, item.estado_pago === 'finalizado' && {backgroundColor: '#6B7280'}]}
         onPress={() => navigation.navigate('CheckoutGanador', { item, usuario })}
       >
-        <Text style={styles.actionText}>Gestionar</Text>
+        <Text style={styles.actionText}>{item.estado_pago === 'finalizado' ? 'Ver Resumen' : 'Gestionar'}</Text>
       </TouchableOpacity>
     </View>
   );
@@ -150,6 +150,9 @@ const styles = StyleSheet.create({
   badgePagado: {
     backgroundColor: '#D1FAE5',
   },
+  badgeFinalizado: {
+    backgroundColor: '#E5E7EB',
+  },
   badgePendiente: {
     backgroundColor: '#FEE2E2',
   },
@@ -159,6 +162,9 @@ const styles = StyleSheet.create({
   },
   badgeTextPagado: {
     color: '#065F46',
+  },
+  badgeTextFinalizado: {
+    color: '#4B5563',
   },
   badgeTextPendiente: {
     color: '#991B1B',

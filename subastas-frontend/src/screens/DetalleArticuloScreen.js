@@ -117,9 +117,9 @@ export default function DetalleArticuloScreen({ route, navigation }) {
 
         <Text style={styles.sectionTitle}>Información de Subasta</Text>
         <View style={styles.auctionInfoBox}>
-          <Ionicons name="gavel" size={24} color={COLORS.PRIMARY} />
+          <Ionicons name="hammer" size={24} color={COLORS.PRIMARY} />
           <View style={{ marginLeft: 12 }}>
-            <Text style={styles.auctionTitle}>{subasta?.nombre || 'Subasta Activa'}</Text>
+            <Text style={styles.auctionTitle}>{subasta?.nombre || 'Subasta Activa'} (Cat: {subasta?.categoria})</Text>
             <Text style={styles.auctionStatus}>Estado: {subasta?.estado === 'abierta' && !isSubastaStarted ? 'Programada' : subasta?.estado}</Text>
           </View>
         </View>

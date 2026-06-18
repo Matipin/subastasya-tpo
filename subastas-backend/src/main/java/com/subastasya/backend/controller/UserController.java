@@ -113,12 +113,36 @@ public class UserController {
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
                         
-                        // Fake estado_pago based on result size
-                        map.put("estado_pago", result.size() < 2 ? "pagado" : "pendiente");
+                        // Fake estado_pago
+                        if (result.size() == 0) map.put("estado_pago", "finalizado");
+                        else if (result.size() == 1) map.put("estado_pago", "pagado");
+                        else map.put("estado_pago", "pendiente");
                         
                         result.add(map);
                     }
                 }
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/me/auctions/registered")
+    public ResponseEntity<?> getRegisteredAuctions(@RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        Usuario user = opt.get();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        if (user.getCliente() != null) {
+            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+            for (Asistente a : asistentes) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", a.getSubasta().getIdentificador());
+                map.put("nombre", "Subasta " + a.getSubasta().getUbicacion());
+                map.put("fecha", a.getSubasta().getFecha());
+                map.put("hora", a.getSubasta().getHora());
+                map.put("estado", a.getSubasta().getEstado());
+                map.put("categoria", a.getSubasta().getCategoria());
+                result.add(map);
             }
         }
         return ResponseEntity.ok(result);
