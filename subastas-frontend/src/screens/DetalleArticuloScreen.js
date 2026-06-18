@@ -3,13 +3,13 @@ import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
-import { AuthContext } from '../context/AuthContext';
+
 
 const { width } = Dimensions.get('window');
 
 export default function DetalleArticuloScreen({ route, navigation }) {
-  const { articulo, subasta } = route.params;
-  const { usuario, isGuest } = useContext(AuthContext);
+  const { articulo, subasta, usuario } = route.params;
+  const isGuest = !usuario || usuario.isGuest;
   
   const [isRegistered, setIsRegistered] = useState(false);
   const [loadingReg, setLoadingReg] = useState(true);
