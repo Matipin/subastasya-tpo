@@ -23,6 +23,7 @@ export default function HomeScreen({ navigation, route }) {
       let data = await response.json();
       
       if (data && data.length > 0) {
+        let allItems = [];
         data.forEach(subasta => {
           if (subasta.estado === 'abierta' || subasta.estado === 'programada') {
             if (subasta.articulos && subasta.articulos.length > 0) {
