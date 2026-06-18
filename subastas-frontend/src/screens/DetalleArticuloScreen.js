@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert, SafeAreaView } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -53,8 +53,20 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     setIsRegistered(true);
   };
   
+  const isSubastaStarted = React.useMemo(() => {
+    if (!subasta) return false;
+    if (subasta.estado !== 'abierta') return false;
+    try {
+      const subastaDate = new Date(`${subasta.fecha}T${subasta.hora}`);
+      return subastaDate <= new Date();
+    } catch(e) {
+      return true; // Fallback
+    }
+  }, [subasta]);
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <SafeAreaView style={styles.container}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
       {/* Header Image */}
       <View style={styles.imageContainer}>
         {articulo.urlImagen ? (
@@ -108,7 +120,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
           <Ionicons name="gavel" size={24} color={COLORS.PRIMARY} />
           <View style={{ marginLeft: 12 }}>
             <Text style={styles.auctionTitle}>{subasta?.nombre || 'Subasta Activa'}</Text>
-            <Text style={styles.auctionStatus}>Estado: {subasta?.estado || 'Programada'}</Text>
+            <Text style={styles.auctionStatus}>Estado: {subasta?.estado === 'abierta' && !isSubastaStarted ? 'Programada' : subasta?.estado}</Text>
           </View>
         </View>
       </View>
@@ -120,21 +132,21 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             <TouchableOpacity 
               style={[
                 styles.actionButton, 
-                subasta?.estado !== 'abierta' && { backgroundColor: '#CCC' }
+                !isSubastaStarted && { backgroundColor: '#CCC' }
               ]}
               onPress={() => {
-                if (subasta?.estado === 'abierta') {
+                if (isSubastaStarted) {
                   navigation.navigate('SubastaEnVivo', { articulo, subasta, usuario });
                 } else {
-                  Alert.alert('Subasta Cerrada', 'Esta subasta aún no ha comenzado o ya finalizó.');
+                  Alert.alert('Subasta Programada', 'Esta subasta aún no ha comenzado.');
                 }
               }}
-              disabled={subasta?.estado !== 'abierta'}
+              disabled={!isSubastaStarted}
             >
               <Text style={styles.actionButtonText}>
-                {subasta?.estado === 'abierta' ? 'Ingresar a Sala en Vivo' : 'Subasta Programada'}
+                {isSubastaStarted ? 'Ingresar a Sala en Vivo' : 'Subasta Programada'}
               </Text>
-              {subasta?.estado === 'abierta' && <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />}
+              {isSubastaStarted && <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />}
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
@@ -158,6 +170,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
         </View>
       )}
     </ScrollView>
+    </SafeAreaView>
   );
 }
 

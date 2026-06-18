@@ -37,6 +37,11 @@ export default function SubastasGanadasScreen({ route, navigation }) {
         <Text style={styles.itemName}>{item.itemNombre}</Text>
         <Text style={styles.dateText}>Ganado el {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
         <Text style={styles.montoText}>Por USD {item.monto?.toFixed(2)}</Text>
+        <View style={[styles.badge, item.estado_pago === 'pagado' ? styles.badgePagado : styles.badgePendiente]}>
+          <Text style={[styles.badgeText, item.estado_pago === 'pagado' ? styles.badgeTextPagado : styles.badgeTextPendiente]}>
+            {item.estado_pago === 'pagado' ? 'Pagado' : 'Para Pagar'}
+          </Text>
+        </View>
       </View>
       <TouchableOpacity 
         style={styles.actionButton}
@@ -134,5 +139,28 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 12,
+  },
+  badge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    marginTop: 4,
+  },
+  badgePagado: {
+    backgroundColor: '#D1FAE5',
+  },
+  badgePendiente: {
+    backgroundColor: '#FEE2E2',
+  },
+  badgeText: {
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  badgeTextPagado: {
+    color: '#065F46',
+  },
+  badgeTextPendiente: {
+    color: '#991B1B',
   }
 });

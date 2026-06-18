@@ -24,8 +24,10 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
     medioPago: 'Visa ****1234',
   };
 
+  const valorPujado = item.monto || details.valorPujado;
+  const comision = valorPujado * 0.10;
   const costoEnvio = metodoEntrega === 'domicilio' ? details.costoEnvioDomicilio : 0;
-  const totalPagado = details.valorPujado + details.comision + costoEnvio;
+  const totalPagado = valorPujado + comision + costoEnvio;
 
   const handleConfirmar = async () => {
     if (metodoEntrega === 'retiro') {
@@ -79,11 +81,11 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Valor pujado</Text>
-          <Text style={styles.rowValue}>${details.valorPujado.toLocaleString()}</Text>
+          <Text style={styles.rowValue}>${valorPujado.toLocaleString()}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Comision (10%)</Text>
-          <Text style={styles.rowValue}>${details.comision.toLocaleString()}</Text>
+          <Text style={styles.rowValue}>${comision.toLocaleString()}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Costo de envio</Text>

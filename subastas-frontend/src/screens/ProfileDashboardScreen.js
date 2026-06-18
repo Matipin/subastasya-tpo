@@ -108,7 +108,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
 
       <TouchableOpacity 
         style={styles.fullButton} 
-        onPress={() => navigation.navigate('MisSubastas', { usuario })}
+        onPress={() => navigation.navigate('HistorialPujas', { usuario })}
       >
         <Text style={styles.btnText}>Total de pujas realizadas</Text>
       </TouchableOpacity>

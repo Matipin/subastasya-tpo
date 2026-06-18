@@ -202,12 +202,7 @@ public class DataInitializer implements CommandLineRunner {
             ItemCatalogo ih3 = createHistoricalItem(sh3, "Collar de Perlas", admin, duenioBase);
             createWinningPujo(ah3, ih3, new BigDecimal("2300.00"));
 
-            Deuda deudaTest = new Deuda();
-            deudaTest.setUsuario(u1);
-            deudaTest.setMonto(new BigDecimal("2300.00"));
-            deudaTest.setMotivo("Pago pendiente por adjudicación de Collar de Perlas");
-            deudaTest.setPagada(false);
-            deudaRepository.save(deudaTest);
+            // Deuda eliminada para el usuario Test para que no se bloquee al entrar
         }
 
         // Generar Historial Ganado, Deuda, y Productos Vendedor para Usuario ORO

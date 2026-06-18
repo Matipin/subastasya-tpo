@@ -4,7 +4,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
-export default function HistorialPujasScreen({ navigation }) {
+export default function HistorialPujasScreen({ route, navigation }) {
+  const { usuario } = route.params || {};
   const [pujas, setPujas] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,17 +15,12 @@ export default function HistorialPujasScreen({ navigation }) {
 
   const fetchPujas = async () => {
     try {
-      // Simulación de llamada a la API
-      // const response = await fetch(`${API_BASE_URL}/users/me/bids`, { ... });
-      // const data = await response.json();
-      
-      // Data de prueba basada en Figma 38
-      const dummyData = [
-        { id: '1', articulo: 'Reloj Vintage', subasta: 'Subasta de Arte y Antigüedades', monto: 15000, fecha: '10/06/2026' },
-        { id: '2', articulo: 'Juego de Tazas', subasta: 'Subasta Colección Privada', monto: 3500, fecha: '08/06/2026' },
-        { id: '3', articulo: 'Máquina de Coser', subasta: 'Subasta de Arte y Antigüedades', monto: 8000, fecha: '01/06/2026' },
-      ];
-      setPujas(dummyData);
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/bids?email=${encodeURIComponent(usuario?.email || '')}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        setPujas(data);
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -39,7 +35,7 @@ export default function HistorialPujasScreen({ navigation }) {
         <Text style={styles.monto}>${item.monto.toLocaleString()}</Text>
       </View>
       <Text style={styles.subastaText}>{item.subasta}</Text>
-      <Text style={styles.fechaText}>Fecha de puja: {item.fecha}</Text>
+      <Text style={styles.fechaText}>Fecha de puja: {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
     </View>
   );
 

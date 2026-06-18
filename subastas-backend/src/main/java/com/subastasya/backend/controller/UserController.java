@@ -112,6 +112,10 @@ public class UserController {
                         map.put("itemNombre", p.getItem().getProducto().getDescripcionCompleta());
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
+                        
+                        // Fake estado_pago based on result size
+                        map.put("estado_pago", result.size() < 2 ? "pagado" : "pendiente");
+                        
                         result.add(map);
                     }
                 }
@@ -129,5 +133,29 @@ public class UserController {
         
         List<Producto> products = productoRepository.findByDuenioIdentificador(user.getDuenio().getIdentificador());
         return ResponseEntity.ok(products);
+    }
+
+    @GetMapping("/me/bids")
+    public ResponseEntity<?> getBids(@RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        Usuario user = opt.get();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        if (user.getCliente() != null) {
+            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+            for (Asistente a : asistentes) {
+                List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(a.getIdentificador());
+                for (Pujo p : pujos) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", p.getIdentificador().toString());
+                    map.put("articulo", p.getItem().getProducto().getDescripcionCompleta());
+                    map.put("subasta", p.getItem().getCatalogo().getDescripcion());
+                    map.put("monto", p.getImporte());
+                    map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
+                    result.add(map);
+                }
+            }
+        }
+        return ResponseEntity.ok(result);
     }
 }
