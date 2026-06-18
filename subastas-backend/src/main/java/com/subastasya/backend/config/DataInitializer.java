@@ -288,10 +288,13 @@ public class DataInitializer implements CommandLineRunner {
         pujoRepository.save(p);
     }
 
-    private void createNotificacion(Usuario u, String mensaje) {
+    private void createNotificacion(Usuario u, String msj) {
+        if (u == null || u.getIdUsuario() == null) return;
         Notificacion n = new Notificacion();
-        n.setUsuario(u);
-        n.setMensaje(mensaje);
+        Usuario ref = new Usuario();
+        ref.setIdUsuario(u.getIdUsuario());
+        n.setUsuario(ref);
+        n.setMensaje(msj);
         n.setLeida(false);
         n.setFechaCreacion(LocalDateTime.now());
         notificacionRepository.save(n);
