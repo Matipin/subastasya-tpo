@@ -93,4 +93,55 @@ public class UserController {
 
         return ResponseEntity.ok(metrics);
     }
+
+    @GetMapping("/me/won-auctions")
+    public ResponseEntity<?> getWonAuctions(@RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        Usuario user = opt.get();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        if (user.getCliente() != null) {
+            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+            for (Asistente a : asistentes) {
+                List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(a.getIdentificador());
+                for (Pujo p : pujos) {
+                    if ("si".equals(p.getGanador())) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("id", p.getIdentificador());
+                        map.put("monto", p.getImporte());
+                        map.put("itemNombre", p.getItem().getProducto().getDescripcionCompleta());
+                        map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
+                        map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
+                        result.add(map);
+                    }
+                }
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/me/products")
+    public ResponseEntity<?> getProducts(@RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        Usuario user = opt.get();
+        if (user.getDuenio() == null) return ResponseEntity.ok(new java.util.ArrayList<>());
+        
+        List<Producto> products = productoRepository.findByDuenioIdentificador(user.getDuenio().getIdentificador());
+        return ResponseEntity.ok(products);
+    }
+
+    @PostMapping("/me/products/{id}/accept-offer")
+    public ResponseEntity<?> acceptOffer(@PathVariable Long id) {
+        Optional<Producto> opt = productoRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        
+        Producto p = opt.get();
+        p.setDescripcionCatalogo("Aprobado");
+        productoRepository.save(p);
+        
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "El producto se subastará en Mónaco, Colección Verano 2026, el 25/12/2026.");
+        return ResponseEntity.ok(response);
+    }
 }

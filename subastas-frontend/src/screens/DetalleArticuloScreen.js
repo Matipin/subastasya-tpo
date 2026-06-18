@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
+import { API_BASE_URL } from './api';
 
 const { width } = Dimensions.get('window');
 
@@ -10,10 +11,28 @@ export default function DetalleArticuloScreen({ route, navigation }) {
   const isGuest = !usuario || usuario.isGuest;
   const [isRegistered, setIsRegistered] = useState(subasta?.identificador === 1); // Mock initial state based on DataInitializer
 
-  const handleRegister = () => {
-    // 1. Verificar Medio de Pago
-    // Como no tenemos garantizado el flag exacto en la respuesta actual, simulamos la validación
-    // o verificamos si el usuario tiene el perfil completo.
+  const handleRegister = async () => {
+    // 1. Verificar Deudas Impagas
+    try {
+      const debtsUrl = `${API_BASE_URL.replace('/auth', '/users')}/me/debts?email=${encodeURIComponent(usuario?.email || '')}`;
+      const debtsResponse = await fetch(debtsUrl);
+      if (debtsResponse.ok) {
+        const debtsData = await debtsResponse.json();
+        const hasUnpaidDebts = debtsData.some(d => !d.pagada);
+        if (hasUnpaidDebts) {
+          Alert.alert(
+            'Inscripción Bloqueada', 
+            'Tienes deudas pendientes por subastas anteriores. Por favor, regulariza tu situación.',
+            [{ text: 'Ir a Deudas', onPress: () => navigation.navigate('Deudas', { usuario }) }, { text: 'Cancelar', style: 'cancel' }]
+          );
+          return;
+        }
+      }
+    } catch (e) {
+      console.log('Error checking debts', e);
+    }
+
+    // 2. Verificar Medio de Pago
     if (!usuario?.mediosDePago && !usuario?.hasPaymentMethod && usuario?.estadoRegistro !== 'ACTIVO') {
       Alert.alert(
         'Medio de Pago Requerido', 
