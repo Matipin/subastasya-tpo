@@ -3,16 +3,37 @@ import { View, Text, StyleSheet, Image, ScrollView, TouchableOpacity, Dimensions
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
+import { AuthContext } from '../context/AuthContext';
 
 const { width } = Dimensions.get('window');
 
 export default function DetalleArticuloScreen({ route, navigation }) {
-  const { articulo, subasta, usuario } = route.params;
-  const isGuest = !usuario || usuario.isGuest;
-  const [isRegistered, setIsRegistered] = useState(subasta?.identificador === 1); // Mock initial state based on DataInitializer
+  const { articulo, subasta } = route.params;
+  const { usuario, isGuest } = useContext(AuthContext);
+  
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [loadingReg, setLoadingReg] = useState(true);
+
+  useEffect(() => {
+    if (!isGuest && subasta?.identificador && usuario?.email) {
+      fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/auctions/registered?email=${encodeURIComponent(usuario.email)}`)
+        .then(r => r.json())
+        .then(data => {
+          setIsRegistered(data.some(a => a.id === subasta.identificador));
+          setLoadingReg(false);
+        })
+        .catch(e => {
+          console.error(e);
+          setLoadingReg(false);
+        });
+    } else {
+      setLoadingReg(false);
+    }
+  }, [subasta, usuario, isGuest]);
+
+  const isSubastaStarted = subasta?.estado === 'abierta' && new Date() >= new Date(subasta.fecha + 'T' + (subasta.hora || '00:00:00'));
 
   const handleRegister = async () => {
-    // 1. Verificar Deudas Impagas
     try {
       const debtsUrl = `${API_BASE_URL.replace('/auth', '/users')}/me/debts?email=${encodeURIComponent(usuario?.email || '')}`;
       const debtsResponse = await fetch(debtsUrl);
@@ -32,7 +53,6 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       console.log('Error checking debts', e);
     }
 
-    // 2. Verificar Medio de Pago
     if (!usuario?.mediosDePago && !usuario?.hasPaymentMethod && usuario?.estadoRegistro !== 'ACTIVO') {
       Alert.alert(
         'Medio de Pago Requerido', 
@@ -42,32 +62,18 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       return;
     }
 
-    // 2. Verificar Categoría
     if (subasta?.categoria === 'oro' && usuario?.cliente?.categoria !== 'oro') {
       Alert.alert('Acceso Denegado', 'Esta subasta es exclusiva para la categoría ORO.');
       return;
     }
     
-    // Simulate successful registration
     Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');
     setIsRegistered(true);
   };
-  
-  const isSubastaStarted = React.useMemo(() => {
-    if (!subasta) return false;
-    if (subasta.estado !== 'abierta') return false;
-    try {
-      const subastaDate = new Date(`${subasta.fecha}T${subasta.hora}`);
-      return subastaDate <= new Date();
-    } catch(e) {
-      return true; // Fallback
-    }
-  }, [subasta]);
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-      {/* Header Image */}
       <View style={styles.imageContainer}>
         {articulo.urlImagen ? (
           <Image 
@@ -85,48 +91,24 @@ export default function DetalleArticuloScreen({ route, navigation }) {
         </TouchableOpacity>
       </View>
 
-      {/* Details Section */}
       <View style={styles.detailsContainer}>
-        <View style={styles.titleRow}>
-          <Text style={styles.title}>{articulo.nombre}</Text>
-          {!isGuest && (
-            <View style={styles.priceBadge}>
-              <Text style={styles.priceBadgeText}>USD {articulo.precioBase || '100.00'}</Text>
-            </View>
-          )}
-        </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="person-circle-outline" size={20} color="#666" />
-          <Text style={styles.artistName}>Autor / Propietario Desconocido</Text>
-        </View>
+        <Text style={styles.title}>{articulo.nombre || articulo.producto?.descripcionCompleta || 'Artículo'}</Text>
         
-        <View style={styles.infoRow}>
-          <Ionicons name="calendar-outline" size={20} color="#666" />
-          <Text style={styles.artistName}>Año: 2026</Text>
+        <View style={{ marginTop: 10 }}>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Precio Base:</Text> {articulo.precioBase || '1.000.000'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Actual dueño:</Text> {articulo.producto?.duenio?.nombre || 'Juan Perez'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Fecha de subasta:</Text> {subasta?.fecha || '10/10/2026'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Categoria minima:</Text> {subasta?.categoria || 'Bronce'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Direccion:</Text> {subasta?.ubicacion || 'CABA Rivadavia 1500'}</Text>
         </View>
 
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionTitle}>Descripción</Text>
+        <Text style={[styles.sectionTitle, {marginTop: 20}]}>Descripcion:</Text>
         <Text style={styles.description}>
-          {articulo.descripcion || 'Sin descripción detallada para esta obra de arte en el catálogo. Este artículo formará parte de la subasta programada. Recomendamos revisar las condiciones antes de pujar.'}
+          {articulo.producto?.descripcionCompleta || articulo.descripcion || 'Atractivo artículo vintage en muy buen estado de conservación. Una pieza clásica y elegante, perfecta para coleccionistas.'}
         </Text>
-
-        <View style={styles.divider} />
-
-        <Text style={styles.sectionTitle}>Información de Subasta</Text>
-        <View style={styles.auctionInfoBox}>
-          <Ionicons name="hammer" size={24} color={COLORS.PRIMARY} />
-          <View style={{ marginLeft: 12 }}>
-            <Text style={styles.auctionTitle}>{subasta?.nombre || 'Subasta Activa'} (Cat: {subasta?.categoria})</Text>
-            <Text style={styles.auctionStatus}>Estado: {subasta?.estado === 'abierta' && !isSubastaStarted ? 'Programada' : subasta?.estado}</Text>
-          </View>
-        </View>
       </View>
 
-      {/* Fixed Bottom Action */}
-      {!isGuest ? (
+      {!isGuest && !loadingReg ? (
         <View style={styles.bottomActionContainer}>
           {isRegistered ? (
             <TouchableOpacity 
@@ -138,37 +120,32 @@ export default function DetalleArticuloScreen({ route, navigation }) {
                 if (isSubastaStarted) {
                   navigation.navigate('SubastaEnVivo', { articulo, subasta, usuario });
                 } else {
-                  Alert.alert('Subasta Programada', 'Esta subasta aún no ha comenzado.');
+                  Alert.alert('Subasta Programada', 'Aún no es la fecha y hora de inicio de esta subasta.');
                 }
               }}
-              disabled={!isSubastaStarted}
             >
-              <Text style={styles.actionButtonText}>
-                {isSubastaStarted ? 'Ingresar a Sala en Vivo' : 'Subasta Programada'}
-              </Text>
-              {isSubastaStarted && <Ionicons name="arrow-forward" size={20} color="#FFF" style={{ marginLeft: 8 }} />}
+              <Text style={styles.actionText}>{isSubastaStarted ? 'Ingresar a Sala en Vivo' : 'Subasta Programada'}</Text>
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={styles.actionButton}
-              onPress={handleRegister}
+              style={[styles.actionButton, isSubastaStarted && { backgroundColor: '#CCC' }]} 
+              onPress={handleRegister} 
+              disabled={isSubastaStarted}
             >
-              <Text style={styles.actionButtonText}>Anotarse a la Subasta</Text>
-              <Ionicons name="create-outline" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+              <Text style={styles.actionText}>{isSubastaStarted ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}</Text>
             </TouchableOpacity>
           )}
         </View>
-      ) : (
+      ) : isGuest ? (
         <View style={styles.bottomActionContainer}>
           <TouchableOpacity 
             style={[styles.actionButton, { backgroundColor: '#852221' }]}
             onPress={() => navigation.navigate('Login')}
           >
-            <Text style={styles.actionButtonText}>Iniciar Sesión para Participar</Text>
-            <Ionicons name="person-outline" size={20} color="#FFF" style={{ marginLeft: 8 }} />
+            <Text style={styles.actionText}>Iniciar Sesión para Participar</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
     </ScrollView>
     </SafeAreaView>
   );
@@ -209,34 +186,11 @@ const styles = StyleSheet.create({
     marginTop: -30,
     minHeight: 500,
   },
-  titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 16,
-  },
   title: {
     fontSize: 26,
     fontWeight: 'bold',
     color: COLORS.TEXT_TITLE,
-    flex: 1,
     marginRight: 10,
-  },
-  priceBadge: {
-    backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 12,
-  },
-  priceBadgeText: {
-    color: '#FFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
   },
   artistName: {
     fontSize: 15,

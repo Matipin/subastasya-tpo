@@ -94,7 +94,7 @@ public class DataInitializer implements CommandLineRunner {
 
         Duenio duenioBase = duenioRepository.findAll().stream().filter(d -> "11111111".equals(d.getDocumento())).findFirst().orElseGet(() -> {
             Duenio d = new Duenio();
-            d.setNombre("Dueño Ejemplo");
+            d.setNombre("Juan Perez");
             d.setDocumento("11111111");
             d.setVerificador(admin);
             return duenioRepository.save(d);
@@ -122,7 +122,7 @@ public class DataInitializer implements CommandLineRunner {
             c.setSubasta(s);
             catalogoRepository.save(c);
 
-            createDemoItem(c, "Reloj Rolex Vintage", admin, duenioBase, "disponible");
+            createDemoItem(c, "Reloj Vintage", admin, duenioBase, "disponible");
             return s;
         });
 
@@ -295,10 +295,11 @@ public class DataInitializer implements CommandLineRunner {
 
     private Producto createDemoItem(Catalogo c, String nombre, Empleado admin, Duenio duenio, String estado) {
         Producto p = new Producto();
-        String[] autores = {"Juan Pérez", "Marta Minujín", "Antonio Berni", "Salvador Dalí", "Picasso"};
-        String autor = autores[(int)(Math.random() * autores.length)];
-        int anio = 1850 + (int)(Math.random() * 150);
-        p.setDescripcionCompleta(nombre + ". Obra original de " + autor + ". Creado en el año " + anio + ". Pieza certificada en excelente estado de conservación, con gran valor histórico.");
+        if (nombre.contains("Reloj Vintage")) {
+            p.setDescripcionCompleta("Atractivo reloj de pulsera vintage [Años 1960-1969] en muy buen estado de conservación. Una pieza clásica y elegante, perfecta para coleccionistas o para uso diario con un toque distinguido.");
+        } else {
+            p.setDescripcionCompleta("Excelente pieza de colección en muy buen estado. " + nombre + " listo para ser adquirido en subasta.");
+        }
         p.setDisponible("no"); // En inventario o subasta no está "disponible" para uso normal
         p.setDescripcionCatalogo(estado);
         p.setRevisor(admin);
