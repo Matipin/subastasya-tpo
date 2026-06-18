@@ -12,10 +12,28 @@ export default function HomeScreen({ navigation, route }) {
   const usuario = route?.params?.usuario;
   const [subastas, setSubastas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
     fetchSubastas();
-  }, []);
+    if (usuario && !usuario.isGuest) {
+      fetchNotificaciones();
+    }
+  }, [usuario]);
+
+  const fetchNotificaciones = async () => {
+    try {
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/notifications?email=${encodeURIComponent(usuario?.email || '')}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        const unread = data.filter(n => !n.leida).length;
+        setUnreadCount(unread);
+      }
+    } catch (e) {
+      console.error('Error fetching notificaciones:', e);
+    }
+  };
 
   const fetchSubastas = async () => {
     try {
@@ -102,7 +120,14 @@ export default function HomeScreen({ navigation, route }) {
                 style={styles.iconBtn}
                 onPress={() => navigation.navigate('Notificaciones', { usuario })}
               >
-                <Ionicons name="notifications-outline" size={28} color="#222" />
+                <View>
+                  <Ionicons name="notifications-outline" size={28} color="#222" />
+                  {unreadCount > 0 && (
+                    <View style={styles.badgeContainer}>
+                      <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                    </View>
+                  )}
+                </View>
               </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.iconBtn}
@@ -231,5 +256,24 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: 'bold',
     lineHeight: 34,
+  },
+  badgeContainer: {
+    position: 'absolute',
+    right: -4,
+    top: -2,
+    backgroundColor: '#EF4444',
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#FFF',
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    color: '#FFF',
+    fontSize: 10,
+    fontWeight: 'bold',
   }
 });

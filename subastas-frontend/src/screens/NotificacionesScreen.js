@@ -30,6 +30,10 @@ export default function NotificacionesScreen({ route, navigation }) {
     fetchNotificaciones();
   }, []);
 
+  const handleDismiss = (id) => {
+    setNotificaciones(prev => prev.filter(n => n.id !== id));
+  };
+
   const renderItem = ({ item }) => (
     <View style={[styles.card, !item.leida && styles.cardUnread]}>
       <View style={styles.iconContainer}>
@@ -43,6 +47,9 @@ export default function NotificacionesScreen({ route, navigation }) {
           {new Date(item.fechaCreacion).toLocaleString()}
         </Text>
       </View>
+      <TouchableOpacity onPress={() => handleDismiss(item.id)} style={styles.closeBtn}>
+        <Ionicons name="close" size={20} color="#9CA3AF" />
+      </TouchableOpacity>
     </View>
   );
 
@@ -139,5 +146,10 @@ const styles = StyleSheet.create({
   dateText: {
     fontSize: 12,
     color: '#9CA3AF',
+  },
+  closeBtn: {
+    padding: 5,
+    marginLeft: 10,
+    justifyContent: 'flex-start',
   }
 });

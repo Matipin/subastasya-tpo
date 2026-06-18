@@ -10,7 +10,16 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
   const [customBid, setCustomBid] = useState('');
-  const [timeLeft, setTimeLeft] = useState(0);
+  
+  const calculateTimeLeft = () => {
+    if (!subasta?.hora) return 600;
+    const [h, m] = subasta.hora.split(':');
+    const start = new Date();
+    start.setHours(parseInt(h, 10), parseInt(m, 10), 0);
+    const diff = Math.floor((start.getTime() + 10 * 60000 - new Date().getTime()) / 1000);
+    return diff > 0 ? diff : 0;
+  };
+  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   const fetchStatus = async () => {
     try {
@@ -168,7 +177,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           <View style={styles.timerBadge}>
             <Ionicons name="time-outline" size={18} color="#852221" />
             <Text style={styles.timerText}>
-              {timeLeft > 0 ? `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}` : 'FINALIZADO'}
+              {timeLeft > 0 ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60) < 10 ? '0'+(timeLeft % 60) : timeLeft % 60}` : 'FINALIZADO'}
             </Text>
           </View>
         </View>
@@ -244,7 +253,7 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#852221',
-    paddingTop: 40,
+    paddingTop: 10,
     paddingBottom: 15,
     paddingHorizontal: 15,
     flexDirection: 'row',
