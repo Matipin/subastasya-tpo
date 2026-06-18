@@ -21,7 +21,10 @@ import MisSubastasScreen from './src/screens/MisSubastasScreen';
 import SubastasGanadasScreen from './src/screens/SubastasGanadasScreen';
 import MisProductosScreen from './src/screens/MisProductosScreen';
 import MiCategoriaScreen from './src/screens/MiCategoriaScreen';
-
+import CheckoutGanadorScreen from './src/screens/CheckoutGanadorScreen';
+import HistorialPujasScreen from './src/screens/HistorialPujasScreen';
+import TerminosCondicionesScreen from './src/screens/TerminosCondicionesScreen';
+import SubastaStatusModal from './src/screens/SubastaStatusModal';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -50,6 +53,14 @@ export default function App() {
         <Stack.Screen name="SubastasGanadas" component={SubastasGanadasScreen} />
         <Stack.Screen name="MisProductos" component={MisProductosScreen} />
         <Stack.Screen name="MiCategoria" component={MiCategoriaScreen} />
+        <Stack.Screen name="CheckoutGanador" component={CheckoutGanadorScreen} />
+        <Stack.Screen name="HistorialPujas" component={HistorialPujasScreen} />
+        <Stack.Screen name="TerminosCondiciones" component={TerminosCondicionesScreen} />
+        <Stack.Screen 
+          name="SubastaStatus" 
+          component={SubastaStatusModal} 
+          options={{ presentation: 'transparentModal' }} 
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

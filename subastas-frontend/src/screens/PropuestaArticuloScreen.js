@@ -18,6 +18,11 @@ export default function PropuestaArticuloScreen({ navigation }) {
       return;
     }
 
+    if (fotos.length < 6) {
+      Alert.alert('Error', 'Debe subir un mínimo de 6 fotos del artículo para la revisión.');
+      return;
+    }
+
     setLoading(true);
     try {
       // Usamos el nuevo endpoint permitido
@@ -29,7 +34,7 @@ export default function PropuestaArticuloScreen({ navigation }) {
           nombre,
           descripcion,
           categoria,
-          fotoUrl: fotos.length > 0 ? fotos[0] : '' // Sending first photo as URL or keeping API intact
+          fotosUrls: fotos // Sending all photos
         })
       });
 
@@ -48,8 +53,8 @@ export default function PropuestaArticuloScreen({ navigation }) {
   };
 
   const pickImage = async () => {
-    if (fotos.length >= 6) {
-      Alert.alert('Límite', 'Podés subir hasta 6 fotos como máximo.');
+    if (fotos.length >= 10) {
+      Alert.alert('Límite', 'Podés subir hasta 10 fotos.');
       return;
     }
     let result = await ImagePicker.launchImageLibraryAsync({

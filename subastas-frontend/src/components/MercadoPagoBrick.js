@@ -2,8 +2,9 @@ import React, { useRef } from 'react';
 import { View, StyleSheet, Platform, Text } from 'react-native';
 import { WebView } from 'react-native-webview';
 
-const MP_PUBLIC_KEY = 'TEST-xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx';
-
+// Tomamos la clave pública de las variables de entorno de Expo
+// Si no existe, usamos el string vacío para que no rompa antes de tiempo
+const MP_PUBLIC_KEY = process.env.EXPO_PUBLIC_MP_PUBLIC_KEY || 'FALTA_CLAVE_PUBLICA';
 export default function MercadoPagoBrick({ onSubmit, usuarioEmail }) {
   const webViewRef = useRef(null);
 

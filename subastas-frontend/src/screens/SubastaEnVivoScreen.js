@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -25,39 +25,77 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     }
   };
 
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [ws, setWs] = useState(null);
+
   useEffect(() => {
+    // Inicializar estado por REST y luego conectar WS
     fetchStatus();
-    // Polling cada 3 segundos
-    const intervalId = setInterval(fetchStatus, 3000);
-    return () => clearInterval(intervalId);
+
+    const wsUrl = API_BASE_URL.replace('http', 'ws').replace('/api/v1/auth', '/ws-auction');
+    const websocket = new WebSocket(wsUrl);
+
+    websocket.onopen = () => {
+      console.log('WS Connected');
+    };
+
+    websocket.onmessage = (e) => {
+      const msg = JSON.parse(e.data);
+      if (msg.type === 'BID') {
+        setStatus(prev => ({
+          ...prev,
+          monto_actual: msg.amount,
+          puja_minima: msg.minBid,
+          puja_maxima: msg.maxBid,
+          ultimo_postor: msg.user,
+        }));
+      } else if (msg.type === 'CHAT') {
+        setChatMessages(prev => [...prev, msg]);
+      }
+    };
+
+    websocket.onerror = (e) => console.log('WS error', e.message);
+
+    setWs(websocket);
+
+    return () => {
+      websocket.close();
+    };
   }, []);
 
-  const handleBid = async () => {
-    if (!status) return;
+  const handleBid = () => {
+    if (!status || !ws) return;
     setBidding(true);
-    try {
-      const url = API_BASE_URL.replace('/auth', '/auctions') + `/${subasta?.identificador || 1}/items/${articulo?.id}/bid`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: status.puja_minima,
-          asistenteId: 1 // Default if we don't have the user's asistente mapping
-        })
-      });
+    const amountToBid = status.puja_minima;
 
-      if (response.ok) {
-        Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
-        fetchStatus();
-      } else {
-        const msg = await response.text();
-        Alert.alert('Error', msg || 'No se pudo realizar la puja.');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'No se pudo conectar con el servidor.');
-    } finally {
+    const bidMsg = {
+      auctionId: subasta?.identificador || 1,
+      itemId: articulo?.id || 1,
+      user: usuario?.nombre || 'Usuario App',
+      type: 'BID',
+      amount: amountToBid
+    };
+
+    ws.send(JSON.stringify(bidMsg));
+    
+    setTimeout(() => {
+      Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
       setBidding(false);
-    }
+    }, 500);
+  };
+
+  const handleSendChat = () => {
+    if (!chatInput.trim() || !ws) return;
+    const chatMsg = {
+      auctionId: subasta?.identificador || 1,
+      itemId: articulo?.id || 1,
+      user: usuario?.nombre || 'Usuario App',
+      type: 'CHAT',
+      content: chatInput
+    };
+    ws.send(JSON.stringify(chatMsg));
+    setChatInput('');
   };
 
   if (loading && !status) {
@@ -109,6 +147,25 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           <View style={styles.bidInfoRow}>
             <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
             <Text style={styles.bidInfoValue}>USD {status?.puja_maxima?.toFixed(2) || '0.00'}</Text>
+          </View>
+        </View>
+
+        {/* Chat en Vivo */}
+        <View style={styles.chatSection}>
+          <Text style={styles.chatTitle}>Chat en vivo</Text>
+          <View style={styles.chatBox}>
+            {chatMessages.map((msg, index) => (
+              <View key={index} style={styles.chatMsg}>
+                <Text style={styles.chatUser}>{msg.user}: </Text>
+                <Text style={styles.chatContent}>{msg.content}</Text>
+              </View>
+            ))}
+          </View>
+          <View style={styles.chatInputContainer}>
+            <TextInput style={styles.chatInput} placeholder="Participa de la conversacion..." value={chatInput} onChangeText={setChatInput} />
+            <TouchableOpacity onPress={handleSendChat} style={styles.sendBtn}>
+              <Ionicons name="send" size={18} color="#FFF" />
+            </TouchableOpacity>
           </View>
         </View>
       </ScrollView>
@@ -282,5 +339,54 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 12,
+  },
+  chatSection: {
+    marginTop: 20,
+    backgroundColor: '#FFF',
+    padding: 15,
+    borderRadius: 15,
+  },
+  chatTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: COLORS.TEXT_TITLE,
+  },
+  chatBox: {
+    minHeight: 100,
+    maxHeight: 200,
+    marginBottom: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 10,
+  },
+  chatMsg: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  chatUser: {
+    fontWeight: 'bold',
+    color: COLORS.PRIMARY,
+  },
+  chatContent: {
+    color: '#333',
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  chatInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginRight: 10,
+  },
+  sendBtn: {
+    backgroundColor: COLORS.PRIMARY,
+    padding: 10,
+    borderRadius: 20,
   }
 });
