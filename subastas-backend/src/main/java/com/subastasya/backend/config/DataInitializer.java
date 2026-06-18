@@ -137,12 +137,12 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Subasta 2: FUTURA
-        boolean hasFutura = subastaRepository.findAll().stream().anyMatch(s -> "programada".equals(s.getEstado()) && s.getHora().isAfter(LocalTime.now()) && "comun".equals(s.getCategoria()));
+        boolean hasFutura = subastaRepository.findAll().stream().anyMatch(s -> "abierta".equals(s.getEstado()) && s.getHora().isAfter(LocalTime.now()) && "comun".equals(s.getCategoria()));
         if (!hasFutura) {
             Subasta s2 = new Subasta();
             s2.setFecha(LocalDate.now());
             s2.setHora(LocalTime.now().plusHours(3));
-            s2.setEstado("programada");
+            s2.setEstado("abierta"); // En lugar de programada, para cumplir con el check constraint (abierta o cerrada)
             s2.setUbicacion("Virtual");
             s2.setCapacidadAsistentes(500);
             s2.setTieneDeposito("no");
@@ -165,7 +165,7 @@ public class DataInitializer implements CommandLineRunner {
             Subasta s3 = new Subasta();
             s3.setFecha(LocalDate.now().plusDays(2));
             s3.setHora(LocalTime.of(20, 0));
-            s3.setEstado("programada");
+            s3.setEstado("abierta"); // En lugar de programada, para cumplir con el check constraint
             s3.setUbicacion("Mónaco");
             s3.setCapacidadAsistentes(50);
             s3.setTieneDeposito("si");
