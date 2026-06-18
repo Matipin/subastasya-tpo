@@ -25,6 +25,8 @@ public class UserController {
     private final PujoRepository pujoRepository;
     private final AsistenteRepository asistenteRepository;
     private final ProductoRepository productoRepository;
+    private final CatalogoRepository catalogoRepository;
+    private final ItemCatalogoRepository itemCatalogoRepository;
 
     @GetMapping("/me/payments")
     public ResponseEntity<?> obtenerMediosDePago(@RequestParam String email) {
