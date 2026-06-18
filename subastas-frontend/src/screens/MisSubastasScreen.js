@@ -15,11 +15,11 @@ export default function MisSubastasScreen({ route, navigation }) {
 
   const fetchSubastas = async () => {
     try {
-      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/auctions/registered?email=${encodeURIComponent(usuario?.email || '')}`;
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/profile?email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
-        setSubastas(data);
+        setSubastas(data.subastasAnotadas || []);
       }
     } catch (e) {
       console.error(e);

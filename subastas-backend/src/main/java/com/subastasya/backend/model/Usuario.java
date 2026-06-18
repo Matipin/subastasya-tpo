@@ -35,4 +35,7 @@ public class Usuario {
     @JoinColumn(name = "duenio_id")
     @JsonIgnore
     private Duenio duenio;
+
+    @Transient
+    private java.util.List<java.util.Map<String, Object>> subastasAnotadas;
 }

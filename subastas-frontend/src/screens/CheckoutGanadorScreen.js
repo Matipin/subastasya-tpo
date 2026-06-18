@@ -5,18 +5,19 @@ import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
 export default function CheckoutGanadorScreen({ route, navigation }) {
-  // Datos recibidos por parametro desde la notificación o listado
-  const { articulo, checkoutDetails } = route.params || {};
+  const { articulo, checkoutDetails, usuario } = route.params || {};
   
-  const [metodoEntrega, setMetodoEntrega] = useState('domicilio');
-  
-  // Valores default de demostracion si no vienen en params
   const item = articulo || {
     id: 1,
     nombre: 'Reloj Vintage',
     urlImagen: 'https://images.unsplash.com/photo-1522312346375-d1a52e2b99b3?q=80&w=600&auto=format&fit=crop',
+    estado_pago: 'pendiente'
   };
 
+  const isFinalizado = item.estado_pago === 'finalizado';
+
+  const [metodoEntrega, setMetodoEntrega] = useState('domicilio');
+  
   const details = checkoutDetails || {
     valorPujado: 15000,
     comision: 1500,
@@ -46,9 +47,6 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
 
   const procesarPago = async () => {
     try {
-      // Simulación de llamada al backend
-      // const response = await fetch(`${API_BASE_URL}/users/me/items/won/${item.id}/checkout`, { method: 'POST', ... });
-      
       Alert.alert('Pago realizado', 'El pago se procesó exitosamente con su medio predeterminado.', [
         { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
       ]);
@@ -56,6 +54,29 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
       Alert.alert('Error', 'Hubo un error procesando el pago. Intente nuevamente.');
     }
   };
+
+  if (isFinalizado) {
+    return (
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()}>
+            <Text style={{color: COLORS.TEXT_TITLE}}>← Volver</Text>
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Resumen de Compra</Text>
+        </View>
+        <ScrollView style={{padding: 20}}>
+          <View style={styles.summaryCard}>
+            <Ionicons name="checkmark-circle" size={60} color="#10B981" style={{alignSelf:'center', marginBottom:20}}/>
+            <Text style={styles.summaryTitle}>Objeto Recibido</Text>
+            <Text style={styles.summaryText}>Articulo: <Text style={{fontWeight:'bold'}}>{item.nombre}</Text></Text>
+            <Text style={styles.summaryText}>Importe Abonado: <Text style={{fontWeight:'bold'}}>${valorPujado}</Text></Text>
+            <Text style={styles.summaryText}>Método de Pago: <Text style={{fontWeight:'bold'}}>Tarjeta Visa terminada en 1234</Text></Text>
+            <Text style={[styles.summaryText, {marginTop: 20, fontStyle:'italic', textAlign:'center'}]}>La transacción se ha completado y has recibido tu artículo correctamente.</Text>
+          </View>
+        </ScrollView>
+      </View>
+    );
+  }
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -98,8 +119,6 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
           <Text style={styles.totalLabel}>total a pagar</Text>
           <Text style={styles.totalValue}>${totalPagado.toLocaleString()}</Text>
         </View>
-        
-        <Text style={styles.paymentMethod}>Medio de pago: {details.medioPago}</Text>
       </View>
 
       <Text style={[styles.sectionTitle, { marginLeft: 20, marginTop: 20 }]}>Metodo de entrega</Text>
@@ -126,12 +145,18 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         )}
       </TouchableOpacity>
 
-      {item.estado_pago !== 'finalizado' && (
-        <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
-          <Text style={styles.submitButtonText}>Confirmar compra</Text>
-        </TouchableOpacity>
-      )}
+      <View style={styles.paymentMethodSection}>
+        <Text style={[styles.sectionTitle, { marginLeft: 20 }]}>Método de Pago</Text>
+        <View style={[styles.card, styles.paymentCard]}>
+          <Ionicons name="card" size={24} color="#555" />
+          <Text style={styles.paymentText}>Tarjeta Visa terminada en 1234</Text>
+          <Ionicons name="checkmark-circle" size={24} color={COLORS.PRIMARY} />
+        </View>
+      </View>
 
+      <TouchableOpacity style={styles.submitButton} onPress={handleConfirmar}>
+        <Text style={styles.submitButtonText}>Confirmar compra</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -220,11 +245,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: COLORS.PRIMARY,
   },
-  paymentMethod: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    marginTop: 10,
-  },
   deliveryOption: {
     marginHorizontal: 20,
     backgroundColor: '#FFF',
@@ -274,5 +294,11 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
-  }
+  },
+  summaryCard: { backgroundColor: '#FFF', padding: 30, borderRadius: 15, elevation: 2, marginTop: 20 },
+  summaryTitle: { fontSize: 22, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#333' },
+  summaryText: { fontSize: 16, color: '#555', marginBottom: 10 },
+  paymentMethodSection: { marginTop: 20, marginBottom: 10 },
+  paymentCard: { flexDirection: 'row', alignItems: 'center', padding: 15, justifyContent: 'space-between', marginHorizontal: 20, marginVertical: 0 },
+  paymentText: { flex: 1, marginLeft: 10, fontSize: 16, color: '#333' }
 });

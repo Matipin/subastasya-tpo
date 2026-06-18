@@ -209,6 +209,10 @@ public class DataInitializer implements CommandLineRunner {
             ItemCatalogo ih3 = createHistoricalItem(sh3, "Collar de Perlas", admin, duenioBase);
             createWinningPujo(ah3, ih3, new BigDecimal("2300.00"));
 
+            // Notificaciones requeridas por el usuario
+            createNotificacion(u1, "¡Felicidades! Ganaste la subasta de la Silla Luis XV. Por favor, selecciona el método de pago y envío en Subastas Ganadas.");
+            createNotificacion(u1, "La subasta del Reloj Vintage está en vivo. ¡Entra ahora para pujar!");
+            
             // Deuda eliminada para el usuario Test para que no se bloquee al entrar
         }
 

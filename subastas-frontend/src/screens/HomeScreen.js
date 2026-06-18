@@ -23,13 +23,13 @@ export default function HomeScreen({ navigation, route }) {
       let data = await response.json();
       
       if (data && data.length > 0) {
-        let allItems = [];
         data.forEach(subasta => {
-          if (subasta.articulos && subasta.articulos.length > 0) {
-            subasta.articulos.forEach(articulo => {
-              // Creating a pseudo-subasta object for each item so navigation works
-              allItems.push({ ...subasta, articulos: [articulo] });
-            });
+          if (subasta.estado === 'abierta' || subasta.estado === 'programada') {
+            if (subasta.articulos && subasta.articulos.length > 0) {
+              subasta.articulos.forEach(articulo => {
+                allItems.push({ ...subasta, articulos: [articulo] });
+              });
+            }
           }
         });
         setSubastas(allItems);

@@ -37,7 +37,35 @@ public class UserController {
     public ResponseEntity<?> getProfile(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        return ResponseEntity.ok(opt.get());
+        Usuario user = opt.get();
+        
+        java.util.List<Map<String, Object>> result = new java.util.ArrayList<>();
+        if (user.getCliente() != null) {
+            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+            for (Asistente a : asistentes) {
+                Map<String, Object> map = new HashMap<>();
+                map.put("id", a.getSubasta().getIdentificador());
+                
+                String nombreObj = a.getSubasta().getUbicacion();
+                List<Catalogo> catalogos = catalogoRepository.findBySubastaIdentificador(a.getSubasta().getIdentificador());
+                if (!catalogos.isEmpty()) {
+                    List<ItemCatalogo> items = itemCatalogoRepository.findByCatalogoIdentificador(catalogos.get(0).getIdentificador());
+                    if (!items.isEmpty()) {
+                        nombreObj = items.get(0).getProducto().getDescripcionCatalogo();
+                    }
+                }
+
+                map.put("nombre", "Subasta de " + nombreObj);
+                map.put("fecha", a.getSubasta().getFecha());
+                map.put("hora", a.getSubasta().getHora());
+                map.put("estado", a.getSubasta().getEstado());
+                map.put("categoria", a.getSubasta().getCategoria());
+                result.add(map);
+            }
+        }
+        user.setSubastasAnotadas(result);
+        
+        return ResponseEntity.ok(user);
     }
 
     @GetMapping("/me/debts")
@@ -126,27 +154,7 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/me/auctions/registered")
-    public ResponseEntity<?> getRegisteredAuctions(@RequestParam String email) {
-        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
-        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        Usuario user = opt.get();
-        List<Map<String, Object>> result = new java.util.ArrayList<>();
-        if (user.getCliente() != null) {
-            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
-            for (Asistente a : asistentes) {
-                Map<String, Object> map = new HashMap<>();
-                map.put("id", a.getSubasta().getIdentificador());
-                map.put("nombre", "Subasta " + a.getSubasta().getUbicacion());
-                map.put("fecha", a.getSubasta().getFecha());
-                map.put("hora", a.getSubasta().getHora());
-                map.put("estado", a.getSubasta().getEstado());
-                map.put("categoria", a.getSubasta().getCategoria());
-                result.add(map);
-            }
-        }
-        return ResponseEntity.ok(result);
-    }
+
 
     @GetMapping("/me/items/proposed")
     public ResponseEntity<?> getProducts(@RequestParam String email) {

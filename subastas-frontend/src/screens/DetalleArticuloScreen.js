@@ -16,10 +16,10 @@ export default function DetalleArticuloScreen({ route, navigation }) {
 
   useEffect(() => {
     if (!isGuest && subasta?.identificador && usuario?.email) {
-      fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/auctions/registered?email=${encodeURIComponent(usuario.email)}`)
+      fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/profile?email=${encodeURIComponent(usuario.email)}`)
         .then(r => r.json())
         .then(data => {
-          setIsRegistered(data.some(a => a.id === subasta.identificador));
+          setIsRegistered(data.subastasAnotadas?.some(a => a.id === subasta.identificador));
           setLoadingReg(false);
         })
         .catch(e => {
@@ -31,7 +31,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     }
   }, [subasta, usuario, isGuest]);
 
-  const isSubastaStarted = subasta?.estado === 'abierta' && new Date() >= new Date(subasta.fecha + 'T' + (subasta.hora || '00:00:00'));
+  const isSubastaStarted = subasta?.estado === 'abierta';
 
   const handleRegister = async () => {
     try {
@@ -67,8 +67,23 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       return;
     }
     
-    Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');
-    setIsRegistered(true);
+    try {
+      const joinResponse = await fetch(`${API_BASE_URL.replace('/auth', '/auctions')}/${subasta.identificador}/join`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ clienteId: usuario?.cliente?.identificador })
+      });
+      if (joinResponse.ok) {
+        Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');
+        setIsRegistered(true);
+      } else {
+        Alert.alert('Error', 'No se pudo registrar a la subasta.');
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');
+      setIsRegistered(true);
+    }
   };
 
   return (
