@@ -94,7 +94,7 @@ public class UserController {
         return ResponseEntity.ok(metrics);
     }
 
-    @GetMapping("/me/won-auctions")
+    @GetMapping("/me/items/won")
     public ResponseEntity<?> getWonAuctions(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -120,7 +120,7 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/me/products")
+    @GetMapping("/me/items/proposed")
     public ResponseEntity<?> getProducts(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -129,19 +129,5 @@ public class UserController {
         
         List<Producto> products = productoRepository.findByDuenioIdentificador(user.getDuenio().getIdentificador());
         return ResponseEntity.ok(products);
-    }
-
-    @PostMapping("/me/products/{id}/accept-offer")
-    public ResponseEntity<?> acceptOffer(@PathVariable Long id) {
-        Optional<Producto> opt = productoRepository.findById(id);
-        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        
-        Producto p = opt.get();
-        p.setDescripcionCatalogo("Aprobado");
-        productoRepository.save(p);
-        
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "El producto se subastará en Mónaco, Colección Verano 2026, el 25/12/2026.");
-        return ResponseEntity.ok(response);
     }
 }

@@ -11,7 +11,7 @@ export default function SubastasGanadasScreen({ route, navigation }) {
 
   const fetchWonItems = async () => {
     try {
-      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/won-auctions?email=${encodeURIComponent(usuario?.email || '')}`;
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();

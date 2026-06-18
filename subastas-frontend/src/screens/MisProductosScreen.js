@@ -11,7 +11,7 @@ export default function MisProductosScreen({ route, navigation }) {
 
   const fetchProductos = async () => {
     try {
-      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/products?email=${encodeURIComponent(usuario?.email || '')}`;
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/items/proposed?email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
@@ -30,11 +30,11 @@ export default function MisProductosScreen({ route, navigation }) {
 
   const handleAcceptOffer = async (id) => {
     try {
-      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/products/${id}/accept-offer`;
+      const url = `${API_BASE_URL.replace('/auth', '/items')}/${id}/decision?decision=aceptar&email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url, { method: 'POST' });
       if (response.ok) {
-        const data = await response.json();
-        Alert.alert('Oferta Aceptada', data.message);
+        const text = await response.text();
+        Alert.alert('Oferta Aceptada', text || 'El producto pasará al catálogo.');
         fetchProductos();
       } else {
         Alert.alert('Error', 'No se pudo aceptar la oferta.');
@@ -44,9 +44,20 @@ export default function MisProductosScreen({ route, navigation }) {
     }
   };
 
-  const handleRejectOffer = () => {
-    Alert.alert('Oferta Rechazada', 'Has rechazado la oferta sugerida. El producto no entrará a esta subasta.');
-    // En un caso real llamaría a un endpoint de rechazo.
+  const handleRejectOffer = async (id) => {
+    try {
+      const url = `${API_BASE_URL.replace('/auth', '/items')}/${id}/decision?decision=rechazar&email=${encodeURIComponent(usuario?.email || '')}`;
+      const response = await fetch(url, { method: 'POST' });
+      if (response.ok) {
+        const text = await response.text();
+        Alert.alert('Oferta Rechazada', text || 'Has rechazado la oferta sugerida. El producto no entrará a esta subasta.');
+        fetchProductos();
+      } else {
+        Alert.alert('Error', 'No se pudo rechazar la oferta.');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Error de conexión.');
+    }
   };
 
   const renderItem = ({ item }) => {
@@ -57,7 +68,7 @@ export default function MisProductosScreen({ route, navigation }) {
           <Text style={styles.itemName}>{item.descripcionCompleta}</Text>
           <Text style={styles.dateText}>Registrado: {new Date(item.fecha).toLocaleDateString()}</Text>
           <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.descripcionCatalogo || 'En revisión'}</Text>
+            <Text style={styles.statusText}>{item.descripcionCatalogo === 'si' ? 'Aprobado' : (item.descripcionCatalogo || 'En revisión')}</Text>
           </View>
         </View>
 
@@ -66,7 +77,7 @@ export default function MisProductosScreen({ route, navigation }) {
             <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]} onPress={() => handleAcceptOffer(item.identificador)}>
               <Text style={styles.actionBtnText}>Aceptar</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={handleRejectOffer}>
+            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => handleRejectOffer(item.identificador)}>
               <Text style={styles.actionBtnText}>Rechazar</Text>
             </TouchableOpacity>
           </View>
