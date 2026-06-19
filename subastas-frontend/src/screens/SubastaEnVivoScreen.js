@@ -53,13 +53,33 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           ultimo_postor: msg.user,
         }));
         setCustomBid(msg.minBid.toString());
-        setTimeLeft(30); // reset local timer 30s
+        setTimeLeft(60); // reset local timer 60s
       } else if (msg.type === 'CHAT') {
         setChatMessages(prev => [...prev, msg]);
       } else if (msg.type === 'ENDED') {
         setStatus(prev => ({ ...prev, isEnded: true }));
         setTimeLeft(0);
-        Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con $${msg.amount}`);
+        
+        const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
+        if (isWinner) {
+          Alert.alert('¡Subasta Finalizada!', `¡Felicidades! Ganaste la subasta por $${msg.amount}.`, [
+            { 
+              text: 'Proceder al pago', 
+              onPress: () => {
+                const wonItem = {
+                  id: articulo?.id || 1,
+                  nombre: articulo?.nombre || 'Artículo de Subasta',
+                  urlImagen: articulo?.urlImagen,
+                  estado_pago: 'pendiente',
+                  monto: msg.amount,
+                };
+                navigation.replace('CheckoutGanador', { item: wonItem, usuario });
+              }
+            }
+          ]);
+        } else {
+          Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con $${msg.amount}`);
+        }
       }
     };
 
