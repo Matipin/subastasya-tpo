@@ -34,6 +34,7 @@ public class DataInitializer implements CommandLineRunner {
     private final DeudaRepository deudaRepository;
     private final NotificacionRepository notificacionRepository;
     private final PujoRepository pujoRepository;
+    private final MedioDePagoRepository medioDePagoRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -64,6 +65,17 @@ public class DataInitializer implements CommandLineRunner {
             u1 = usuarioRepository.save(tempU1);
         } else {
             u1 = optU1.get();
+        }
+
+        if (medioDePagoRepository.findByCliente_Identificador(u1.getCliente().getIdentificador()).isEmpty()) {
+            MedioDePago mp = new MedioDePago();
+            mp.setCliente(u1.getCliente());
+            mp.setTipo("TARJETA");
+            mp.setEntidad("VISA");
+            mp.setNumero("4509953566233704");
+            mp.setTitular("APRO");
+            mp.setVerificado(true);
+            medioDePagoRepository.save(mp);
         }
 
         // Create ORO user
