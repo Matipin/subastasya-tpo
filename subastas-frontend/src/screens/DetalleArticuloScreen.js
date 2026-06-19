@@ -68,8 +68,12 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       }
     } catch(e) { console.log(e); }
 
-    if (subasta?.categoria === 'oro' && usuario?.cliente?.categoria !== 'oro') {
-      Alert.alert('Acceso Denegado', 'Esta subasta es exclusiva para la categoría ORO.');
+    // Validar categoría: comun < especial < plata < oro < platino
+    const catOrder = ['comun', 'especial', 'plata', 'oro', 'platino'];
+    const userCatIndex = catOrder.indexOf(usuario?.cliente?.categoria || 'comun');
+    const subastaCatIndex = catOrder.indexOf(subasta?.categoria || 'comun');
+    if (userCatIndex < subastaCatIndex) {
+      Alert.alert('Acceso Denegado', `Esta subasta requiere categoría ${subasta.categoria?.toUpperCase()}. Tu categoría actual es ${(usuario?.cliente?.categoria || 'comun').toUpperCase()}.`);
       return;
     }
     
@@ -269,9 +273,20 @@ const styles = StyleSheet.create({
     shadowRadius: 5,
     elevation: 8,
   },
+  actionText: {
+    color: '#FFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
   actionButtonText: {
     color: '#FFF',
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  infoText: {
+    fontSize: 15,
+    color: '#555',
+    marginBottom: 6,
+    lineHeight: 22,
   }
 });

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Optional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1/items")
@@ -28,6 +29,13 @@ public class ItemController {
         if (request.getEmail() == null) {
             return ResponseEntity.badRequest().body("Email requerido");
         }
+        if (!request.isDeclaraPropiedad()) {
+            return ResponseEntity.badRequest().body("Debe declarar que el bien le pertenece y no posee impedimento legal.");
+        }
+        if (!request.isAceptaDevolucion()) {
+            return ResponseEntity.badRequest().body("Debe aceptar que en caso de rechazo, la empresa devolverá el bien con cargo.");
+        }
+        
         Optional<Usuario> userOpt = usuarioRepository.findByEmail(request.getEmail());
         if (userOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado.");
@@ -60,12 +68,22 @@ public class ItemController {
             return empleadoRepository.save(emp);
         });
 
+        // Construir descripción completa con historia si existe
+        StringBuilder descCompleta = new StringBuilder();
+        descCompleta.append(request.getDescripcion() != null ? request.getDescripcion() : "Sin descripción");
+        if (request.getHistoria() != null && !request.getHistoria().isEmpty()) {
+            descCompleta.append(" | Historia: ").append(request.getHistoria());
+        }
+        if (request.getArtista() != null && !request.getArtista().isEmpty()) {
+            descCompleta.append(" | Artista/Diseñador: ").append(request.getArtista());
+        }
+
         Producto producto = new Producto();
         producto.setDuenio(duenio);
         producto.setRevisor(revisor);
         producto.setFecha(LocalDate.now());
         producto.setDisponible("no"); // Pendiente de decisión
-        producto.setDescripcionCompleta(request.getDescripcion() != null ? request.getDescripcion() : "Sin descripción");
+        producto.setDescripcionCompleta(descCompleta.toString());
         producto.setDescripcionCatalogo(request.getNombre() != null ? request.getNombre() : "Obra Nueva");
         productoRepository.save(producto);
 
@@ -73,6 +91,9 @@ public class ItemController {
         Notificacion notif = new Notificacion();
         notif.setUsuario(usuario);
         notif.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 500. Por favor, toma una decisión desde tu panel.");
+        notif.setTipo("producto_tasado");
+        notif.setReferenciaId(producto.getIdentificador().longValue());
+        notif.setFechaCreacion(LocalDateTime.now());
         notificacionRepository.save(notif);
 
         return ResponseEntity.status(HttpStatus.CREATED).body(producto);
@@ -117,6 +138,9 @@ public class ItemController {
             Notificacion notif = new Notificacion();
             notif.setUsuario(u);
             notif.setMensaje("Has aceptado la tasación para '" + p.getDescripcionCatalogo() + "'. El producto pasará al catálogo.");
+            notif.setTipo("producto_tasado");
+            notif.setReferenciaId(p.getIdentificador().longValue());
+            notif.setFechaCreacion(LocalDateTime.now());
             notificacionRepository.save(notif);
             
             return ResponseEntity.ok("Producto aceptado e ingresado al catálogo.");
@@ -133,6 +157,9 @@ public class ItemController {
             Notificacion notif = new Notificacion();
             notif.setUsuario(u);
             notif.setMensaje("Has rechazado la tasación para '" + p.getDescripcionCatalogo() + "'. Se ha generado una deuda de USD 50 por gastos operativos de envío de retorno.");
+            notif.setTipo("deuda");
+            notif.setReferenciaId(deuda.getId());
+            notif.setFechaCreacion(LocalDateTime.now());
             notificacionRepository.save(notif);
 
             return ResponseEntity.ok("Producto rechazado. Se ha generado cargo de envío.");

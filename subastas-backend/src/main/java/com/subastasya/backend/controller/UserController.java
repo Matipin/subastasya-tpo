@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Map;
 import java.util.HashMap;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -27,8 +29,9 @@ public class UserController {
     private final ProductoRepository productoRepository;
     private final CatalogoRepository catalogoRepository;
     private final ItemCatalogoRepository itemCatalogoRepository;
+    private final FotoRepository fotoRepository;
 
-    @GetMapping("/me/payments")
+    @GetMapping("/me/medios-de-pago")
     public ResponseEntity<?> obtenerMediosDePago(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
@@ -78,11 +81,40 @@ public class UserController {
     }
 
     @PostMapping("/me/debts/{id}/pay")
-    public ResponseEntity<?> payDebt(@PathVariable Long id) {
+    public ResponseEntity<?> payDebt(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
         Optional<Deuda> deudaOpt = deudaRepository.findById(id);
         if (deudaOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         Deuda deuda = deudaOpt.get();
         deuda.setPagada(true);
+        deuda.setFechaPago(LocalDateTime.now());
+        
+        // Extraer info del checkout si viene en el body
+        if (body != null) {
+            if (body.containsKey("metodoEnvio")) {
+                deuda.setMetodoEnvio((String) body.get("metodoEnvio"));
+            }
+            if (body.containsKey("renunciaSeguro")) {
+                deuda.setRenunciaSeguro(Boolean.TRUE.equals(body.get("renunciaSeguro")));
+            }
+            if (body.containsKey("medioPagoId")) {
+                // Buscar el nombre del medio de pago
+                try {
+                    Long mpId = Long.valueOf(body.get("medioPagoId").toString());
+                    Optional<MedioDePago> mpOpt = medioDePagoRepository.findById(mpId);
+                    if (mpOpt.isPresent()) {
+                        MedioDePago mp = mpOpt.get();
+                        deuda.setMedioPagoUsado(mp.getTipo() + " " + (mp.getEntidad() != null ? mp.getEntidad() : "") + " ****" + (mp.getNumero() != null && mp.getNumero().length() >= 4 ? mp.getNumero().substring(mp.getNumero().length() - 4) : "****"));
+                    }
+                } catch (Exception e) {
+                    // Si falla, usar un valor genérico
+                    deuda.setMedioPagoUsado("Medio de pago registrado");
+                }
+            }
+            if (body.containsKey("medioPagoNombre")) {
+                deuda.setMedioPagoUsado((String) body.get("medioPagoNombre"));
+            }
+        }
+        
         deudaRepository.save(deuda);
         return ResponseEntity.ok("Deuda pagada correctamente.");
     }
@@ -102,13 +134,23 @@ public class UserController {
 
         int totalPujas = 0;
         int subastasParticipadas = 0;
+        int subastasGanadas = 0;
         int ventasRealizadas = 0;
+        double totalOfertado = 0.0;
+        double totalPagado = 0.0;
 
         if (user.getCliente() != null) {
             List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
             subastasParticipadas = asistentes.size();
             for (Asistente a : asistentes) {
-                totalPujas += pujoRepository.findByAsistenteIdentificador(a.getIdentificador()).size();
+                List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(a.getIdentificador());
+                totalPujas += pujos.size();
+                for (Pujo p : pujos) {
+                    totalOfertado += p.getImporte().doubleValue();
+                    if ("si".equals(p.getGanador())) {
+                        subastasGanadas++;
+                    }
+                }
             }
         }
         
@@ -116,10 +158,21 @@ public class UserController {
             ventasRealizadas = productoRepository.findByDuenioIdentificador(user.getDuenio().getIdentificador()).size();
         }
 
-        Map<String, Integer> metrics = new HashMap<>();
+        // Calcular total pagado de deudas
+        List<Deuda> deudas = deudaRepository.findByUsuarioIdUsuario(user.getIdUsuario());
+        for (Deuda d : deudas) {
+            if (d.isPagada()) {
+                totalPagado += d.getMonto().doubleValue();
+            }
+        }
+
+        Map<String, Object> metrics = new HashMap<>();
         metrics.put("totalPujas", totalPujas);
         metrics.put("subastasParticipadas", subastasParticipadas);
+        metrics.put("subastasGanadas", subastasGanadas);
         metrics.put("ventasRealizadas", ventasRealizadas);
+        metrics.put("totalOfertado", totalOfertado);
+        metrics.put("totalPagado", totalPagado);
 
         return ResponseEntity.ok(metrics);
     }
@@ -143,20 +196,47 @@ public class UserController {
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
                         
-                        map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
-                        map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
+                        // Comisión (10% del monto)
+                        double comision = p.getImporte().doubleValue() * 0.10;
+                        map.put("comision", comision);
                         
+                        // Imagen del producto
+                        List<Foto> fotos = fotoRepository.findByProductoIdentificador(p.getItem().getProducto().getIdentificador());
+                        if (!fotos.isEmpty() && fotos.get(0).getFoto() != null) {
+                            map.put("urlImagen", new String(fotos.get(0).getFoto(), java.nio.charset.StandardCharsets.UTF_8));
+                        }
+                        
+                        // Nombre de la subasta
+                        List<Catalogo> catalogos = catalogoRepository.findBySubastaIdentificador(
+                            p.getItem().getCatalogo().getSubasta().getIdentificador());
+                        if (!catalogos.isEmpty()) {
+                            map.put("subastaNombre", catalogos.get(0).getDescripcion());
+                        }
+
                         List<Deuda> deudas = deudaRepository.findByUsuarioIdUsuario(user.getIdUsuario());
                         boolean isPaid = deudas.stream().anyMatch(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()) && d.isPagada());
                         if (isPaid) {
                             map.put("estado_pago", "pagado");
                         } else {
-                            map.put("estado_pago", "pendiente");
+                            // Check if debt exists but unpaid
+                            boolean hasPendingDebt = deudas.stream().anyMatch(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()) && !d.isPagada());
+                            map.put("estado_pago", hasPendingDebt ? "pendiente" : "pendiente");
                         }
                         
-                        Optional<Deuda> relatedDebt = deudas.stream().filter(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador())).findFirst();
+                        // Info de pago para ítems ya pagados
+                        Optional<Deuda> relatedDebt = deudas.stream()
+                            .filter(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()))
+                            .findFirst();
                         if (relatedDebt.isPresent()) {
-                            map.put("deudaId", relatedDebt.get().getId());
+                            Deuda deuda = relatedDebt.get();
+                            map.put("deudaId", deuda.getId());
+                            if (deuda.isPagada()) {
+                                map.put("medioPagoUsado", deuda.getMedioPagoUsado() != null ? deuda.getMedioPagoUsado() : "Medio de pago registrado");
+                                map.put("fechaPago", deuda.getFechaPago());
+                                map.put("metodoEnvio", deuda.getMetodoEnvio() != null ? deuda.getMetodoEnvio() : "domicilio");
+                                map.put("renunciaSeguro", deuda.isRenunciaSeguro());
+                                map.put("recibido", true); // Para ítems pagados, asumimos recibido
+                            }
                         }
 
                         result.add(map);

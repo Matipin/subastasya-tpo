@@ -60,26 +60,49 @@ export default function MisProductosScreen({ route, navigation }) {
     }
   };
 
+  const getStatusConfig = (status) => {
+    switch(status) {
+      case 'Con Oferta': return { color: '#F59E0B', bg: '#FEF3C7', icon: 'pricetag', text: 'Con Oferta' };
+      case 'En validación': return { color: '#3B82F6', bg: '#DBEAFE', icon: 'hourglass', text: 'En validación' };
+      case 'Pendiente de Envío': return { color: '#8B5CF6', bg: '#EDE9FE', icon: 'cube', text: 'Pendiente de Envío' };
+      case 'Subastado': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Subastado' };
+      case 'si': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Aprobado' };
+      default: return { color: '#6B7280', bg: '#F3F4F6', icon: 'time', text: status || 'En revisión' };
+    }
+  };
+
   const renderItem = ({ item }) => {
     const isConOferta = item.descripcionCatalogo === 'Con Oferta';
+    const status = getStatusConfig(item.descripcionCatalogo);
+    
     return (
       <View style={styles.card}>
         <View style={styles.cardInfo}>
           <Text style={styles.itemName}>{item.descripcionCompleta}</Text>
           <Text style={styles.dateText}>Registrado: {new Date(item.fecha).toLocaleDateString()}</Text>
-          <View style={styles.statusBadge}>
-            <Text style={styles.statusText}>{item.descripcionCatalogo === 'si' ? 'Aprobado' : (item.descripcionCatalogo || 'En revisión')}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+            <Ionicons name={status.icon} size={14} color={status.color} />
+            <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
           </View>
         </View>
 
         {isConOferta && (
-          <View style={styles.offerActions}>
-            <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]} onPress={() => handleAcceptOffer(item.identificador)}>
-              <Text style={styles.actionBtnText}>Aceptar</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => handleRejectOffer(item.identificador)}>
-              <Text style={styles.actionBtnText}>Rechazar</Text>
-            </TouchableOpacity>
+          <View style={styles.offerSection}>
+            <View style={styles.offerDetails}>
+              <Text style={styles.offerLabel}>Precio base sugerido:</Text>
+              <Text style={styles.offerPrice}>USD 500.00</Text>
+              <Text style={styles.offerNote}>Comisión estimada: 10% (USD 50.00)</Text>
+            </View>
+            <View style={styles.offerActions}>
+              <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]} onPress={() => handleAcceptOffer(item.identificador)}>
+                <Ionicons name="checkmark" size={16} color="#FFF" />
+                <Text style={styles.actionBtnText}>Aceptar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.actionBtn, styles.rejectBtn]} onPress={() => handleRejectOffer(item.identificador)}>
+                <Ionicons name="close" size={16} color="#FFF" />
+                <Text style={styles.actionBtnText}>Rechazar</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         )}
       </View>
@@ -151,26 +174,48 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   statusBadge: {
-    backgroundColor: '#F3F4F6',
+    flexDirection: 'row',
+    alignItems: 'center',
     alignSelf: 'flex-start',
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
   },
   statusText: {
-    color: '#4B5563',
     fontSize: 12,
     fontWeight: 'bold',
+    marginLeft: 4,
+  },
+  offerSection: {
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    paddingTop: 12,
+    marginTop: 10,
+  },
+  offerDetails: {
+    marginBottom: 10,
+  },
+  offerLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  offerPrice: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#F59E0B',
+    marginVertical: 2,
+  },
+  offerNote: {
+    fontSize: 11,
+    color: '#9CA3AF',
   },
   offerActions: {
     flexDirection: 'row',
     justifyContent: 'flex-start',
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 10,
   },
   actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
@@ -186,5 +231,6 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 14,
+    marginLeft: 4,
   }
 });

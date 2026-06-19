@@ -5,10 +5,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
 
-export default function PropuestaArticuloScreen({ navigation }) {
+export default function PropuestaArticuloScreen({ route, navigation }) {
+  const usuario = route?.params?.usuario;
   const [nombre, setNombre] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [categoria, setCategoria] = useState('');
+  const [historia, setHistoria] = useState('');
+  const [artista, setArtista] = useState('');
+  const [declaraPropiedad, setDeclaraPropiedad] = useState(false);
+  const [aceptaDevolucion, setAceptaDevolucion] = useState(false);
   const [fotos, setFotos] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -23,27 +28,42 @@ export default function PropuestaArticuloScreen({ navigation }) {
       return;
     }
 
+    if (!declaraPropiedad) {
+      Alert.alert('Error', 'Debe declarar que el bien le pertenece y no posee impedimento legal.');
+      return;
+    }
+
+    if (!aceptaDevolucion) {
+      Alert.alert('Error', 'Debe aceptar las condiciones de devolución con cargo.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Usamos el nuevo endpoint permitido
       const url = API_BASE_URL.replace('/auth', '/items') + '/propose';
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          email: usuario?.email,
           nombre,
           descripcion,
           categoria,
-          fotosUrls: fotos // Sending all photos
+          historia,
+          artista,
+          declaraPropiedad,
+          aceptaDevolucion,
+          fotosUrls: fotos
         })
       });
 
       if (response.ok) {
-        Alert.alert('¡Propuesta Enviada!', 'El artículo pasará a revisión técnica.', [
+        Alert.alert('¡Propuesta Enviada!', 'El artículo pasará a revisión técnica. Un tasador lo evaluará y recibirás una notificación con la oferta sugerida.', [
           { text: 'Aceptar', onPress: () => navigation.goBack() }
         ]);
       } else {
-        Alert.alert('Error', 'No se pudo enviar la propuesta.');
+        const errorText = await response.text();
+        Alert.alert('Error', errorText || 'No se pudo enviar la propuesta.');
       }
     } catch (e) {
       Alert.alert('Error', 'Error de conexión con el servidor.');
@@ -74,6 +94,15 @@ export default function PropuestaArticuloScreen({ navigation }) {
     newFotos.splice(index, 1);
     setFotos(newFotos);
   };
+
+  const CheckBox = ({ checked, onPress, label }) => (
+    <TouchableOpacity style={styles.checkboxRow} onPress={onPress} activeOpacity={0.7}>
+      <View style={[styles.checkbox, checked && styles.checkboxChecked]}>
+        {checked && <Ionicons name="checkmark" size={16} color="#FFF" />}
+      </View>
+      <Text style={styles.checkboxLabel}>{label}</Text>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={styles.container}>
@@ -112,10 +141,20 @@ export default function PropuestaArticuloScreen({ navigation }) {
         </View>
 
         <View style={styles.formGroup}>
+          <Text style={styles.label}>Artista / Diseñador</Text>
+          <TextInput 
+            style={styles.input} 
+            placeholder="Nombre del artista o diseñador (si aplica)"
+            value={artista}
+            onChangeText={setArtista}
+          />
+        </View>
+
+        <View style={styles.formGroup}>
           <Text style={styles.label}>Descripción Detallada *</Text>
           <TextInput 
             style={[styles.input, styles.textArea]} 
-            placeholder="Materiales, historia, estado de conservación..."
+            placeholder="Materiales, estado de conservación, dimensiones..."
             value={descripcion}
             onChangeText={setDescripcion}
             multiline
@@ -125,10 +164,24 @@ export default function PropuestaArticuloScreen({ navigation }) {
         </View>
 
         <View style={styles.formGroup}>
-          <Text style={styles.label}>Fotografías (Hasta 6) *</Text>
+          <Text style={styles.label}>Historia / Contexto del Objeto</Text>
+          <TextInput 
+            style={[styles.input, styles.textArea]} 
+            placeholder="Origen, dueños anteriores, fecha estimada de creación, contexto histórico..."
+            value={historia}
+            onChangeText={setHistoria}
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
+          />
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Fotografías (Mínimo 6, máximo 10) *</Text>
+          <Text style={styles.helperText}>Se requieren al menos 6 fotos de alta calidad para la tasación: frente, dorso, laterales, detalles y firma/sello si aplica.</Text>
           <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
             <Ionicons name="camera-outline" size={24} color={COLORS.PRIMARY} />
-            <Text style={styles.uploadBtnText}>Seleccionar Foto</Text>
+            <Text style={styles.uploadBtnText}>Seleccionar Foto ({fotos.length}/10)</Text>
           </TouchableOpacity>
           <View style={styles.fotosContainer}>
             {fotos.map((uri, index) => (
@@ -142,8 +195,25 @@ export default function PropuestaArticuloScreen({ navigation }) {
           </View>
         </View>
 
+        {/* Declaraciones legales */}
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Declaraciones Obligatorias *</Text>
+          
+          <CheckBox
+            checked={declaraPropiedad}
+            onPress={() => setDeclaraPropiedad(!declaraPropiedad)}
+            label="Declaro que el bien me pertenece, es de origen lícito y no posee impedimento legal alguno para su venta."
+          />
+
+          <CheckBox
+            checked={aceptaDevolucion}
+            onPress={() => setAceptaDevolucion(!aceptaDevolucion)}
+            label="Acepto que, en caso de rechazo de la tasación, la empresa devolverá el bien con un cargo por gastos operativos de envío."
+          />
+        </View>
+
         <TouchableOpacity 
-          style={styles.submitButton} 
+          style={[styles.submitButton, (!declaraPropiedad || !aceptaDevolucion) && styles.submitButtonDisabled]} 
           onPress={handleSubmit}
           disabled={loading}
         >
@@ -197,6 +267,12 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_TITLE,
     marginBottom: 8,
   },
+  helperText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    lineHeight: 18,
+    marginBottom: 10,
+  },
   input: {
     backgroundColor: '#FFF',
     borderWidth: 1,
@@ -207,7 +283,7 @@ const styles = StyleSheet.create({
     color: COLORS.TEXT_MAIN,
   },
   textArea: {
-    minHeight: 120,
+    minHeight: 100,
   },
   submitButton: {
     backgroundColor: COLORS.PRIMARY,
@@ -220,6 +296,11 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 5,
     elevation: 8,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#CCC',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   submitButtonText: {
     color: '#FFF',
@@ -266,5 +347,33 @@ const styles = StyleSheet.create({
     right: -10,
     backgroundColor: '#FFF',
     borderRadius: 12,
-  }
+  },
+  // Checkbox styles
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+    paddingRight: 10,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  checkboxChecked: {
+    backgroundColor: COLORS.PRIMARY,
+    borderColor: COLORS.PRIMARY,
+  },
+  checkboxLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+    lineHeight: 20,
+  },
 });

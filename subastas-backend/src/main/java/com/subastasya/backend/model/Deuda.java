@@ -25,4 +25,15 @@ public class Deuda {
 
     private boolean pagada = false;
     private LocalDateTime fechaCreacion = LocalDateTime.now();
+
+    // Campos para checkout completado
+    @Column(length = 100)
+    private String medioPagoUsado;
+
+    private LocalDateTime fechaPago;
+
+    @Column(length = 20)
+    private String metodoEnvio; // "domicilio" o "retiro"
+
+    private boolean renunciaSeguro = false;
 }

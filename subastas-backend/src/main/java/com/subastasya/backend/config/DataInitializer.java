@@ -211,26 +211,60 @@ public class DataInitializer implements CommandLineRunner {
 
         // Generar Historial Ganado para Usuario TEST
         if (pujoRepository.findByAsistenteIdentificador(u1.getCliente().getIdentificador()).isEmpty()) {
+            // Subasta pasada 1: Jarrón Dinastía Ming - PAGADA
             Subasta sh1 = createHistoricalSubasta("Subasta Pasada 1", admin);
             Asistente ah1 = createAsistente(u1.getCliente(), sh1);
             ItemCatalogo ih1 = createHistoricalItem(sh1, "Jarrón Dinastía Ming", admin, duenioBase);
             createWinningPujo(ah1, ih1, new BigDecimal("1500.00"));
 
+            // Crear deuda PAGADA para Jarrón
+            Deuda d1 = new Deuda();
+            d1.setUsuario(u1);
+            d1.setMonto(new BigDecimal("1500.00"));
+            d1.setMotivo("Adjudicación Item de Subasta " + ih1.getIdentificador());
+            d1.setPagada(true);
+            d1.setFechaPago(LocalDateTime.now().minusDays(8));
+            d1.setMedioPagoUsado("VISA ****3704");
+            d1.setMetodoEnvio("domicilio");
+            d1.setRenunciaSeguro(false);
+            deudaRepository.save(d1);
+
+            // Subasta pasada 2: Silla Luis XV - PAGADA
             Subasta sh2 = createHistoricalSubasta("Subasta Pasada 2", admin);
             Asistente ah2 = createAsistente(u1.getCliente(), sh2);
             ItemCatalogo ih2 = createHistoricalItem(sh2, "Silla Luis XV", admin, duenioBase);
             createWinningPujo(ah2, ih2, new BigDecimal("850.00"));
 
+            // Crear deuda PAGADA para Silla
+            Deuda d2 = new Deuda();
+            d2.setUsuario(u1);
+            d2.setMonto(new BigDecimal("850.00"));
+            d2.setMotivo("Adjudicación Item de Subasta " + ih2.getIdentificador());
+            d2.setPagada(true);
+            d2.setFechaPago(LocalDateTime.now().minusDays(5));
+            d2.setMedioPagoUsado("VISA ****3704");
+            d2.setMetodoEnvio("retiro");
+            d2.setRenunciaSeguro(true);
+            deudaRepository.save(d2);
+
+            // Subasta pasada 3: Collar de Perlas - PENDIENTE DE PAGO
             Subasta sh3 = createHistoricalSubasta("Subasta Reciente (Con Deuda)", admin);
             Asistente ah3 = createAsistente(u1.getCliente(), sh3);
             ItemCatalogo ih3 = createHistoricalItem(sh3, "Collar de Perlas", admin, duenioBase);
             createWinningPujo(ah3, ih3, new BigDecimal("2300.00"));
 
-            // Notificaciones requeridas por el usuario
-            createNotificacion(u1, "¡Felicidades! Ganaste la subasta de la Silla Luis XV. Por favor, selecciona el método de pago y envío en Subastas Ganadas.");
-            createNotificacion(u1, "La subasta del Reloj Vintage está en vivo. ¡Entra ahora para pujar!");
-            
-            // Deuda eliminada para el usuario Test para que no se bloquee al entrar
+            // Crear deuda PENDIENTE para Collar
+            Deuda d3 = new Deuda();
+            d3.setUsuario(u1);
+            d3.setMonto(new BigDecimal("2300.00"));
+            d3.setMotivo("Adjudicación Item de Subasta " + ih3.getIdentificador());
+            d3.setPagada(false);
+            deudaRepository.save(d3);
+
+            // Notificaciones tipadas
+            createNotificacion(u1, "¡Felicidades! Ganaste la subasta de la Silla Luis XV. Por favor, selecciona el método de pago y envío en Subastas Ganadas.", "subasta_ganada", ih2.getIdentificador());
+            createNotificacion(u1, "La subasta del Reloj Vintage está en vivo. ¡Entra ahora para pujar!", "subasta_en_vivo", s1.getIdentificador());
+            createNotificacion(u1, "Tienes un pago pendiente por el Collar de Perlas. Dirígete a Subastas Ganadas para completarlo.", "subasta_ganada", ih3.getIdentificador());
         }
 
         // Generar Historial Ganado, Deuda, y Productos Vendedor para Usuario ORO
@@ -249,13 +283,13 @@ public class DataInitializer implements CommandLineRunner {
 
             // 3 Productos del Usuario Oro como Vendedor
             Producto p1 = createDemoItem(null, "Estatua de Mármol", admin, uOro.getDuenio(), "Pendiente de Envío");
-            createNotificacion(uOro, "Debes enviar tu artículo 'Estatua de Mármol' a la sucursal de Buenos Aires en las próximas 48 horas.");
+            createNotificacion(uOro, "Debes enviar tu artículo 'Estatua de Mármol' a la sucursal de Buenos Aires en las próximas 48 horas.", "general", null);
 
             Producto p2 = createDemoItem(null, "Reloj Patek Philippe", admin, uOro.getDuenio(), "En validación");
-            createNotificacion(uOro, "Hemos recibido tu artículo 'Reloj Patek Philippe'. Nuestros tasadores lo están validando.");
+            createNotificacion(uOro, "Hemos recibido tu artículo 'Reloj Patek Philippe'. Nuestros tasadores lo están validando.", "producto_tasado", p2.getIdentificador().longValue());
 
             Producto p3 = createDemoItem(null, "Anillo de Zafiro", admin, uOro.getDuenio(), "Con Oferta");
-            createNotificacion(uOro, "¡Tienes una oferta sugerida de 5,000 USD por tu artículo 'Anillo de Zafiro'! Revisa tus productos para aceptar o rechazar.");
+            createNotificacion(uOro, "¡Tienes una oferta sugerida de 5,000 USD por tu artículo 'Anillo de Zafiro'! Revisa tus productos para aceptar o rechazar.", "producto_tasado", p3.getIdentificador().longValue());
         }
     }
 
@@ -305,7 +339,7 @@ public class DataInitializer implements CommandLineRunner {
         pujoRepository.save(p);
     }
 
-    private void createNotificacion(Usuario u, String msj) {
+    private void createNotificacion(Usuario u, String msj, String tipo, Long referenciaId) {
         if (u == null || u.getIdUsuario() == null) return;
         Notificacion n = new Notificacion();
         Usuario ref = new Usuario();
@@ -313,6 +347,8 @@ public class DataInitializer implements CommandLineRunner {
         n.setUsuario(ref);
         n.setMensaje(msj);
         n.setLeida(false);
+        n.setTipo(tipo != null ? tipo : "general");
+        n.setReferenciaId(referenciaId);
         n.setFechaCreacion(LocalDateTime.now());
         notificacionRepository.save(n);
     }

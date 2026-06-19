@@ -30,6 +30,7 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
     @Autowired private AsistenteRepository asistenteRepository;
     @Autowired private PujoRepository pujoRepository;
     @Autowired private DeudaRepository deudaRepository;
+    @Autowired private NotificacionRepository notificacionRepository;
 
     private final Map<String, BidMessageDTO> auctionStates = new ConcurrentHashMap<>();
     private final Map<String, Timer> auctionTimers = new ConcurrentHashMap<>();
@@ -153,6 +154,32 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                 d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
                                 d.setPagada(false);
                                 deudaRepository.save(d);
+
+                                // Notificación al ganador
+                                Notificacion notifGanador = new Notificacion();
+                                notifGanador.setUsuario(user);
+                                notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "' por USD " + String.format("%.2f", finalState.getAmount()) + ". Dirígete a Subastas Ganadas para completar el pago.");
+                                notifGanador.setTipo("subasta_ganada");
+                                notifGanador.setReferenciaId(item.getIdentificador());
+                                notifGanador.setFechaCreacion(java.time.LocalDateTime.now());
+                                notificacionRepository.save(notifGanador);
+
+                                // Notificación al dueño del producto
+                                if (item.getProducto().getDuenio() != null) {
+                                    java.util.List<Usuario> allUsers = usuarioRepository.findAll();
+                                    for (Usuario u : allUsers) {
+                                        if (u.getDuenio() != null && u.getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
+                                            Notificacion notifDuenio = new Notificacion();
+                                            notifDuenio.setUsuario(u);
+                                            notifDuenio.setMensaje("Tu producto '" + item.getProducto().getDescripcionCatalogo() + "' fue vendido en subasta por USD " + String.format("%.2f", finalState.getAmount()) + ".");
+                                            notifDuenio.setTipo("producto_vendido");
+                                            notifDuenio.setReferenciaId(item.getProducto().getIdentificador().longValue());
+                                            notifDuenio.setFechaCreacion(java.time.LocalDateTime.now());
+                                            notificacionRepository.save(notifDuenio);
+                                            break;
+                                        }
+                                    }
+                                }
                             }
                         }
                     } catch (Exception ex) {

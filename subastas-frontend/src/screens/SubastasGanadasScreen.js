@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -28,35 +28,80 @@ export default function SubastasGanadasScreen({ route, navigation }) {
     fetchWonItems();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.card}>
-      <View style={styles.iconContainer}>
-        <Ionicons name="trophy" size={24} color="#F59E0B" />
-      </View>
-      <View style={styles.cardInfo}>
-        <Text style={styles.itemName}>{item.itemNombre}</Text>
-        <Text style={styles.dateText}>Ganado el {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
-        <Text style={styles.montoText}>Por USD {item.monto?.toFixed(2)}</Text>
-        <View style={[styles.badge, item.estado_pago === 'finalizado' ? styles.badgeFinalizado : (item.estado_pago === 'pagado' ? styles.badgePagado : styles.badgePendiente)]}>
-          <Text style={[styles.badgeText, item.estado_pago === 'finalizado' ? styles.badgeTextFinalizado : (item.estado_pago === 'pagado' ? styles.badgeTextPagado : styles.badgeTextPendiente)]}>
-            {item.estado_pago === 'finalizado' ? 'Finalizado' : (item.estado_pago === 'pagado' ? 'Pagado' : 'Para Pagar')}
-          </Text>
+  const handleNavigate = (item) => {
+    // Pasar toda la info al CheckoutGanador
+    navigation.navigate('CheckoutGanador', { 
+      articulo: {
+        id: item.id,
+        nombre: item.itemNombre,
+        itemNombre: item.itemNombre,
+        monto: item.monto,
+        estado_pago: item.estado_pago,
+        deudaId: item.deudaId,
+        urlImagen: item.urlImagen,
+        fecha: item.fecha,
+        subastaId: item.subastaId,
+        subastaNombre: item.subastaNombre,
+        comision: item.comision,
+        // Info para ítems pagados
+        medioPagoUsado: item.medioPagoUsado,
+        fechaPago: item.fechaPago,
+        metodoEnvio: item.metodoEnvio,
+        renunciaSeguro: item.renunciaSeguro,
+        recibido: item.recibido,
+      },
+      usuario 
+    });
+  };
+
+  const renderItem = ({ item }) => {
+    const isPaid = item.estado_pago === 'finalizado' || item.estado_pago === 'pagado';
+
+    return (
+      <TouchableOpacity style={styles.card} onPress={() => handleNavigate(item)} activeOpacity={0.8}>
+        {/* Imagen del producto */}
+        {item.urlImagen ? (
+          <Image source={{ uri: item.urlImagen }} style={styles.itemImage} resizeMode="cover" />
+        ) : (
+          <View style={[styles.itemImage, styles.imagePlaceholder]}>
+            <Ionicons name="image-outline" size={30} color="#CCC" />
+          </View>
+        )}
+
+        <View style={styles.cardContent}>
+          <View style={styles.cardInfo}>
+            <Text style={styles.itemName} numberOfLines={1}>{item.itemNombre}</Text>
+            <Text style={styles.dateText}>Ganado el {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
+            <Text style={styles.montoText}>USD {item.monto?.toFixed(2)}</Text>
+          </View>
+
+          <View style={styles.cardFooter}>
+            <View style={[styles.badge, isPaid ? styles.badgePagado : styles.badgePendiente]}>
+              <Ionicons 
+                name={isPaid ? 'checkmark-circle' : 'time'} 
+                size={12} 
+                color={isPaid ? '#065F46' : '#991B1B'} 
+              />
+              <Text style={[styles.badgeText, isPaid ? styles.badgeTextPagado : styles.badgeTextPendiente]}>
+                {isPaid ? 'Pagado' : 'Para Pagar'}
+              </Text>
+            </View>
+
+            <View style={[styles.actionButton, isPaid && { backgroundColor: '#6B7280' }]}>
+              <Text style={styles.actionText}>{isPaid ? 'Ver Resumen' : 'Gestionar'}</Text>
+              <Ionicons name="chevron-forward" size={14} color="#FFF" />
+            </View>
+          </View>
         </View>
-      </View>
-      <TouchableOpacity 
-        style={[styles.actionButton, (item.estado_pago === 'finalizado' || item.estado_pago === 'pagado') && {backgroundColor: '#6B7280'}]}
-        onPress={() => navigation.navigate('CheckoutGanador', { item, usuario })}
-      >
-        <Text style={styles.actionText}>{(item.estado_pago === 'finalizado' || item.estado_pago === 'pagado') ? 'Ver Resumen' : 'Gestionar'}</Text>
       </TouchableOpacity>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backText}>← Volver</Text>
+          <Ionicons name="arrow-back" size={24} color={COLORS.TEXT_TITLE} />
         </TouchableOpacity>
         <Text style={styles.title}>Subastas Ganadas</Text>
       </View>
@@ -84,37 +129,48 @@ export default function SubastasGanadasScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.BACKGROUND },
-  header: { padding: 20, paddingTop: 50, backgroundColor: COLORS.CARD_BG, borderBottomWidth: 1, borderBottomColor: '#EEE' },
-  backBtn: { marginBottom: 10 },
-  backText: { color: COLORS.PRIMARY, fontWeight: 'bold' },
+  header: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    padding: 20, 
+    paddingTop: 50, 
+    backgroundColor: COLORS.CARD_BG, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#EEE' 
+  },
+  backBtn: { marginRight: 15 },
   title: { fontSize: 24, fontWeight: 'bold', color: COLORS.TEXT_TITLE },
   content: { padding: 20, flex: 1, justifyContent: 'center' },
   emptyCard: { backgroundColor: '#FFF', padding: 40, borderRadius: 10, alignItems: 'center' },
   emptyText: { color: '#666', fontSize: 16, marginTop: 10 },
   card: {
     backgroundColor: '#FFF',
-    padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     marginBottom: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
     elevation: 3,
   },
-  iconContainer: {
-    backgroundColor: '#FEF3C7',
-    padding: 12,
-    borderRadius: 50,
-    marginRight: 15,
+  itemImage: {
+    width: '100%',
+    height: 140,
+  },
+  imagePlaceholder: {
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cardContent: {
+    padding: 16,
   },
   cardInfo: {
-    flex: 1,
+    marginBottom: 12,
   },
   itemName: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 4,
@@ -125,46 +181,52 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   montoText: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.PRIMARY,
   },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    paddingTop: 12,
+  },
   actionButton: {
     backgroundColor: COLORS.PRIMARY,
-    paddingHorizontal: 15,
+    paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   actionText: {
     color: '#FFF',
     fontWeight: 'bold',
-    fontSize: 12,
+    fontSize: 13,
+    marginRight: 4,
   },
   badge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 12,
-    marginTop: 4,
   },
   badgePagado: {
     backgroundColor: '#D1FAE5',
-  },
-  badgeFinalizado: {
-    backgroundColor: '#E5E7EB',
   },
   badgePendiente: {
     backgroundColor: '#FEE2E2',
   },
   badgeText: {
-    fontSize: 10,
+    fontSize: 12,
     fontWeight: 'bold',
+    marginLeft: 4,
   },
   badgeTextPagado: {
     color: '#065F46',
-  },
-  badgeTextFinalizado: {
-    color: '#4B5563',
   },
   badgeTextPendiente: {
     color: '#991B1B',

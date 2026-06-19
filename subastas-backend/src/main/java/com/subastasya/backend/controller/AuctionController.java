@@ -53,6 +53,10 @@ public class AuctionController {
             for (Catalogo catalogo : catalogos) {
                 List<ItemCatalogo> items = itemCatalogoRepository.findByCatalogoIdentificador(catalogo.getIdentificador());
                 for (ItemCatalogo item : items) {
+                    // No mostrar ítems ya subastados en el catálogo
+                    if ("si".equals(item.getSubastado())) {
+                        continue;
+                    }
                     ArticuloDTO dto = new ArticuloDTO();
                     dto.setId(item.getProducto().getIdentificador());
                     dto.setNombre(item.getProducto().getDescripcionCatalogo());

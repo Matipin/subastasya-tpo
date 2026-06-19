@@ -13,6 +13,7 @@ export default function HomeScreen({ navigation, route }) {
   const [subastas, setSubastas] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     fetchSubastas();
@@ -61,6 +62,21 @@ export default function HomeScreen({ navigation, route }) {
       setIsLoading(false);
     }
   };
+
+  // Filtrar por búsqueda
+  const filteredSubastas = searchQuery.trim() 
+    ? subastas.filter(item => {
+        const articulo = item.articulos?.[0];
+        if (!articulo) return false;
+        const query = searchQuery.toLowerCase();
+        return (
+          (articulo.nombre && articulo.nombre.toLowerCase().includes(query)) ||
+          (articulo.descripcion && articulo.descripcion.toLowerCase().includes(query)) ||
+          (item.ubicacion && item.ubicacion.toLowerCase().includes(query)) ||
+          (item.categoria && item.categoria.toLowerCase().includes(query))
+        );
+      })
+    : subastas;
 
   const handlePujar = () => {
     if (!usuario?.medioPagoRegistrado) {
@@ -147,24 +163,40 @@ export default function HomeScreen({ navigation, route }) {
       </View>
 
       <View style={styles.searchContainer}>
-        <Ionicons name="menu-outline" size={20} color="#666" style={{ marginRight: 10 }} />
+        <Ionicons name="search-outline" size={20} color="#666" style={{ marginRight: 10 }} />
         <TextInput 
           style={styles.searchInput}
-          placeholder="Buscar..."
+          placeholder="Buscar artículos..."
           placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
-        <Ionicons name="search-outline" size={20} color="#666" style={{ marginLeft: 10 }} />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={20} color="#999" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      <Text style={styles.sectionTitle}>Item Destacadas</Text>
+      <Text style={styles.sectionTitle}>
+        {searchQuery.trim() ? `Resultados (${filteredSubastas.length})` : 'Item Destacadas'}
+      </Text>
 
       <FlatList
-        data={subastas}
+        data={filteredSubastas}
         keyExtractor={(item, index) => (item.articulos?.[0]?.id || item.identificador || index).toString()}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
         numColumns={2}
+        ListEmptyComponent={
+          <View style={{ alignItems: 'center', marginTop: 40 }}>
+            <Ionicons name="search" size={40} color="#CCC" />
+            <Text style={{ color: '#999', marginTop: 10 }}>
+              {searchQuery.trim() ? 'No se encontraron artículos.' : 'No hay artículos disponibles.'}
+            </Text>
+          </View>
+        }
       />
 
       {/* Botón Flotante para Proponer Artículo */}
