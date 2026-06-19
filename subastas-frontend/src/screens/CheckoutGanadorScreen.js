@@ -64,11 +64,22 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
 
   const procesarPago = async () => {
     try {
-      await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/pay-won`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: usuario?.email, itemId: item.id })
-      });
+      let dId = item.deudaId;
+      if (!dId) {
+        const wonRes = await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email)}`);
+        const wonItems = await wonRes.json();
+        const wonMatch = wonItems.find(w => w.id === item.id || w.id === item.id.toString());
+        if (wonMatch && wonMatch.deudaId) {
+          dId = wonMatch.deudaId;
+        }
+      }
+      
+      if (dId) {
+        await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/debts/${dId}/pay`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
     } catch(e) { console.error(e); }
     
     Alert.alert('Pago realizado', 'El pago se procesó exitosamente con tu medio de pago.', [

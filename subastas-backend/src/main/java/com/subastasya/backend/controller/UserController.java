@@ -143,7 +143,10 @@ public class UserController {
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
                         
-                        List<Deuda> deudas = deudaRepository.findByUsuario_Identificador(user.getIdentificador());
+                        map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
+                        map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
+                        
+                        List<Deuda> deudas = deudaRepository.findByUsuarioIdUsuario(user.getIdUsuario());
                         boolean isPaid = deudas.stream().anyMatch(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()) && d.isPagada());
                         if (isPaid) {
                             map.put("estado_pago", "pagado");
@@ -151,6 +154,11 @@ public class UserController {
                             map.put("estado_pago", "pendiente");
                         }
                         
+                        Optional<Deuda> relatedDebt = deudas.stream().filter(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador())).findFirst();
+                        if (relatedDebt.isPresent()) {
+                            map.put("deudaId", relatedDebt.get().getId());
+                        }
+
                         result.add(map);
                     }
                 }
@@ -196,72 +204,4 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
-    @PostMapping("/auctions/win")
-    public ResponseEntity<?> winAuction(@RequestBody Map<String, Object> body) {
-        String email = (String) body.get("email");
-        Long itemId = Long.valueOf(body.get("itemId").toString());
-        Double amount = Double.valueOf(body.get("amount").toString());
-
-        Optional<Usuario> optUser = usuarioRepository.findByEmail(email);
-        if (optUser.isEmpty()) return ResponseEntity.badRequest().body("User not found");
-        Usuario user = optUser.get();
-
-        Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(itemId);
-        if (optItem.isEmpty()) return ResponseEntity.badRequest().body("Item not found");
-        ItemCatalogo item = optItem.get();
-
-        List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
-        Asistente asistente = null;
-        for (Asistente a : asistentes) {
-            if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
-                asistente = a;
-                break;
-            }
-        }
-        if (asistente == null) {
-            asistente = new Asistente();
-            asistente.setCliente(user.getCliente());
-            asistente.setSubasta(item.getCatalogo().getSubasta());
-            asistente = asistenteRepository.save(asistente);
-        }
-
-        Pujo p = new Pujo();
-        p.setAsistente(asistente);
-        p.setItem(item);
-        p.setImporte(java.math.BigDecimal.valueOf(amount));
-        p.setGanador("si");
-        pujoRepository.save(p);
-
-        item.setSubastado("si");
-        itemCatalogoRepository.save(item);
-
-        Deuda d = new Deuda();
-        d.setUsuario(user);
-        d.setMonto(java.math.BigDecimal.valueOf(amount));
-        d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
-        d.setPagada(false);
-        deudaRepository.save(d);
-
-        return ResponseEntity.ok(java.util.Collections.singletonMap("status", "success"));
-    }
-
-    @PostMapping("/me/pay-won")
-    public ResponseEntity<?> payWon(@RequestBody Map<String, Object> body) {
-        String email = (String) body.get("email");
-        Long itemId = Long.valueOf(body.get("itemId").toString());
-
-        Optional<Usuario> optUser = usuarioRepository.findByEmail(email);
-        if (optUser.isEmpty()) return ResponseEntity.badRequest().build();
-        Usuario user = optUser.get();
-
-        List<Deuda> deudas = deudaRepository.findByUsuario_Identificador(user.getIdentificador());
-        for (Deuda d : deudas) {
-            if (d.getMotivo().contains("Subasta " + itemId)) {
-                d.setPagada(true);
-                deudaRepository.save(d);
-            }
-        }
-
-        return ResponseEntity.ok(java.util.Collections.singletonMap("status", "success"));
-    }
 }

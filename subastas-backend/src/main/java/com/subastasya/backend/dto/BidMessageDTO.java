@@ -11,6 +11,7 @@ public class BidMessageDTO {
     private Long auctionId;
     private Long itemId;
     private String user;
+    private String email;
     private String type; // "BID", "CHAT", "UPDATE"
     private String content; // message content if CHAT
     private Double amount;

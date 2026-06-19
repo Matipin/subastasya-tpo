@@ -7,6 +7,9 @@ import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+import org.springframework.beans.factory.annotation.Autowired;
+import com.subastasya.backend.repository.*;
+import com.subastasya.backend.model.*;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -22,7 +25,12 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
     private final Set<WebSocketSession> sessions = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final ObjectMapper objectMapper = new ObjectMapper();
     
-    // Almacena el estado en vivo de cada item: key = "auctionId_itemId"
+    @Autowired private UsuarioRepository usuarioRepository;
+    @Autowired private ItemCatalogoRepository itemCatalogoRepository;
+    @Autowired private AsistenteRepository asistenteRepository;
+    @Autowired private PujoRepository pujoRepository;
+    @Autowired private DeudaRepository deudaRepository;
+
     private final Map<String, BidMessageDTO> auctionStates = new ConcurrentHashMap<>();
     private final Map<String, Timer> auctionTimers = new ConcurrentHashMap<>();
 
@@ -105,6 +113,52 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                     finalState.setType("ENDED");
                     auctionStates.put(stateKey, finalState);
                     
+                    try {
+                        if (finalState.getEmail() != null) {
+                            java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(finalState.getEmail());
+                            java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(finalState.getItemId());
+                            
+                            if (optUser.isPresent() && optItem.isPresent()) {
+                                Usuario user = optUser.get();
+                                ItemCatalogo item = optItem.get();
+                                
+                                java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+                                Asistente asistente = null;
+                                for (Asistente a : asistentes) {
+                                    if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
+                                        asistente = a;
+                                        break;
+                                    }
+                                }
+                                if (asistente == null) {
+                                    asistente = new Asistente();
+                                    asistente.setCliente(user.getCliente());
+                                    asistente.setSubasta(item.getCatalogo().getSubasta());
+                                    asistente = asistenteRepository.save(asistente);
+                                }
+
+                                Pujo p = new Pujo();
+                                p.setAsistente(asistente);
+                                p.setItem(item);
+                                p.setImporte(java.math.BigDecimal.valueOf(finalState.getAmount()));
+                                p.setGanador("si");
+                                pujoRepository.save(p);
+
+                                item.setSubastado("si");
+                                itemCatalogoRepository.save(item);
+
+                                Deuda d = new Deuda();
+                                d.setUsuario(user);
+                                d.setMonto(java.math.BigDecimal.valueOf(finalState.getAmount()));
+                                d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
+                                d.setPagada(false);
+                                deudaRepository.save(d);
+                            }
+                        }
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
                     String response = objectMapper.writeValueAsString(finalState);
                     for (WebSocketSession s : sessions) {
                         if (s.isOpen()) {
