@@ -30,7 +30,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         .then(data => {
           if (data && data.length > 0) {
             setMediosPago(data);
-            setSelectedMedioId(data[0].idMedioDePago);
+            setSelectedMedioId(data[0].identificador);
           }
         })
         .catch(e => console.error(e));
@@ -62,7 +62,15 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
     procesarPago();
   };
 
-  const procesarPago = () => {
+  const procesarPago = async () => {
+    try {
+      await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/pay-won`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: usuario?.email, itemId: item.id })
+      });
+    } catch(e) { console.error(e); }
+    
     Alert.alert('Pago realizado', 'El pago se procesó exitosamente con tu medio de pago.', [
       { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
     ]);
@@ -169,15 +177,15 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         
         {mediosPago.map(mp => (
           <TouchableOpacity 
-            key={mp.idMedioDePago} 
-            style={[styles.card, styles.paymentCard, selectedMedioId === mp.idMedioDePago && !showMPBrick && { borderColor: COLORS.PRIMARY, borderWidth: 2 }]}
-            onPress={() => { setSelectedMedioId(mp.idMedioDePago); setShowMPBrick(false); }}
+            key={mp.identificador} 
+            style={[styles.card, styles.paymentCard, selectedMedioId === mp.identificador && !showMPBrick && { borderColor: COLORS.PRIMARY, borderWidth: 2 }]}
+            onPress={() => { setSelectedMedioId(mp.identificador); setShowMPBrick(false); }}
           >
             <Ionicons name={mp.tipo === 'TARJETA' ? 'card' : 'business'} size={24} color="#555" />
             <Text style={styles.paymentText}>
               {mp.tipo === 'TARJETA' ? `Tarjeta terminada en ${mp.numero?.slice(-4) || '****'}` : `Cuenta terminada en ${mp.numero?.slice(-4) || '****'}`}
             </Text>
-            {selectedMedioId === mp.idMedioDePago && !showMPBrick && <Ionicons name="checkmark-circle" size={24} color={COLORS.PRIMARY} />}
+            {selectedMedioId === mp.identificador && !showMPBrick && <Ionicons name="checkmark-circle" size={24} color={COLORS.PRIMARY} />}
           </TouchableOpacity>
         ))}
 

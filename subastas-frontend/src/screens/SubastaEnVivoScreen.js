@@ -65,7 +65,15 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           Alert.alert('¡Subasta Finalizada!', `¡Felicidades! Ganaste la subasta por $${msg.amount}.`, [
             { 
               text: 'Proceder al pago', 
-              onPress: () => {
+              onPress: async () => {
+                try {
+                  await fetch(`${API_BASE_URL.replace('/auth', '/users')}/auctions/win`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: usuario?.email, itemId: articulo?.id || 1, amount: msg.amount })
+                  });
+                } catch(e) { console.error(e); }
+                
                 const wonItem = {
                   id: articulo?.id || 1,
                   nombre: articulo?.nombre || 'Artículo de Subasta',

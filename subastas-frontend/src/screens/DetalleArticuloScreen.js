@@ -31,7 +31,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     }
   }, [subasta, usuario, isGuest]);
 
-  const isSubastaStarted = subasta?.estado === 'abierta';
+  const isSubastaStarted = subasta?.estado === 'abierta' && new Date(subasta?.fecha + 'T' + subasta?.hora) <= new Date();
 
   const handleRegister = async () => {
     try {
@@ -53,14 +53,20 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       console.log('Error checking debts', e);
     }
 
-    if (!usuario?.mediosDePago && !usuario?.hasPaymentMethod && usuario?.estadoRegistro !== 'ACTIVO') {
-      Alert.alert(
-        'Medio de Pago Requerido', 
-        'Debes registrar un medio de pago habilitado antes de poder anotarte a una subasta.',
-        [{ text: 'Registrar', onPress: () => navigation.navigate('GestionarMediosPago') }, { text: 'Cancelar', style: 'cancel' }]
-      );
-      return;
-    }
+    try {
+      const mpResponse = await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/medios-de-pago?email=${encodeURIComponent(usuario.email)}`);
+      if (mpResponse.ok) {
+        const mps = await mpResponse.json();
+        if (mps.length === 0) {
+          Alert.alert(
+            'Medio de Pago Requerido', 
+            'Debes registrar un medio de pago habilitado antes de poder anotarte a una subasta.',
+            [{ text: 'Registrar', onPress: () => navigation.navigate('GestionarMediosPago') }, { text: 'Cancelar', style: 'cancel' }]
+          );
+          return;
+        }
+      }
+    } catch(e) { console.log(e); }
 
     if (subasta?.categoria === 'oro' && usuario?.cliente?.categoria !== 'oro') {
       Alert.alert('Acceso Denegado', 'Esta subasta es exclusiva para la categoría ORO.');
@@ -143,11 +149,10 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[styles.actionButton, isSubastaStarted && { backgroundColor: '#CCC' }]} 
+              style={[styles.actionButton]} 
               onPress={handleRegister} 
-              disabled={isSubastaStarted}
             >
-              <Text style={styles.actionText}>{isSubastaStarted ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}</Text>
+              <Text style={styles.actionText}>Anotarse a la Subasta</Text>
             </TouchableOpacity>
           )}
         </View>
