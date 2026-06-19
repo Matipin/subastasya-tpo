@@ -44,10 +44,10 @@ export default function SubastasGanadasScreen({ route, navigation }) {
         </View>
       </View>
       <TouchableOpacity 
-        style={[styles.actionButton, item.estado_pago === 'finalizado' && {backgroundColor: '#6B7280'}]}
+        style={[styles.actionButton, (item.estado_pago === 'finalizado' || item.estado_pago === 'pagado') && {backgroundColor: '#6B7280'}]}
         onPress={() => navigation.navigate('CheckoutGanador', { item, usuario })}
       >
-        <Text style={styles.actionText}>{item.estado_pago === 'finalizado' ? 'Ver Resumen' : 'Gestionar'}</Text>
+        <Text style={styles.actionText}>{(item.estado_pago === 'finalizado' || item.estado_pago === 'pagado') ? 'Ver Resumen' : 'Gestionar'}</Text>
       </TouchableOpacity>
     </View>
   );

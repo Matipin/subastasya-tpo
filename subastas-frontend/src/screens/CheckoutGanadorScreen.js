@@ -15,7 +15,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
     estado_pago: 'pendiente'
   };
 
-  const isFinalizado = item.estado_pago === 'finalizado';
+  const isFinalizado = item.estado_pago === 'finalizado' || item.estado_pago === 'pagado';
 
   const [metodoEntrega, setMetodoEntrega] = useState('domicilio');
   const [mediosPago, setMediosPago] = useState([]);
