@@ -26,6 +26,7 @@ public class ItemController {
     private final SubastaRepository subastaRepository;
     private final CatalogoRepository catalogoRepository;
     private final ItemCatalogoRepository itemCatalogoRepository;
+    private final FotoRepository fotoRepository;
 
     @PostMapping("/propose")
     public ResponseEntity<?> proposeItem(@RequestBody ProposeRequest request) {
