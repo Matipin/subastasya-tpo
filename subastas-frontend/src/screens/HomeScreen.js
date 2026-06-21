@@ -57,8 +57,23 @@ export default function HomeScreen({ navigation, route }) {
       
       if (data && data.length > 0) {
         let allItems = [];
+        const now = new Date();
         data.forEach(subasta => {
           if (subasta.estado === 'abierta' || subasta.estado === 'programada') {
+            const fechaStr = subasta.fechaInicio || subasta.fecha;
+            const horaArr = subasta.hora;
+            let horaStr = '00:00:00';
+            if (Array.isArray(horaArr)) {
+              horaStr = horaArr.map(String).map(s => s.padStart(2, '0')).join(':');
+            } else if (typeof horaArr === 'string') {
+              horaStr = horaArr;
+            }
+            const subastaDate = new Date(`${fechaStr}T${horaStr}`);
+            // Si pasaron más de 5 minutos, ya no debería aparecer (el backend la cerrará)
+            if (now > new Date(subastaDate.getTime() + 5 * 60000)) {
+              return;
+            }
+
             if (subasta.articulos && subasta.articulos.length > 0) {
               subasta.articulos.forEach(articulo => {
                 allItems.push({ ...subasta, articulos: [articulo] });

@@ -9,4 +9,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByActivationToken(String activationToken);
     Optional<Usuario> findByRecoveryToken(String recoveryToken);
     Optional<Usuario> findByCliente(com.subastasya.backend.model.Cliente cliente);
+    Optional<Usuario> findByDuenio(com.subastasya.backend.model.Duenio duenio);
 }
