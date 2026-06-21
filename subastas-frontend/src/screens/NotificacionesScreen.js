@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -41,7 +42,15 @@ export default function NotificacionesScreen({ route, navigation }) {
       const url = `${API_BASE_URL.replace('/auth', '/users')}/me/notifications?email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url);
       if (response.ok) {
-        const data = await response.json();
+        let data = await response.json();
+        
+        // Obtener notificaciones descartadas
+        const dismissedStr = await AsyncStorage.getItem(`dismissed_notifications_${usuario?.email}`);
+        const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
+        
+        // Filtrar las descartadas
+        data = data.filter(n => !dismissedIds.includes(n.id));
+
         // Ordenar por fecha desc
         data.sort((a, b) => new Date(b.fechaCreacion) - new Date(a.fechaCreacion));
         setNotificaciones(data);
@@ -57,8 +66,19 @@ export default function NotificacionesScreen({ route, navigation }) {
     fetchNotificaciones();
   }, []);
 
-  const handleDismiss = (id) => {
+  const handleDismiss = async (id) => {
     setNotificaciones(prev => prev.filter(n => n.id !== id));
+    try {
+      const key = `dismissed_notifications_${usuario?.email}`;
+      const dismissedStr = await AsyncStorage.getItem(key);
+      const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
+      if (!dismissedIds.includes(id)) {
+        dismissedIds.push(id);
+        await AsyncStorage.setItem(key, JSON.stringify(dismissedIds));
+      }
+    } catch (e) {
+      console.error('Error saving dismissed notification:', e);
+    }
   };
 
   const handlePress = (item) => {

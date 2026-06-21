@@ -27,7 +27,18 @@ export default function HomeScreen({ navigation, route }) {
       const url = `${API_BASE_URL.replace('/auth', '/users')}/me/notifications?email=${encodeURIComponent(usuario?.email || '')}`;
       const response = await fetch(url);
       if (response.ok) {
-        const data = await response.json();
+        let data = await response.json();
+        
+        // Obtener y filtrar notificaciones descartadas
+        try {
+          const { default: AsyncStorage } = await import('@react-native-async-storage/async-storage');
+          const dismissedStr = await AsyncStorage.getItem(`dismissed_notifications_${usuario?.email}`);
+          const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
+          data = data.filter(n => !dismissedIds.includes(n.id));
+        } catch (err) {
+          console.error('Error al leer notificaciones descartadas', err);
+        }
+
         const unread = data.filter(n => !n.leida).length;
         setUnreadCount(unread);
       }
@@ -109,6 +120,9 @@ export default function HomeScreen({ navigation, route }) {
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{articulo.nombre}</Text>
           <Text style={styles.cardPrice}>Precio base: {articulo.precioBase}$</Text>
+          <Text style={{fontSize: 9, color: '#888', marginTop: 2}}>
+            {item.fecha ? `${item.fecha} ${item.hora?.slice(0,5) || '14:00'} hs` : 'Sin fecha'}
+          </Text>
         </View>
       </TouchableOpacity>
     );

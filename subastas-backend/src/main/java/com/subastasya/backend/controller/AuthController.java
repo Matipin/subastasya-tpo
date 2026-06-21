@@ -48,7 +48,32 @@ public class AuthController {
             return ResponseEntity.badRequest().body("El email es obligatorio.");
         }
 
-        if (usuarioRepository.findByEmail(request.getEmail()).isPresent()) {
+        Optional<Usuario> existingUser = usuarioRepository.findByEmail(request.getEmail());
+        
+        if (Boolean.TRUE.equals(request.getIsUpdate())) {
+            if (existingUser.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado para actualizar.");
+            }
+            Usuario usuario = existingUser.get();
+            Cliente cliente = usuario.getCliente();
+            if (cliente == null) {
+                return ResponseEntity.badRequest().body("El usuario no tiene un perfil de cliente para actualizar.");
+            }
+            
+            if (request.getNombre() != null && !request.getNombre().isBlank()) {
+                cliente.setNombre(request.getNombre() + (request.getApellido() != null ? " " + request.getApellido() : ""));
+            }
+            if (request.getDomicilio() != null && !request.getDomicilio().isBlank()) {
+                cliente.setDireccion(request.getDomicilio());
+            }
+            // Suponemos que podemos guardar el telefono en direccion si no hay campo en DB, o si agregamos campo telefono...
+            // La base de datos original no tiene telefono en Personas/Clientes, pero dejemos el domicilio.
+            
+            clienteRepository.save(cliente);
+            return ResponseEntity.ok("Perfil actualizado correctamente.");
+        }
+
+        if (existingUser.isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body("Ya existe una cuenta con este email.");
         }
 

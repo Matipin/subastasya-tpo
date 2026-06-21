@@ -23,6 +23,9 @@ public class ItemController {
     private final EmpleadoRepository empleadoRepository;
     private final DeudaRepository deudaRepository;
     private final NotificacionRepository notificacionRepository;
+    private final SubastaRepository subastaRepository;
+    private final CatalogoRepository catalogoRepository;
+    private final ItemCatalogoRepository itemCatalogoRepository;
 
     @PostMapping("/propose")
     public ResponseEntity<?> proposeItem(@RequestBody ProposeRequest request) {
@@ -90,7 +93,8 @@ public class ItemController {
         // Simulamos tasación inmediata: creamos Notificación
         Notificacion notif = new Notificacion();
         notif.setUsuario(usuario);
-        notif.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 500. Por favor, toma una decisión desde tu panel.");
+        LocalDate fechaSugerida = LocalDate.now().plusDays(15);
+        notif.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 1500. Fecha de subasta: " + fechaSugerida.toString() + ". Por favor, toma una decisión desde tu panel.");
         notif.setTipo("producto_tasado");
         notif.setReferenciaId(producto.getIdentificador().longValue());
         notif.setFechaCreacion(LocalDateTime.now());
@@ -135,9 +139,37 @@ public class ItemController {
             p.setDisponible("si");
             productoRepository.save(p);
             
+            // Crear Subasta
+            Subasta subasta = new Subasta();
+            subasta.setFecha(LocalDate.now().plusDays(15));
+            subasta.setHora(java.time.LocalTime.of(14, 0));
+            subasta.setEstado("abierta");
+            subasta.setCategoria("comun");
+            subasta.setUbicacion("Sede Central, CABA");
+            subasta.setCapacidadAsistentes(100);
+            subasta.setTieneDeposito("si");
+            subasta.setSeguridadPropia("si");
+            subasta = subastaRepository.save(subasta);
+
+            // Crear Catalogo
+            Catalogo catalogo = new Catalogo();
+            catalogo.setDescripcion("Catálogo Especial - " + p.getDescripcionCatalogo());
+            catalogo.setSubasta(subasta);
+            catalogo.setResponsable(p.getRevisor());
+            catalogo = catalogoRepository.save(catalogo);
+
+            // Crear ItemCatalogo
+            ItemCatalogo itemCat = new ItemCatalogo();
+            itemCat.setCatalogo(catalogo);
+            itemCat.setProducto(p);
+            itemCat.setPrecioBase(new BigDecimal("1500.00"));
+            itemCat.setComision(new BigDecimal("15.00"));
+            itemCat.setSubastado("no");
+            itemCatalogoRepository.save(itemCat);
+
             Notificacion notif = new Notificacion();
             notif.setUsuario(u);
-            notif.setMensaje("Has aceptado la tasación para '" + p.getDescripcionCatalogo() + "'. El producto pasará al catálogo.");
+            notif.setMensaje("Has aceptado la tasación para '" + p.getDescripcionCatalogo() + "'. El producto pasará al catálogo principal.");
             notif.setTipo("producto_tasado");
             notif.setReferenciaId(p.getIdentificador().longValue());
             notif.setFechaCreacion(LocalDateTime.now());

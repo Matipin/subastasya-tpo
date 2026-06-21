@@ -10,6 +10,7 @@ import RegistroEtapa1Screen from './src/screens/RegistroEtapa1Screen';
 import RegistroEtapa2Screen from './src/screens/RegistroEtapa2Screen';
 import MedioPagoScreen from './src/screens/MedioPagoScreen';
 import ProfileDashboardScreen from './src/screens/ProfileDashboardScreen';
+import EditarPerfilScreen from './src/screens/EditarPerfilScreen';
 import ForgotPasswordScreen from './src/screens/ForgotPasswordScreen';
 import GestionarMediosPagoScreen from './src/screens/GestionarMediosPagoScreen';
 import DetalleArticuloScreen from './src/screens/DetalleArticuloScreen';
@@ -42,6 +43,7 @@ export default function App() {
         <Stack.Screen name="MedioPago" component={MedioPagoScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
         <Stack.Screen name="ProfileDashboard" component={ProfileDashboardScreen} />
+        <Stack.Screen name="EditarPerfil" component={EditarPerfilScreen} />
         <Stack.Screen name="GestionarMediosPago" component={GestionarMediosPagoScreen} />
         <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
         <Stack.Screen name="DetalleArticulo" component={DetalleArticuloScreen} />

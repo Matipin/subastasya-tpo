@@ -75,6 +75,13 @@ export default function ProfileDashboardScreen({ route, navigation }) {
            <Text style={styles.avatarText}>{usuario?.nombre?.charAt(0) || 'U'}</Text>
         </View>
         <Text style={styles.name}>{usuario?.nombre}</Text>
+        <TouchableOpacity 
+          onPress={() => navigation.navigate('EditarPerfil', { usuario })}
+          style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}
+        >
+          <Ionicons name="pencil" size={16} color={COLORS.PRIMARY} />
+          <Text style={{ color: COLORS.PRIMARY, marginLeft: 4, fontWeight: '600' }}>Editar Perfil</Text>
+        </TouchableOpacity>
         <View style={styles.categoriaBadge}>
           <Ionicons name="shield-checkmark" size={14} color="#D4AF37" />
           <Text style={styles.categoriaText}>{usuario?.cliente?.categoria?.toUpperCase() || 'COMUN'}</Text>

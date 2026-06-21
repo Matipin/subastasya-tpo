@@ -8,4 +8,5 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     Optional<Usuario> findByEmail(String email);
     Optional<Usuario> findByActivationToken(String activationToken);
     Optional<Usuario> findByRecoveryToken(String recoveryToken);
+    Optional<Usuario> findByCliente(com.subastasya.backend.model.Cliente cliente);
 }

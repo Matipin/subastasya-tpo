@@ -12,4 +12,5 @@ public class RegistroEtapa1Request {
     private String pais;
     private String urlFotoDniFront;
     private String urlFotoDniBack;
+    private Boolean isUpdate;
 }
