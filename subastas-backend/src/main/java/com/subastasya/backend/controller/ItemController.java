@@ -100,7 +100,7 @@ public class ItemController {
         notif.setFechaCreacion(LocalDateTime.now());
         notificacionRepository.save(notif);
 
-        return ResponseEntity.status(HttpStatus.CREATED).body(producto);
+        return ResponseEntity.status(HttpStatus.CREATED).body("Propuesta enviada correctamente");
     }
 
     @GetMapping("/propose/status")

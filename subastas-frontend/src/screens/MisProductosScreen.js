@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
@@ -24,9 +25,11 @@ export default function MisProductosScreen({ route, navigation }) {
     }
   };
 
-  useEffect(() => {
-    fetchProductos();
-  }, []);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchProductos();
+    }, [usuario])
+  );
 
   const handleAcceptOffer = async (id) => {
     try {
@@ -72,8 +75,10 @@ export default function MisProductosScreen({ route, navigation }) {
   };
 
   const renderItem = ({ item }) => {
-    const isConOferta = item.descripcionCatalogo === 'Con Oferta';
-    const status = getStatusConfig(item.descripcionCatalogo);
+    // Si disponible == 'no', significa que está pendiente de decisión de oferta
+    const isConOferta = item.disponible === 'no';
+    // Mantenemos el estado visual
+    const status = isConOferta ? getStatusConfig('Con Oferta') : getStatusConfig(item.disponible === 'si' ? 'si' : item.descripcionCatalogo);
     
     return (
       <View style={styles.card}>
