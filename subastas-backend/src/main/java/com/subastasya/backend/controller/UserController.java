@@ -257,7 +257,17 @@ public class UserController {
         if (user.getDuenio() == null) return ResponseEntity.ok(new java.util.ArrayList<>());
         
         List<Producto> products = productoRepository.findByDuenioIdentificador(user.getDuenio().getIdentificador());
-        return ResponseEntity.ok(products);
+        List<java.util.Map<String, Object>> result = new java.util.ArrayList<>();
+        for (Producto p : products) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("identificador", p.getIdentificador());
+            map.put("descripcionCatalogo", p.getDescripcionCatalogo());
+            map.put("descripcionCompleta", p.getDescripcionCompleta());
+            map.put("fecha", p.getFecha());
+            map.put("disponible", p.getDisponible());
+            result.add(map);
+        }
+        return ResponseEntity.ok(result);
     }
 
     @GetMapping("/me/bids")
