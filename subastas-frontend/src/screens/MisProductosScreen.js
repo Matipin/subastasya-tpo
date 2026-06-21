@@ -95,8 +95,9 @@ export default function MisProductosScreen({ route, navigation }) {
           <View style={styles.offerSection}>
             <View style={styles.offerDetails}>
               <Text style={styles.offerLabel}>Precio base sugerido:</Text>
-              <Text style={styles.offerPrice}>USD 500.00</Text>
-              <Text style={styles.offerNote}>Comisión estimada: 10% (USD 50.00)</Text>
+              <Text style={styles.offerPrice}>USD 1500.00</Text>
+              <Text style={styles.offerNote}>Comisión estimada: 10% (USD 150.00)</Text>
+              <Text style={styles.offerNote}>Fecha asignada: dentro de 15 días</Text>
             </View>
             <View style={styles.offerActions}>
               <TouchableOpacity style={[styles.actionBtn, styles.acceptBtn]} onPress={() => handleAcceptOffer(item.identificador)}>

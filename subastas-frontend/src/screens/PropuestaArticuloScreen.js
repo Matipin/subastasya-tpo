@@ -178,7 +178,7 @@ export default function PropuestaArticuloScreen({ route, navigation }) {
 
         <View style={styles.formGroup}>
           <Text style={styles.label}>Fotografías (Mínimo 6, máximo 10) *</Text>
-          <Text style={styles.helperText}>Se requieren al menos 6 fotos de alta calidad para la tasación: frente, dorso, laterales, detalles y firma/sello si aplica.</Text>
+          <Text style={styles.helperText}>Se requieren al menos 6 fotos de alta calidad para la tasación: frente, dorso, laterales, detalles y firma/sello si aplica. {"\n"}*(Nota: la 1ra foto que subas se usará de portada principal para el catálogo de la subasta).*</Text>
           <TouchableOpacity style={styles.uploadBtn} onPress={pickImage}>
             <Ionicons name="camera-outline" size={24} color={COLORS.PRIMARY} />
             <Text style={styles.uploadBtnText}>Seleccionar Foto ({fotos.length}/10)</Text>

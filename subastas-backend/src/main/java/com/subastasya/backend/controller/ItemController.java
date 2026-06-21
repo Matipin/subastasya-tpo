@@ -88,7 +88,25 @@ public class ItemController {
         producto.setDisponible("no"); // Pendiente de decisión
         producto.setDescripcionCompleta(descCompleta.toString());
         producto.setDescripcionCatalogo(request.getNombre() != null ? request.getNombre() : "Obra Nueva");
-        productoRepository.save(producto);
+        producto = productoRepository.save(producto);
+
+        // Guardar las fotos subidas
+        if (request.getFotosUrls() != null && !request.getFotosUrls().isEmpty()) {
+            for (String base64Url : request.getFotosUrls()) {
+                try {
+                    // base64Url tiene formato "data:image/jpeg;base64,....."
+                    String base64Data = base64Url.contains(",") ? base64Url.split(",")[1] : base64Url;
+                    byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+                    
+                    Foto foto = new Foto();
+                    foto.setProducto(producto);
+                    foto.setFoto(imageBytes);
+                    fotoRepository.save(foto);
+                } catch (Exception e) {
+                    System.err.println("Error decodificando o guardando foto: " + e.getMessage());
+                }
+            }
+        }
 
         // Simulamos tasación inmediata: creamos Notificación
         Notificacion notif = new Notificacion();
