@@ -20,6 +20,7 @@ public class AuctionScheduler {
     private final PujoRepository pujoRepository;
     private final UsuarioRepository usuarioRepository;
     private final NotificacionRepository notificacionRepository;
+    private final AsistenteRepository asistenteRepository;
 
     // Se ejecuta cada minuto
     @Scheduled(fixedRate = 60000)
@@ -63,6 +64,32 @@ public class AuctionScheduler {
                                         }
                                     }
                                 }
+                            }
+                        }
+                    }
+                }
+                
+                // Si faltan exactamente 5 minutos (o menos) para que comience, enviar notificación a asistentes (si no se envió ya)
+                if (s.getFecha().isEqual(today) && now.isAfter(s.getHora().minusMinutes(6)) && now.isBefore(s.getHora())) {
+                    List<Notificacion> enviadas = notificacionRepository.findAll().stream()
+                            .filter(n -> "subasta_en_vivo".equals(n.getTipo()) && s.getIdentificador().longValue() == (n.getReferenciaId() != null ? n.getReferenciaId().longValue() : -1))
+                            .toList();
+                            
+                    if (enviadas.isEmpty()) {
+                        List<Asistente> asistentes = asistenteRepository.findAll().stream()
+                                .filter(a -> a.getSubasta().getIdentificador().equals(s.getIdentificador()))
+                                .toList();
+                                
+                        for (Asistente a : asistentes) {
+                            java.util.Optional<Usuario> uOpt = usuarioRepository.findByCliente(a.getCliente());
+                            if (uOpt.isPresent()) {
+                                Notificacion notif = new Notificacion();
+                                notif.setUsuario(uOpt.get());
+                                notif.setMensaje("La subasta está a punto de comenzar (en 5 minutos o menos). ¡Prepárate para pujar!");
+                                notif.setTipo("subasta_en_vivo");
+                                notif.setReferenciaId(s.getIdentificador().longValue());
+                                notif.setFechaCreacion(java.time.LocalDateTime.now());
+                                notificacionRepository.save(notif);
                             }
                         }
                     }

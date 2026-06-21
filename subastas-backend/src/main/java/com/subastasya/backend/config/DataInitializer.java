@@ -263,7 +263,6 @@ public class DataInitializer implements CommandLineRunner {
 
             // Notificaciones tipadas
             createNotificacion(u1, "¡Felicidades! Ganaste la subasta de la Silla Luis XV. Por favor, selecciona el método de pago y envío en Subastas Ganadas.", "subasta_ganada", ih2.getIdentificador());
-            createNotificacion(u1, "La subasta del Reloj Vintage está en vivo. ¡Entra ahora para pujar!", "subasta_en_vivo", s1.getIdentificador());
             createNotificacion(u1, "Tienes un pago pendiente por el Collar de Perlas. Dirígete a Subastas Ganadas para completarlo.", "subasta_ganada", ih3.getIdentificador());
         }
 

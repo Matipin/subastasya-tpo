@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import {
   View, Text, StyleSheet, FlatList, Image,
   ActivityIndicator, TouchableOpacity, Alert, TextInput
@@ -15,12 +16,14 @@ export default function HomeScreen({ navigation, route }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
 
-  useEffect(() => {
-    fetchSubastas();
-    if (usuario && !usuario.isGuest) {
-      fetchNotificaciones();
-    }
-  }, [usuario]);
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchSubastas();
+      if (usuario && !usuario.isGuest) {
+        fetchNotificaciones();
+      }
+    }, [usuario])
+  );
 
   const fetchNotificaciones = async () => {
     try {
@@ -121,7 +124,7 @@ export default function HomeScreen({ navigation, route }) {
           <Text style={styles.cardTitle}>{articulo.nombre}</Text>
           <Text style={styles.cardPrice}>Precio base: {articulo.precioBase}$</Text>
           <Text style={{fontSize: 9, color: '#888', marginTop: 2}}>
-            {item.fecha ? `${item.fecha} ${item.hora?.slice(0,5) || '14:00'} hs` : 'Sin fecha'}
+            {item.fecha ? `${item.fecha} ${Array.isArray(item.hora) ? item.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (item.hora?.slice(0,5) || '14:00')} hs` : 'Sin fecha'}
           </Text>
         </View>
       </TouchableOpacity>
