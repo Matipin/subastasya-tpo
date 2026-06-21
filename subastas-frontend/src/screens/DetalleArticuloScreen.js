@@ -31,7 +31,18 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     }
   }, [subasta, usuario, isGuest]);
 
-  const isSubastaStarted = subasta?.estado === 'abierta' && new Date(subasta?.fecha + 'T' + subasta?.hora) <= new Date();
+  const fechaStr = subasta?.fechaInicio || subasta?.fecha;
+  const horaArr = subasta?.hora;
+  let horaStr = '00:00:00';
+  if (Array.isArray(horaArr)) {
+    horaStr = horaArr.map(String).map(s => s.padStart(2, '0')).join(':');
+  } else if (typeof horaArr === 'string') {
+    horaStr = horaArr;
+  }
+  const auctionDateObj = subasta?.fechaInicio || subasta?.fecha ? new Date(`${fechaStr}T${horaStr}`) : new Date(Date.now() + 86400000);
+  
+  const isSubastaStarted = subasta?.estado === 'abierta' && auctionDateObj <= new Date();
+  const isOneHourBefore = (auctionDateObj.getTime() - Date.now()) <= 3600000;
 
   const handleRegister = async () => {
     try {
@@ -153,10 +164,16 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[styles.actionButton]} 
-              onPress={handleRegister} 
+              style={[styles.actionButton, isOneHourBefore && { backgroundColor: '#CCC' }]} 
+              onPress={() => {
+                if (isOneHourBefore) {
+                  Alert.alert('Inscripción Cerrada', 'Ya no es posible anotarse a esta subasta. Las inscripciones cierran 1 hora antes de su inicio.');
+                } else {
+                  handleRegister();
+                }
+              }} 
             >
-              <Text style={styles.actionText}>Anotarse a la Subasta</Text>
+              <Text style={styles.actionText}>{isOneHourBefore ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}</Text>
             </TouchableOpacity>
           )}
         </View>

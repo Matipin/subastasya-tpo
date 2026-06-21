@@ -63,6 +63,20 @@ public class AuctionScheduler {
                                             notificacionRepository.save(notif);
                                         }
                                     }
+                                } else {
+                                    // La subasta quedó desierta. La empresa compra el producto al precio base.
+                                    if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
+                                        java.util.Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
+                                        if (duenioOpt.isPresent()) {
+                                            Notificacion notif = new Notificacion();
+                                            notif.setUsuario(duenioOpt.get());
+                                            notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de $" + item.getPrecioBase() + ". El pago se procesará a la brevedad.");
+                                            notif.setTipo("articulo_vendido");
+                                            notif.setReferenciaId(item.getIdentificador().longValue());
+                                            notif.setFechaCreacion(java.time.LocalDateTime.now());
+                                            notificacionRepository.save(notif);
+                                        }
+                                    }
                                 }
                             }
                         }
