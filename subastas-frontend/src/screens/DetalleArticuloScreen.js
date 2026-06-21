@@ -122,7 +122,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
         <View style={{ marginTop: 10 }}>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Precio Base:</Text> {articulo.precioBase || '1.000.000'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Actual dueño:</Text> {articulo.producto?.duenio?.nombre || 'Juan Perez'}</Text>
-          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Fecha de subasta:</Text> {subasta?.fecha ? `${subasta.fecha} a las ${Array.isArray(subasta.hora) ? subasta.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (subasta.hora?.slice(0,5) || '14:00')}` : '10/10/2026'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Fecha de subasta:</Text> {(subasta?.fechaInicio || subasta?.fecha) ? `${subasta.fechaInicio || subasta.fecha} a las ${Array.isArray(subasta.hora) ? subasta.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (subasta.hora?.slice(0,5) || '14:00')}` : '10/10/2026'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Categoria minima:</Text> {subasta?.categoria || 'Bronce'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Direccion:</Text> {subasta?.ubicacion || 'CABA Rivadavia 1500'}</Text>
         </View>
