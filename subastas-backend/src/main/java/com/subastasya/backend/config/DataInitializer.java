@@ -35,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
     private final NotificacionRepository notificacionRepository;
     private final PujoRepository pujoRepository;
     private final MedioDePagoRepository medioDePagoRepository;
+    private final SeguroRepository seguroRepository;
 
     @Override
     public void run(String... args) throws Exception {
@@ -104,6 +105,28 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             uOro = optOro.get();
             if (uOro.getCliente() != null) {
+                // Check if cards are present
+                if (medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador()).isEmpty()) {
+                    MedioDePago mpValida = new MedioDePago();
+                    mpValida.setCliente(uOro.getCliente());
+                    mpValida.setTipo("TARJETA");
+                    mpValida.setEntidad("VISA ORO");
+                    mpValida.setNumero("4000123456789010");
+                    mpValida.setTitular("TEST ORO");
+                    mpValida.setVerificado(true);
+                    mpValida.setMontoGarantia(new java.math.BigDecimal("50000.00")); // Valid funds
+                    medioDePagoRepository.save(mpValida);
+
+                    MedioDePago mpInvalida = new MedioDePago();
+                    mpInvalida.setCliente(uOro.getCliente());
+                    mpInvalida.setTipo("TARJETA");
+                    mpInvalida.setEntidad("MASTERCARD");
+                    mpInvalida.setNumero("5000123456780000");
+                    mpInvalida.setTitular("TEST ORO");
+                    mpInvalida.setVerificado(true);
+                    mpInvalida.setMontoGarantia(new java.math.BigDecimal("10.00")); // Insufficient funds
+                    medioDePagoRepository.save(mpInvalida);
+                }
                 uOro.getCliente().setCategoria("oro");
                 clienteRepository.save(uOro.getCliente());
                 usuarioRepository.save(uOro);
@@ -121,32 +144,50 @@ public class DataInitializer implements CommandLineRunner {
         // -------------------------
         // SUBSTAS PARA PARTICIPAR
         // -------------------------
-        // Subasta 1: EN VIVO (comun)
-        Subasta s1 = subastaRepository.findAll().stream().filter(s -> "abierta".equals(s.getEstado()) && "comun".equals(s.getCategoria())).findFirst().orElseGet(() -> {
+        // Crear Seguro Demo
+        String nroPolizaDemo = "POLIZA-DEMO-123";
+        if (seguroRepository.findById(nroPolizaDemo).isEmpty()) {
+            Seguro s = new Seguro();
+            s.setNroPoliza(nroPolizaDemo);
+            s.setCompania("La Segunda Seguros");
+            s.setPolizaCombinada("si");
+            s.setImporte(new java.math.BigDecimal("10000.00"));
+            seguroRepository.save(s);
+        }
+
+        // Subasta 1: EN VIVO
+        boolean hasLive = subastaRepository.findAll().stream().anyMatch(s -> "abierta".equals(s.getEstado()) && s.getFecha().equals(LocalDate.now()));
+        final Subasta s1;
+        if (!hasLive) {
             Subasta s = new Subasta();
+            // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:25
             s.setFecha(LocalDate.now());
-            s.setHora(LocalTime.now().minusMinutes(5));
+            s.setHora(LocalTime.of(15, 25));
             s.setEstado("abierta");
-            s.setUbicacion("Rivadavia 3421");
             s.setCapacidadAsistentes(100);
             s.setTieneDeposito("si");
             s.setSeguridadPropia("si");
             s.setCategoria("comun");
             s = subastaRepository.save(s);
-            
+
             Catalogo c = new Catalogo();
-            c.setDescripcion("Subasta En Vivo");
+            c.setDescripcion("Subasta de Relojería y Arte");
             c.setResponsable(admin);
             c.setSubasta(s);
             catalogoRepository.save(c);
 
-            createDemoItem(c, "Reloj Vintage", admin, duenioBase, "disponible");
-            return s;
-        });
+            Producto p1 = createDemoItem(c, "Reloj Vintage Suizo", admin, duenioBase, "disponible");
+            p1.setSeguro(nroPolizaDemo);
+            productoRepository.save(p1);
+            
+            s1 = s;
+        } else {
+            s1 = subastaRepository.findAll().stream().filter(s -> "abierta".equals(s.getEstado()) && s.getFecha().equals(LocalDate.now())).findFirst().get();
+        }
 
-        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:00
+        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:25
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(15, 00));
+        s1.setHora(LocalTime.of(15, 25));
         subastaRepository.save(s1);
 
         // Register test user to Subasta 1

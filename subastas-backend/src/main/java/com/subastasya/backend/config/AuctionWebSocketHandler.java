@@ -99,19 +99,21 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                             asistente = new Asistente();
                             asistente.setCliente(user.getCliente());
                             asistente.setSubasta(item.getCatalogo().getSubasta());
+                            asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
                             asistente = asistenteRepository.save(asistente);
                         }
 
                         Pujo p = new Pujo();
                         p.setAsistente(asistente);
                         p.setItem(item);
-                        p.setImporte(java.math.BigDecimal.valueOf(bidMessage.getAmount()));
+                        p.setImporte(java.math.BigDecimal.valueOf(bidMessage.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP));
                         p.setGanador("no");
                         pujoRepository.save(p);
                     }
                 }
             } catch (Exception ex) {
                 System.err.println("Error saving bid to DB: " + ex.getMessage());
+                ex.printStackTrace();
             }
 
             auctionStates.put(stateKey, bidMessage);
@@ -164,14 +166,17 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                     asistente = new Asistente();
                                     asistente.setCliente(user.getCliente());
                                     asistente.setSubasta(item.getCatalogo().getSubasta());
+                                    asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
                                     asistente = asistenteRepository.save(asistente);
                                 }
 
                                 // Update the winning bid to ganador = 'si'
                                 java.util.List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(asistente.getIdentificador());
                                 Pujo winningPujo = null;
+                                java.math.BigDecimal finalAmountBD = java.math.BigDecimal.valueOf(finalState.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP);
+                                
                                 for (Pujo p : pujos) {
-                                    if (p.getItem().getIdentificador().equals(item.getIdentificador()) && p.getImporte().doubleValue() == finalState.getAmount()) {
+                                    if (p.getItem().getIdentificador().equals(item.getIdentificador()) && p.getImporte().compareTo(finalAmountBD) == 0) {
                                         winningPujo = p;
                                         break;
                                     }
@@ -180,7 +185,7 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                     winningPujo = new Pujo();
                                     winningPujo.setAsistente(asistente);
                                     winningPujo.setItem(item);
-                                    winningPujo.setImporte(java.math.BigDecimal.valueOf(finalState.getAmount()));
+                                    winningPujo.setImporte(finalAmountBD);
                                 }
                                 winningPujo.setGanador("si");
                                 pujoRepository.save(winningPujo);
@@ -221,6 +226,7 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                             }
                         }
                     } catch (Exception ex) {
+                        System.err.println("ERROR IN AUCTION TIMER TASK: " + ex.getMessage());
                         ex.printStackTrace();
                     }
 
