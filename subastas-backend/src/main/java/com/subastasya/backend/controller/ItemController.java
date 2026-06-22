@@ -256,7 +256,7 @@ public class ItemController {
             // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
             java.util.List<Notificacion> notifs = notificacionRepository.findByUsuarioIdUsuario(u.getIdUsuario());
             notifs.stream()
-                .filter(n -> "producto_tasado".equals(n.getTipo()) && n.getReferenciaId().equals(p.getIdentificador().longValue()))
+                .filter(n -> "producto_tasado".equals(n.getTipo()) && n.getReferenciaId() != null && n.getReferenciaId().equals(p.getIdentificador().longValue()))
                 .forEach(notificacionRepository::delete);
 
             Deuda deuda = new Deuda();
