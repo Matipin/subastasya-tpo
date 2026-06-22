@@ -105,6 +105,20 @@ public class UserController {
                     Optional<MedioDePago> mpOpt = medioDePagoRepository.findById(mpId);
                     if (mpOpt.isPresent()) {
                         MedioDePago mp = mpOpt.get();
+                        
+                        // VALIDACIÓN DE FONDOS REAL (Usando montoGarantia como saldo disponible)
+                        BigDecimal saldoDisponible = mp.getMontoGarantia() != null ? mp.getMontoGarantia() : BigDecimal.ZERO;
+                        BigDecimal montoACobrar = deuda.getMonto();
+                        
+                        if (saldoDisponible.compareTo(montoACobrar) < 0) {
+                            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                                    .body("Transacción rechazada: Fondos insuficientes en el medio de pago. Saldo disponible: $" + saldoDisponible);
+                        }
+                        
+                        // Restar el saldo si la compra es exitosa
+                        mp.setMontoGarantia(saldoDisponible.subtract(montoACobrar));
+                        medioDePagoRepository.save(mp);
+
                         deuda.setMedioPagoUsado(mp.getTipo() + " " + (mp.getEntidad() != null ? mp.getEntidad() : "") + " ****" + (mp.getNumero() != null && mp.getNumero().length() >= 4 ? mp.getNumero().substring(mp.getNumero().length() - 4) : "****"));
                     }
                 } catch (Exception e) {
