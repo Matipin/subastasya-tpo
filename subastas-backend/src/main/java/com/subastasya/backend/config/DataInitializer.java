@@ -144,9 +144,9 @@ public class DataInitializer implements CommandLineRunner {
             return s;
         });
 
-        // Asegurar que la subasta "en vivo" esté programada exactamente a las 14:40
+        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(14, 40));
+        s1.setHora(LocalTime.of(15, 00));
         subastaRepository.save(s1);
 
         // Register test user to Subasta 1
@@ -171,7 +171,8 @@ public class DataInitializer implements CommandLineRunner {
             asistenteRepository.save(aOro);
         }
 
-        // Subasta 2: FUTURA
+        // Subasta 2: FUTURA (Comentada para que no aparezca el Cuadro Picasso)
+        /*
         boolean hasFutura = subastaRepository.findAll().stream().anyMatch(s -> "abierta".equals(s.getEstado()) && s.getHora().isAfter(LocalTime.now()) && "comun".equals(s.getCategoria()));
         if (!hasFutura) {
             Subasta s2 = new Subasta();
@@ -193,6 +194,7 @@ public class DataInitializer implements CommandLineRunner {
 
             createDemoItem(c2, "Cuadro Picasso Replica", admin, duenioBase, "disponible");
         }
+        */
 
         // Subasta 3: EXCLUSIVA (oro)
         boolean hasOro = subastaRepository.findAll().stream().anyMatch(s -> "oro".equals(s.getCategoria()));

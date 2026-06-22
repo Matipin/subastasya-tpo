@@ -369,7 +369,7 @@ public class UserController {
                 List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(a.getIdentificador());
                 for (Pujo p : pujos) {
                     Map<String, Object> map = new HashMap<>();
-                    map.put("id", p.getIdentificador().toString());
+                    map.put("id", p.getIdentificador() != null ? p.getIdentificador().toString() : java.util.UUID.randomUUID().toString());
                     map.put("articulo", p.getItem().getProducto().getDescripcionCatalogo());
                     map.put("subasta", p.getItem().getCatalogo().getDescripcion());
                     map.put("monto", p.getImporte());
