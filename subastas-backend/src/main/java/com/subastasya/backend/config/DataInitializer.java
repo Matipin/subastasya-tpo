@@ -160,7 +160,7 @@ public class DataInitializer implements CommandLineRunner {
         // Subasta 1: EN VIVO
         // Buscar la subasta 1 existente
         Optional<Subasta> optS1 = subastaRepository.findById(1L);
-        final Subasta s1;
+        Subasta s1;
         if (optS1.isPresent()) {
             s1 = optS1.get();
         } else {
