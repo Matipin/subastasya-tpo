@@ -251,8 +251,11 @@ public class ItemController {
             return ResponseEntity.ok("Producto aceptado e ingresado al catálogo.");
         } else if ("rechazar".equalsIgnoreCase(decision)) {
             try {
-                p.setDisponible("re"); // "re" de rechazado, limitado a 2 caracteres por esquema SQL
-                productoRepository.save(p);
+                // Eliminar fotos primero
+                java.util.List<Foto> fotos = fotoRepository.findByProductoIdentificador(p.getIdentificador());
+                fotos.forEach(fotoRepository::delete);
+                // Eliminar el producto para que desaparezca totalmente (ya que no se puede alterar el campo disponible a 're')
+                productoRepository.delete(p);
                 
                 // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
                 java.util.List<Notificacion> notifs = notificacionRepository.findByUsuarioIdUsuario(u.getIdUsuario());
