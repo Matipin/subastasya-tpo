@@ -36,9 +36,18 @@ public class DataInitializer implements CommandLineRunner {
     private final PujoRepository pujoRepository;
     private final MedioDePagoRepository medioDePagoRepository;
     private final SeguroRepository seguroRepository;
+    private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
     @Override
     public void run(String... args) throws Exception {
+        // Fix DB state
+        try {
+            jdbcTemplate.execute("DELETE FROM notificaciones WHERE usuario_id NOT IN (SELECT idusuario FROM usuarios)");
+            jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS seguros (nroPoliza VARCHAR(30) PRIMARY KEY, compania VARCHAR(150) NOT NULL, polizaCombinada VARCHAR(2), importe NUMERIC(18,2) NOT NULL)");
+        } catch (Exception e) {
+            System.err.println("Error cleaning DB: " + e.getMessage());
+        }
+
         // Empleado Admin Revisor
         Empleado admin = empleadoRepository.findAll().stream().filter(e -> "99999999".equals(e.getDocumento())).findFirst().orElseGet(() -> {
             Empleado e = new Empleado();
@@ -184,9 +193,9 @@ public class DataInitializer implements CommandLineRunner {
             productoRepository.save(p1);
         }
 
-        // Forzar la subasta a estar abierta, hoy a las 16:20
+        // Forzar la subasta a estar abierta, hoy a las 16:25
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(16, 20));
+        s1.setHora(LocalTime.of(16, 25));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
