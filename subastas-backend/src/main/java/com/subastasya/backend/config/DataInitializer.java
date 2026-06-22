@@ -181,9 +181,9 @@ public class DataInitializer implements CommandLineRunner {
             productoRepository.save(p1);
         }
 
-        // Forzar la subasta a estar abierta, hoy a las 16:00
+        // Forzar la subasta a estar abierta, hoy a las 16:13
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(16, 0));
+        s1.setHora(LocalTime.of(16, 13));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
