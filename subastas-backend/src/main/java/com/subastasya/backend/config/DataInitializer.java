@@ -160,7 +160,7 @@ public class DataInitializer implements CommandLineRunner {
         // Subasta 1: EN VIVO
         // Buscar la subasta 1 existente
         Optional<Subasta> optS1 = subastaRepository.findById(1L);
-        Subasta s1;
+        final Subasta s1;
         if (optS1.isPresent()) {
             s1 = optS1.get();
         } else {
@@ -171,7 +171,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setCategoria("comun");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
-            s1 = subastaRepository.save(s1);
+            subastaRepository.save(s1);
 
             Catalogo c = new Catalogo();
             c.setDescripcion("Subasta de Relojería y Arte");
@@ -184,9 +184,9 @@ public class DataInitializer implements CommandLineRunner {
             productoRepository.save(p1);
         }
 
-        // Forzar la subasta a estar abierta, hoy a las 16:13
+        // Forzar la subasta a estar abierta, hoy a las 16:20
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(16, 13));
+        s1.setHora(LocalTime.of(16, 20));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
