@@ -116,6 +116,39 @@ public class UserController {
         }
         
         deudaRepository.save(deuda);
+
+        // Notificar al dueño si la deuda es por un artículo de subasta
+        if (deuda.getMotivo() != null && deuda.getMotivo().contains("Subasta")) {
+            try {
+                String[] parts = deuda.getMotivo().split(" ");
+                // El motivo suele ser "Pago por ítem de Subasta {identificador}"
+                String idStr = parts[parts.length - 1];
+                Long itemId = Long.valueOf(idStr);
+                Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(itemId);
+                if (itemOpt.isPresent()) {
+                    ItemCatalogo item = itemOpt.get();
+                    if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
+                        Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
+                        if (duenioOpt.isPresent()) {
+                            Notificacion notif = new Notificacion();
+                            notif.setUsuario(duenioOpt.get());
+                            notif.setMensaje("¡Buenas noticias! Se ha confirmado el pago de USD " + deuda.getMonto() + " por tu artículo '" + item.getProducto().getDescripcionCatalogo() + "'. El dinero ha sido transferido a tu cuenta.");
+                            notif.setTipo("pago_recibido");
+                            notif.setReferenciaId(itemId);
+                            notif.setFechaCreacion(LocalDateTime.now());
+                            notificacionRepository.save(notif);
+
+                            // Cambiar disponibilidad a vendido
+                            item.getProducto().setDisponible("vendido");
+                            productoRepository.save(item.getProducto());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error notificando al dueño: " + e.getMessage());
+            }
+        }
+
         return ResponseEntity.ok("Deuda pagada correctamente.");
     }
 

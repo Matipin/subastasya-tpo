@@ -29,26 +29,36 @@ export default function DeudasScreen({ route, navigation }) {
     fetchDeudas();
   }, []);
 
-  const handlePay = async (id) => {
-    try {
-      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/debts/${id}/pay`;
-      const response = await fetch(url, { method: 'POST' });
-      if (response.ok) {
-        Alert.alert('Éxito', 'Deuda pagada exitosamente.');
-        fetchDeudas();
-      } else {
-        Alert.alert('Error', 'No se pudo procesar el pago.');
-      }
-    } catch (e) {
-      Alert.alert('Error', 'Error de red.');
-    }
+  const handlePay = (id, monto, motivo) => {
+    navigation.navigate('CheckoutGanador', { 
+      articulo: {
+        id: id,
+        deudaId: id,
+        itemNombre: motivo,
+        monto: monto,
+        isDeuda: true,
+        estado_pago: 'pendiente'
+      },
+      usuario 
+    });
   };
 
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <View style={styles.cardInfo}>
         <Text style={styles.motivoText}>{item.motivo}</Text>
-        <Text style={styles.dateText}>{new Date(item.fechaCreacion).toLocaleDateString()}</Text>
+        <Text style={styles.dateText}>
+          {
+            item.fechaCreacion ? (() => {
+              // Assume format YYYY-MM-DD or similar if it's a string. If it's a timestamp, new Date is ok.
+              if (typeof item.fechaCreacion === 'string' && item.fechaCreacion.includes('-') && !item.fechaCreacion.includes('T')) {
+                 const parts = item.fechaCreacion.split('-');
+                 if(parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+              }
+              return new Date(item.fechaCreacion).toLocaleDateString();
+            })() : ''
+          }
+        </Text>
         <Text style={[styles.montoText, item.pagada && { color: '#10B981' }]}>
           USD {item.monto.toFixed(2)}
         </Text>
@@ -61,7 +71,7 @@ export default function DeudasScreen({ route, navigation }) {
         ) : (
           <TouchableOpacity 
             style={styles.payButton}
-            onPress={() => handlePay(item.id)}
+            onPress={() => handlePay(item.id, item.monto, item.motivo)}
           >
             <Text style={styles.payButtonText}>Pagar</Text>
           </TouchableOpacity>

@@ -95,9 +95,8 @@ public class ItemController {
         if (request.getFotosUrls() != null && !request.getFotosUrls().isEmpty()) {
             for (String base64Url : request.getFotosUrls()) {
                 try {
-                    // base64Url tiene formato "data:image/jpeg;base64,....."
-                    String base64Data = base64Url.contains(",") ? base64Url.split(",")[1] : base64Url;
-                    byte[] imageBytes = java.util.Base64.getDecoder().decode(base64Data);
+                    // Guardamos el string base64 original directamente para que AuctionController lo levante tal cual.
+                    byte[] imageBytes = base64Url.getBytes(java.nio.charset.StandardCharsets.UTF_8);
                     
                     Foto foto = new Foto();
                     foto.setProducto(producto);

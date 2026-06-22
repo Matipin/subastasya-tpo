@@ -44,10 +44,15 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
     medioPago: 'Visa ****1234',
   };
 
+  const isDeuda = item.isDeuda;
   const valorPujado = item.monto || details.valorPujado;
-  const comision = valorPujado * 0.10;
+  
+  // Si es deuda, el monto ya viene con recargo o sin recargo, lo tratamos como "Valor base" + "Recargo"
+  const valorBase = isDeuda ? (valorPujado / 1.10) : valorPujado;
+  const comision = isDeuda ? (valorPujado - valorBase) : (valorPujado * 0.10); // Recargo o Comisión
+  
   const costoEnvio = metodoEntrega === 'domicilio' ? details.costoEnvioDomicilio : 0;
-  const totalPagado = valorPujado + comision + costoEnvio;
+  const totalPagado = isDeuda ? (valorPujado + costoEnvio) : (valorPujado + comision + costoEnvio);
 
   const handleConfirmar = () => {
     if (!selectedMedioId && !showMPBrick && mediosPago.length > 0) {
@@ -246,29 +251,35 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
         <TouchableOpacity onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.TEXT_TITLE} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>¡felicidades!</Text>
+        <Text style={styles.headerTitle}>{isDeuda ? 'pago pendiente' : '¡felicidades!'}</Text>
         <View style={{ width: 24 }} />
       </View>
       
-      <Text style={styles.subtitle}>usted gano la puja</Text>
+      <Text style={styles.subtitle}>{isDeuda ? 'abona tu deuda para regularizar' : 'usted gano la puja'}</Text>
 
-      <Image 
-        source={{ uri: item.urlImagen }} 
-        style={styles.image} 
-        resizeMode="cover"
-      />
+      {item.urlImagen ? (
+        <Image 
+          source={{ uri: item.urlImagen }} 
+          style={styles.image} 
+          resizeMode="cover"
+        />
+      ) : (
+        <View style={[styles.image, { backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }]}>
+          <Ionicons name="document-text-outline" size={60} color="#9CA3AF" />
+        </View>
+      )}
       <Text style={styles.itemTitle}>{item.itemNombre || item.nombre}</Text>
 
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>Resumen de compra</Text>
         
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Valor pujado</Text>
-          <Text style={styles.rowValue}>${valorPujado.toLocaleString()}</Text>
+          <Text style={styles.rowLabel}>{isDeuda ? 'Valor original' : 'Valor pujado'}</Text>
+          <Text style={styles.rowValue}>${isDeuda ? valorBase.toLocaleString(undefined, {minimumFractionDigits: 2}) : valorPujado.toLocaleString()}</Text>
         </View>
         <View style={styles.row}>
-          <Text style={styles.rowLabel}>Comision (10%)</Text>
-          <Text style={styles.rowValue}>${comision.toLocaleString()}</Text>
+          <Text style={styles.rowLabel}>{isDeuda ? 'Recargo por atraso (10%)' : 'Comision (10%)'}</Text>
+          <Text style={styles.rowValue}>${comision.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
         </View>
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Costo de envio</Text>

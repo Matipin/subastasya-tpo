@@ -70,6 +70,7 @@ export default function MisProductosScreen({ route, navigation }) {
       case 'Pendiente de Envío': return { color: '#8B5CF6', bg: '#EDE9FE', icon: 'cube', text: 'Pendiente de Envío' };
       case 'Subastado': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Subastado' };
       case 'si': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Aprobado' };
+      case 'vendido': return { color: '#059669', bg: '#A7F3D0', icon: 'cash', text: 'Vendido' };
       default: return { color: '#6B7280', bg: '#F3F4F6', icon: 'time', text: status || 'En revisión' };
     }
   };
@@ -84,7 +85,14 @@ export default function MisProductosScreen({ route, navigation }) {
       <View style={styles.card}>
         <View style={styles.cardInfo}>
           <Text style={styles.itemName}>{item.descripcionCompleta}</Text>
-          <Text style={styles.dateText}>Registrado: {new Date(item.fecha).toLocaleDateString()}</Text>
+          <Text style={styles.dateText}>
+            Registrado: {
+              item.fecha ? (() => {
+                const parts = item.fecha.split('-');
+                return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : new Date(item.fecha).toLocaleDateString();
+              })() : ''
+            }
+          </Text>
           <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
             <Ionicons name={status.icon} size={14} color={status.color} />
             <Text style={[styles.statusText, { color: status.color }]}>{status.text}</Text>
@@ -95,8 +103,8 @@ export default function MisProductosScreen({ route, navigation }) {
           <View style={styles.offerSection}>
             <View style={styles.offerDetails}>
               <Text style={styles.offerLabel}>Precio base sugerido:</Text>
-              <Text style={styles.offerPrice}>USD 1500.00</Text>
-              <Text style={styles.offerNote}>Comisión estimada: 10% (USD 150.00)</Text>
+              <Text style={styles.offerPrice}>USD {item.precioSugerido || '1500.00'}</Text>
+              <Text style={styles.offerNote}>Comisión estimada: 10% (USD {( (item.precioSugerido || 1500) * 0.1).toFixed(2)})</Text>
               <Text style={styles.offerNote}>Fecha asignada: dentro de 15 días</Text>
             </View>
             <View style={styles.offerActions}>
@@ -108,6 +116,18 @@ export default function MisProductosScreen({ route, navigation }) {
                 <Ionicons name="close" size={16} color="#FFF" />
                 <Text style={styles.actionBtnText}>Rechazar</Text>
               </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        {item.disponible === 'vendido' && (
+          <View style={styles.soldSection}>
+            <View style={styles.soldDetails}>
+              <Ionicons name="checkmark-done-circle" size={24} color="#059669" />
+              <View style={{ marginLeft: 10 }}>
+                <Text style={styles.soldTitle}>¡Vendido y cobrado!</Text>
+                <Text style={styles.soldText}>El monto de la venta ya ha sido transferido a tu cuenta.</Text>
+              </View>
             </View>
           </View>
         )}
@@ -235,8 +255,32 @@ const styles = StyleSheet.create({
   },
   actionBtnText: {
     color: '#FFF',
-    fontWeight: 'bold',
     fontSize: 14,
-    marginLeft: 4,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
+  soldSection: {
+    marginTop: 15,
+    paddingTop: 15,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+  },
+  soldDetails: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    padding: 12,
+    borderRadius: 8,
+  },
+  soldTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#065F46',
+  },
+  soldText: {
+    fontSize: 13,
+    color: '#047857',
+    marginTop: 2,
+    paddingRight: 30,
   }
 });
