@@ -144,9 +144,9 @@ public class DataInitializer implements CommandLineRunner {
             return s;
         });
 
-        // Asegurar que la subasta "en vivo" siempre tenga tiempo suficiente (10 min adelante) en cada reinicio
+        // Asegurar que la subasta "en vivo" esté activa ahora (hace 5 minutos)
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.now().plusMinutes(10));
+        s1.setHora(LocalTime.now().minusMinutes(5));
         subastaRepository.save(s1);
 
         // Register test user to Subasta 1
@@ -158,6 +158,17 @@ public class DataInitializer implements CommandLineRunner {
             a.setSubasta(s1);
             a.setNumeroPostor((int)(Math.random() * 1000) + 1);
             asistenteRepository.save(a);
+        }
+
+        // Register oro user to Subasta 1 so they can test it too
+        boolean isOroRegistered = asistenteRepository.findAll().stream()
+            .anyMatch(a -> a.getCliente().getIdentificador().equals(uOro.getCliente().getIdentificador()) && a.getSubasta().getIdentificador().equals(s1.getIdentificador()));
+        if (!isOroRegistered) {
+            Asistente aOro = new Asistente();
+            aOro.setCliente(uOro.getCliente());
+            aOro.setSubasta(s1);
+            aOro.setNumeroPostor((int)(Math.random() * 1000) + 1);
+            asistenteRepository.save(aOro);
         }
 
         // Subasta 2: FUTURA
