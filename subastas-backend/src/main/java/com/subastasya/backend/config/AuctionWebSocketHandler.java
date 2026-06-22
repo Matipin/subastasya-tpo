@@ -196,6 +196,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                     e.printStackTrace();
                 }
             }
-        }, 30000); // 30 segundos
+        }, 60000); // 60 segundos (1 minuto)
     }
 }

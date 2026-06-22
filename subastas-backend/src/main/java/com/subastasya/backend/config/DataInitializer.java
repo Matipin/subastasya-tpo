@@ -144,9 +144,9 @@ public class DataInitializer implements CommandLineRunner {
             return s;
         });
 
-        // Asegurar que la subasta "en vivo" esté activa ahora (hace 5 minutos)
+        // Asegurar que la subasta "en vivo" esté activa ahora (hace 4 horas por diferencias de zona horaria)
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.now().minusMinutes(5));
+        s1.setHora(LocalTime.now().minusHours(4));
         subastaRepository.save(s1);
 
         // Register test user to Subasta 1

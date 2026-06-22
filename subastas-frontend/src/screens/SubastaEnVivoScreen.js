@@ -10,7 +10,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
   const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
   const [customBid, setCustomBid] = useState('');
-  const [timeLeft, setTimeLeft] = useState(600);
+  const [timeLeft, setTimeLeft] = useState(60);
 
   const fetchStatus = async () => {
     try {
