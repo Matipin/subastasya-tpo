@@ -32,6 +32,13 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
   const [ws, setWs] = useState(null);
 
   useEffect(() => {
+    if (global.activeAuctionId && global.activeAuctionId !== subasta?.identificador) {
+      Alert.alert('Acceso Denegado', 'Ya estás conectado a otra subasta en vivo. No puedes participar en más de una a la vez.');
+      navigation.goBack();
+      return;
+    }
+    global.activeAuctionId = subasta?.identificador;
+
     // Inicializar estado por REST y luego conectar WS
     fetchStatus();
 
@@ -54,6 +61,12 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         }));
         setCustomBid(msg.minBid.toString());
         setTimeLeft(60); // reset local timer 60s
+        
+        // Desbloquear UI si fuimos nosotros
+        if (msg.user === (usuario?.nombre || 'Usuario App')) {
+           setBidding(false);
+           Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
+        }
       } else if (msg.type === 'CHAT') {
         setChatMessages(prev => [...prev, msg]);
       } else if (msg.type === 'ENDED') {
@@ -94,6 +107,9 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     return () => {
       clearInterval(timerInterval);
       websocket.close();
+      if (global.activeAuctionId === subasta?.identificador) {
+        global.activeAuctionId = null;
+      }
     };
   }, []);
 
@@ -114,7 +130,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       return;
     }
 
-    setBidding(true);
+    setBidding(true); // Bloquear la UI
 
     const bidMsg = {
       auctionId: subasta?.identificador || 1,
@@ -126,11 +142,6 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     };
 
     ws.send(JSON.stringify(bidMsg));
-    
-    setTimeout(() => {
-      Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
-      setBidding(false);
-    }, 500);
   };
 
   const handleSendChat = () => {

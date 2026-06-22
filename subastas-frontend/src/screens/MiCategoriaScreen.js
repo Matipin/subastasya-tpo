@@ -13,7 +13,7 @@ const CATEGORIAS = [
 
 export default function MiCategoriaScreen({ navigation, route }) {
   const usuario = route?.params?.usuario;
-  const categoriaActual = usuario?.cliente?.categoria || 'comun';
+  const categoriaActual = (usuario?.cliente?.categoria || 'comun').toLowerCase();
   const indexActual = CATEGORIAS.findIndex(c => c.id === categoriaActual);
 
   return (

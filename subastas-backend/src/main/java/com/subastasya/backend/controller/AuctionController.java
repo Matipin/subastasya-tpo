@@ -133,6 +133,16 @@ public class AuctionController {
             return ResponseEntity.badRequest().body("La oferta debe ser al menos " + minAceptado);
         }
         
+        // Validate that the user is not the owner of the item
+        if (request.getClienteId() != null) {
+            Optional<Usuario> usuarioOpt = usuarioRepository.findAll().stream().filter(u -> u.getCliente() != null && u.getCliente().getIdentificador().equals(Long.valueOf(request.getClienteId()))).findFirst();
+            if (usuarioOpt.isPresent() && usuarioOpt.get().getDuenio() != null && item.getProducto().getDuenio() != null) {
+                if (usuarioOpt.get().getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
+                    return ResponseEntity.badRequest().body("No podés pujar en tu propio artículo.");
+                }
+            }
+        }
+        
         Optional<Subasta> subastaOpt = subastaRepository.findById(Long.valueOf(id));
         boolean sinLimite = false;
         if (subastaOpt.isPresent()) {

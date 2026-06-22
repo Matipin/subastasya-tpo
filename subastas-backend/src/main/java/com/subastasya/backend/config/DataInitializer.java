@@ -78,7 +78,7 @@ public class DataInitializer implements CommandLineRunner {
             medioDePagoRepository.save(mp);
         }
 
-        // Create ORO user
+        // Create or update ORO user
         Optional<Usuario> optOro = usuarioRepository.findByEmail("oro@sello.com");
         final Usuario uOro;
         if (optOro.isEmpty()) {
@@ -99,9 +99,14 @@ public class DataInitializer implements CommandLineRunner {
             
             tempOro.setCliente(cOro);
             tempOro.setDuenio(dOro);
+            
             uOro = usuarioRepository.save(tempOro);
         } else {
             uOro = optOro.get();
+            if (uOro.getCliente() != null) {
+                uOro.getCliente().setCategoria("oro");
+                usuarioRepository.save(uOro);
+            }
         }
 
         Duenio duenioBase = duenioRepository.findAll().stream().filter(d -> "11111111".equals(d.getDocumento())).findFirst().orElseGet(() -> {
@@ -121,7 +126,7 @@ public class DataInitializer implements CommandLineRunner {
             s.setFecha(LocalDate.now());
             s.setHora(LocalTime.now().minusMinutes(5));
             s.setEstado("abierta");
-            s.setUbicacion("Buenos Aires, Argentina");
+            s.setUbicacion("Rivadavia 3421");
             s.setCapacidadAsistentes(100);
             s.setTieneDeposito("si");
             s.setSeguridadPropia("si");
@@ -161,7 +166,7 @@ public class DataInitializer implements CommandLineRunner {
             s2.setFecha(LocalDate.now());
             s2.setHora(LocalTime.now().plusHours(3));
             s2.setEstado("abierta"); // En lugar de programada, para cumplir con el check constraint (abierta o cerrada)
-            s2.setUbicacion("Virtual");
+            s2.setUbicacion("Rivadavia 3421");
             s2.setCapacidadAsistentes(500);
             s2.setTieneDeposito("no");
             s2.setSeguridadPropia("no");
@@ -184,7 +189,7 @@ public class DataInitializer implements CommandLineRunner {
             s3.setFecha(LocalDate.now().plusDays(2));
             s3.setHora(LocalTime.of(20, 0));
             s3.setEstado("abierta"); // En lugar de programada, para cumplir con el check constraint
-            s3.setUbicacion("Mónaco");
+            s3.setUbicacion("Rivadavia 3421");
             s3.setCapacidadAsistentes(50);
             s3.setTieneDeposito("si");
             s3.setSeguridadPropia("si");

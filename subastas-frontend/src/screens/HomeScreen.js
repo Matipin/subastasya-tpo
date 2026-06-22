@@ -138,9 +138,18 @@ export default function HomeScreen({ navigation, route }) {
         <View style={styles.cardContent}>
           <Text style={styles.cardTitle}>{articulo.nombre}</Text>
           <Text style={styles.cardPrice}>Precio base: {articulo.precioBase}$</Text>
-          <Text style={{fontSize: 9, color: '#888', marginTop: 2}}>
-            {(item.fechaInicio || item.fecha) ? `${item.fechaInicio || item.fecha} ${Array.isArray(item.hora) ? item.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (item.hora?.slice(0,5) || '14:00')} hs` : 'Sin fecha'}
-          </Text>
+          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 4}}>
+            <Ionicons name="location" size={10} color="#888" />
+            <Text style={{fontSize: 9, color: '#888', marginLeft: 2}}>
+              {item.ubicacion || 'Rivadavia 3421'}
+            </Text>
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'center', marginTop: 2}}>
+            <Ionicons name="time" size={10} color="#888" />
+            <Text style={{fontSize: 9, color: '#888', marginLeft: 2}}>
+              {(item.fechaInicio || item.fecha) ? `${item.fechaInicio || item.fecha} ${Array.isArray(item.hora) ? item.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (item.hora?.slice(0,5) || '14:00')} hs` : 'Sin fecha'}
+            </Text>
+          </View>
         </View>
       </TouchableOpacity>
     );

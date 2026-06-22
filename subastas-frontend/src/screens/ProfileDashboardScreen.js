@@ -84,7 +84,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={styles.categoriaBadge}>
           <Ionicons name="shield-checkmark" size={14} color="#D4AF37" />
-          <Text style={styles.categoriaText}>{usuario?.cliente?.categoria?.toUpperCase() || 'COMUN'}</Text>
+          <Text style={styles.categoriaText}>{(usuario?.cliente?.categoria || 'COMUN').toUpperCase()}</Text>
         </View>
       </View>
 

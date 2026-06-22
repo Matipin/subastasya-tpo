@@ -108,17 +108,43 @@ public class ItemController {
             }
         }
 
-        // Simulamos tasación inmediata: creamos Notificación
-        Notificacion notif = new Notificacion();
-        notif.setUsuario(usuario);
-        LocalDate fechaSugerida = LocalDate.now().plusDays(15);
-        notif.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 1500. Fecha de subasta: " + fechaSugerida.toString() + ". Por favor, toma una decisión desde tu panel.");
-        notif.setTipo("producto_tasado");
-        notif.setReferenciaId(producto.getIdentificador().longValue());
-        notif.setFechaCreacion(LocalDateTime.now());
-        notificacionRepository.save(notif);
+        // No enviamos tasación inmediata aquí. Retornamos el ID del producto para que el frontend siga el flujo.
 
-        return ResponseEntity.status(HttpStatus.CREATED).body("Propuesta enviada correctamente");
+        return ResponseEntity.status(HttpStatus.CREATED).body(java.util.Map.of("message", "Propuesta enviada correctamente", "productoId", producto.getIdentificador()));
+    }
+
+    @PostMapping("/{id}/simulate-receive")
+    public ResponseEntity<?> simulateReceiveAndAppraisal(@PathVariable Long id, @RequestParam String email) {
+        Optional<Producto> prodOpt = productoRepository.findById(id);
+        Optional<Usuario> userOpt = usuarioRepository.findByEmail(email);
+
+        if (prodOpt.isEmpty() || userOpt.isEmpty()) {
+            return ResponseEntity.badRequest().body("Producto o usuario inválido.");
+        }
+        
+        Producto producto = prodOpt.get();
+        Usuario usuario = userOpt.get();
+
+        // 1. Notificación de RECIBIDO
+        Notificacion notifRecibido = new Notificacion();
+        notifRecibido.setUsuario(usuario);
+        notifRecibido.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido RECIBIDO en Rivadavia 3421 y se encuentra en proceso de tasación.");
+        notifRecibido.setTipo("producto_recibido");
+        notifRecibido.setReferenciaId(producto.getIdentificador().longValue());
+        notifRecibido.setFechaCreacion(LocalDateTime.now());
+        notificacionRepository.save(notifRecibido);
+
+        // 2. Notificación de TASADO (Simulada después de recibir)
+        Notificacion notifTasado = new Notificacion();
+        notifTasado.setUsuario(usuario);
+        LocalDate fechaSugerida = LocalDate.parse("2026-10-10");
+        notifTasado.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 1500. Fecha de subasta: " + fechaSugerida.toString() + ". Por favor, toma una decisión desde tu panel.");
+        notifTasado.setTipo("producto_tasado");
+        notifTasado.setReferenciaId(producto.getIdentificador().longValue());
+        notifTasado.setFechaCreacion(LocalDateTime.now().plusMinutes(1)); // Un minuto después para ordenar
+        notificacionRepository.save(notifTasado);
+
+        return ResponseEntity.ok("Flujo simulado completado.");
     }
 
     @GetMapping("/propose/status")
@@ -159,11 +185,11 @@ public class ItemController {
             
             // Crear Subasta
             Subasta subasta = new Subasta();
-            subasta.setFecha(LocalDate.now().plusDays(15));
-            subasta.setHora(java.time.LocalTime.of(14, 0));
-            subasta.setEstado("abierta");
-            subasta.setCategoria("comun");
-            subasta.setUbicacion("Sede Central, CABA");
+            subasta.setNombre("Subasta Automática - " + p.getDescripcionCatalogo());
+            subasta.setFecha(LocalDate.parse("2026-10-10"));
+            subasta.setHora(java.time.LocalTime.of(10, 0));
+            subasta.setUbicacion("Rivadavia 3421");
+            subasta.setEstado("programada");
             subasta.setCapacidadAsistentes(100);
             subasta.setTieneDeposito("si");
             subasta.setSeguridadPropia("si");

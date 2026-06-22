@@ -79,10 +79,18 @@ export default function DetalleArticuloScreen({ route, navigation }) {
       }
     } catch(e) { console.log(e); }
 
+    // Evitar que el dueño se anote a su propia subasta
+    const duenioIdArticulo = articulo?.producto?.duenio?.identificador;
+    const duenioIdUsuario = usuario?.duenio?.identificador;
+    if (duenioIdArticulo && duenioIdUsuario && duenioIdArticulo === duenioIdUsuario) {
+      Alert.alert('Acceso Denegado', 'Sos el dueño de este artículo, no podés anotarte para pujar en tu propia subasta.');
+      return;
+    }
+    
     // Validar categoría: comun < especial < plata < oro < platino
     const catOrder = ['comun', 'especial', 'plata', 'oro', 'platino'];
-    const userCatIndex = catOrder.indexOf(usuario?.cliente?.categoria || 'comun');
-    const subastaCatIndex = catOrder.indexOf(subasta?.categoria || 'comun');
+    const userCatIndex = catOrder.indexOf((usuario?.cliente?.categoria || 'comun').toLowerCase());
+    const subastaCatIndex = catOrder.indexOf((subasta?.categoria || 'comun').toLowerCase());
     if (userCatIndex < subastaCatIndex) {
       Alert.alert('Acceso Denegado', `Esta subasta requiere categoría ${subasta.categoria?.toUpperCase()}. Tu categoría actual es ${(usuario?.cliente?.categoria || 'comun').toUpperCase()}.`);
       return;
@@ -135,7 +143,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Actual dueño:</Text> {articulo.producto?.duenio?.nombre || 'Juan Perez'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Fecha de subasta:</Text> {(subasta?.fechaInicio || subasta?.fecha) ? `${subasta.fechaInicio || subasta.fecha} a las ${Array.isArray(subasta.hora) ? subasta.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (subasta.hora?.slice(0,5) || '14:00')}` : '10/10/2026'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Categoria minima:</Text> {subasta?.categoria || 'Bronce'}</Text>
-          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Direccion:</Text> {subasta?.ubicacion || 'CABA Rivadavia 1500'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Direccion:</Text> {subasta?.ubicacion || 'Rivadavia 3421'}</Text>
         </View>
 
         <Text style={[styles.sectionTitle, {marginTop: 20}]}>Descripcion:</Text>
@@ -164,16 +172,25 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             </TouchableOpacity>
           ) : (
             <TouchableOpacity 
-              style={[styles.actionButton, isOneHourBefore && { backgroundColor: '#CCC' }]} 
+              style={[
+                styles.actionButton, 
+                (isOneHourBefore || (articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador)) && { backgroundColor: '#CCC' }
+              ]} 
               onPress={() => {
-                if (isOneHourBefore) {
+                if (articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador) {
+                  Alert.alert('Acceso Denegado', 'Sos el dueño de este artículo, no podés anotarte para pujar en tu propia subasta.');
+                } else if (isOneHourBefore) {
                   Alert.alert('Inscripción Cerrada', 'Ya no es posible anotarse a esta subasta. Las inscripciones cierran 1 hora antes de su inicio.');
                 } else {
                   handleRegister();
                 }
               }} 
             >
-              <Text style={styles.actionText}>{isOneHourBefore ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}</Text>
+              <Text style={styles.actionText}>
+                {articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador 
+                  ? 'Sos el dueño' 
+                  : isOneHourBefore ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>

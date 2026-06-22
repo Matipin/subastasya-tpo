@@ -58,9 +58,23 @@ export default function PropuestaArticuloScreen({ route, navigation }) {
       });
 
       if (response.ok) {
-        Alert.alert('¡Propuesta Enviada!', 'El artículo pasará a revisión técnica. Un tasador lo evaluará y recibirás una notificación con la oferta sugerida.', [
-          { text: 'Aceptar', onPress: () => navigation.goBack() }
-        ]);
+        const data = await response.json();
+        Alert.alert(
+          'Producto Aceptado preliminarmente', 
+          'Por favor, envíe su artículo a Rivadavia 3421, CABA para ser tasado físicamente.', 
+          [
+            { 
+              text: 'Entendido', 
+              onPress: async () => {
+                try {
+                  const simUrl = API_BASE_URL.replace('/auth', '/items') + `/${data.productoId}/simulate-receive?email=${encodeURIComponent(usuario?.email)}`;
+                  await fetch(simUrl, { method: 'POST' });
+                } catch(e) { console.log(e); }
+                navigation.goBack();
+              } 
+            }
+          ]
+        );
       } else {
         const errorText = await response.text();
         Alert.alert('Error', errorText || 'No se pudo enviar la propuesta.');
