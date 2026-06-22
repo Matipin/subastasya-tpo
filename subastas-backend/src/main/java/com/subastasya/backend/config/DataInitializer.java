@@ -180,7 +180,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-            s1.setHora(LocalTime.of(16, 30));
+            s1.setHora(LocalTime.of(16, 40));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION

@@ -82,39 +82,42 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
             bidMessage.setType("BID");
             
             try {
-                if (bidMessage.getEmail() != null) {
-                    java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
-                    java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
-                    if (optUser.isPresent() && optItem.isPresent()) {
-                        Usuario user = optUser.get();
-                        ItemCatalogo item = optItem.get();
-                        
-                        java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
-                        Asistente asistente = null;
-                        for (Asistente a : asistentes) {
-                            if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
-                                asistente = a;
-                                break;
+                transactionTemplate.execute(status -> {
+                    if (bidMessage.getEmail() != null) {
+                        java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
+                        java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
+                        if (optUser.isPresent() && optItem.isPresent()) {
+                            Usuario user = optUser.get();
+                            ItemCatalogo item = optItem.get();
+                            
+                            java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+                            Asistente asistente = null;
+                            for (Asistente a : asistentes) {
+                                if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
+                                    asistente = a;
+                                    break;
+                                }
                             }
-                        }
-                        if (asistente == null) {
-                            asistente = new Asistente();
-                            asistente.setCliente(user.getCliente());
-                            asistente.setSubasta(item.getCatalogo().getSubasta());
-                            asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
-                            asistente = asistenteRepository.save(asistente);
-                        }
+                            if (asistente == null) {
+                                asistente = new Asistente();
+                                asistente.setCliente(user.getCliente());
+                                asistente.setSubasta(item.getCatalogo().getSubasta());
+                                asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
+                                asistente = asistenteRepository.save(asistente);
+                            }
 
-                        Pujo p = new Pujo();
-                        p.setAsistente(asistente);
-                        p.setItem(item);
-                        p.setImporte(java.math.BigDecimal.valueOf(bidMessage.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP));
-                        p.setGanador("no");
-                        pujoRepository.save(p);
+                            Pujo p = new Pujo();
+                            p.setAsistente(asistente);
+                            p.setItem(item);
+                            p.setImporte(java.math.BigDecimal.valueOf(bidMessage.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP));
+                            p.setGanador("no");
+                            pujoRepository.save(p);
+                        }
                     }
-                }
+                    return null;
+                });
             } catch (Exception ex) {
-                System.err.println("Error saving bid to DB: " + ex.getMessage());
+                System.err.println("Error saving intermediate bid to DB: " + ex.getMessage());
                 ex.printStackTrace();
             }
 
