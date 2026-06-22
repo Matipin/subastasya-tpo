@@ -215,6 +215,30 @@ public class UserController {
         return ResponseEntity.ok(metrics);
     }
 
+    @GetMapping("/me/bids")
+    public ResponseEntity<?> getBidHistory(@RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        Usuario user = opt.get();
+        List<Map<String, Object>> result = new java.util.ArrayList<>();
+        if (user.getCliente() != null) {
+            List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+            for (Asistente a : asistentes) {
+                List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(a.getIdentificador());
+                for (Pujo p : pujos) {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", p.getIdentificador() != null ? p.getIdentificador().toString() : java.util.UUID.randomUUID().toString());
+                    map.put("articulo", p.getItem().getProducto().getDescripcionCatalogo());
+                    map.put("monto", p.getImporte());
+                    map.put("subasta", p.getItem().getCatalogo().getSubasta().getUbicacion() + " (Categoría " + p.getItem().getCatalogo().getSubasta().getCategoria() + ")");
+                    map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
+                    result.add(map);
+                }
+            }
+        }
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/me/items/won")
     public ResponseEntity<?> getWonAuctions(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);

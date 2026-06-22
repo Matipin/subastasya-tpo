@@ -75,18 +75,12 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         
         const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
         if (isWinner) {
-          Alert.alert('¡Subasta Finalizada!', `¡Felicidades! Ganaste la subasta por $${msg.amount}.`, [
+          Alert.alert('¡Subasta Finalizada!', `¡Felicidades! Ganaste la subasta por $${msg.amount}. Podrás realizar el pago desde 'Subastas Ganadas' una vez que toda la sesión de subasta cierre de forma oficial.`, [
             { 
-              text: 'Proceder al pago', 
+              text: 'Entendido', 
+              style: 'default',
               onPress: () => {
-                const wonItem = {
-                  id: articulo?.id || 1,
-                  nombre: articulo?.nombre || 'Artículo de Subasta',
-                  urlImagen: articulo?.urlImagen,
-                  estado_pago: 'pendiente',
-                  monto: msg.amount,
-                };
-                navigation.replace('CheckoutGanador', { item: wonItem, usuario });
+                // No navegamos de inmediato, el usuario debe esperar a que termine toda la sesión
               }
             }
           ]);

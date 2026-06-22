@@ -38,7 +38,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
         sessions.add(session);
-        // Cuando alguien se conecta, si hay estado guardado, podríamos mandarle el último estado de todas las subastas o que él mande un JOIN
     }
 
     @Override
@@ -55,13 +54,11 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
         BidMessageDTO currentState = auctionStates.getOrDefault(stateKey, new BidMessageDTO());
         
         if ("JOIN".equals(bidMessage.getType())) {
-            // El cliente pide el estado actual
             if (currentState.getAmount() == null) {
-                // Initialize default state
                 currentState.setAuctionId(bidMessage.getAuctionId());
                 currentState.setItemId(bidMessage.getItemId());
                 currentState.setType("STATE");
-                currentState.setAmount(100.0); // Debería venir de la base de datos idealmente
+                currentState.setAmount(100.0);
                 currentState.setMinBid(101.0);
                 currentState.setMaxBid(120.0);
                 currentState.setUser("Nadie");
@@ -72,9 +69,8 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
         }
 
         if ("BID".equals(bidMessage.getType())) {
-            // Validar que el tiempo no haya terminado
             if ("ENDED".equals(currentState.getType())) {
-                return; // Ignorar pujas si ya terminó
+                return;
             }
 
             Double newMinBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.01);
@@ -83,11 +79,45 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
             bidMessage.setMaxBid(newMaxBid);
             bidMessage.setType("BID");
             
+            try {
+                if (bidMessage.getEmail() != null) {
+                    java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
+                    java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
+                    if (optUser.isPresent() && optItem.isPresent()) {
+                        Usuario user = optUser.get();
+                        ItemCatalogo item = optItem.get();
+                        
+                        java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+                        Asistente asistente = null;
+                        for (Asistente a : asistentes) {
+                            if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
+                                asistente = a;
+                                break;
+                            }
+                        }
+                        if (asistente == null) {
+                            asistente = new Asistente();
+                            asistente.setCliente(user.getCliente());
+                            asistente.setSubasta(item.getCatalogo().getSubasta());
+                            asistente = asistenteRepository.save(asistente);
+                        }
+
+                        Pujo p = new Pujo();
+                        p.setAsistente(asistente);
+                        p.setItem(item);
+                        p.setImporte(java.math.BigDecimal.valueOf(bidMessage.getAmount()));
+                        p.setGanador("no");
+                        pujoRepository.save(p);
+                    }
+                }
+            } catch (Exception ex) {
+                System.err.println("Error saving bid to DB: " + ex.getMessage());
+            }
+
             auctionStates.put(stateKey, bidMessage);
             resetTimer(stateKey, bidMessage);
         }
 
-        // Broadcast to all connected clients
         String response = objectMapper.writeValueAsString(bidMessage);
         for (WebSocketSession s : sessions) {
             if (s.isOpen()) {
@@ -105,7 +135,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
         Timer newTimer = new Timer();
         auctionTimers.put(stateKey, newTimer);
         
-        // 30 seconds for the timer as an example
         newTimer.schedule(new TimerTask() {
             @Override
             public void run() {
@@ -138,12 +167,23 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                     asistente = asistenteRepository.save(asistente);
                                 }
 
-                                Pujo p = new Pujo();
-                                p.setAsistente(asistente);
-                                p.setItem(item);
-                                p.setImporte(java.math.BigDecimal.valueOf(finalState.getAmount()));
-                                p.setGanador("si");
-                                pujoRepository.save(p);
+                                // Update the winning bid to ganador = 'si'
+                                java.util.List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(asistente.getIdentificador());
+                                Pujo winningPujo = null;
+                                for (Pujo p : pujos) {
+                                    if (p.getItem().getIdentificador().equals(item.getIdentificador()) && p.getImporte().doubleValue() == finalState.getAmount()) {
+                                        winningPujo = p;
+                                        break;
+                                    }
+                                }
+                                if (winningPujo == null) {
+                                    winningPujo = new Pujo();
+                                    winningPujo.setAsistente(asistente);
+                                    winningPujo.setItem(item);
+                                    winningPujo.setImporte(java.math.BigDecimal.valueOf(finalState.getAmount()));
+                                }
+                                winningPujo.setGanador("si");
+                                pujoRepository.save(winningPujo);
 
                                 item.setSubastado("si");
                                 itemCatalogoRepository.save(item);
@@ -155,7 +195,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                 d.setPagada(false);
                                 deudaRepository.save(d);
 
-                                // Notificación al ganador
                                 Notificacion notifGanador = new Notificacion();
                                 notifGanador.setUsuario(user);
                                 notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "' por USD " + String.format("%.2f", finalState.getAmount()) + ". Dirígete a Subastas Ganadas para completar el pago.");
@@ -164,7 +203,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                 notifGanador.setFechaCreacion(java.time.LocalDateTime.now());
                                 notificacionRepository.save(notifGanador);
 
-                                // Notificación al dueño del producto
                                 if (item.getProducto().getDuenio() != null) {
                                     java.util.List<Usuario> allUsers = usuarioRepository.findAll();
                                     for (Usuario u : allUsers) {
@@ -196,6 +234,6 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                     e.printStackTrace();
                 }
             }
-        }, 60000); // 60 segundos (1 minuto)
+        }, 60000);
     }
 }
