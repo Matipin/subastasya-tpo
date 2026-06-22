@@ -10,6 +10,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.subastasya.backend.repository.*;
 import com.subastasya.backend.model.*;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -31,6 +32,7 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
     @Autowired private PujoRepository pujoRepository;
     @Autowired private DeudaRepository deudaRepository;
     @Autowired private NotificacionRepository notificacionRepository;
+    @Autowired private TransactionTemplate transactionTemplate;
 
     private final Map<String, BidMessageDTO> auctionStates = new ConcurrentHashMap<>();
     private final Map<String, Timer> auctionTimers = new ConcurrentHashMap<>();
@@ -146,85 +148,88 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                     auctionStates.put(stateKey, finalState);
                     
                     try {
-                        if (finalState.getEmail() != null) {
-                            java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(finalState.getEmail());
-                            java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(finalState.getItemId());
-                            
-                            if (optUser.isPresent() && optItem.isPresent()) {
-                                Usuario user = optUser.get();
-                                ItemCatalogo item = optItem.get();
+                        transactionTemplate.execute(status -> {
+                            if (finalState.getEmail() != null) {
+                                java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(finalState.getEmail());
+                                java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(finalState.getItemId());
                                 
-                                java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
-                                Asistente asistente = null;
-                                for (Asistente a : asistentes) {
-                                    if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
-                                        asistente = a;
-                                        break;
-                                    }
-                                }
-                                if (asistente == null) {
-                                    asistente = new Asistente();
-                                    asistente.setCliente(user.getCliente());
-                                    asistente.setSubasta(item.getCatalogo().getSubasta());
-                                    asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
-                                    asistente = asistenteRepository.save(asistente);
-                                }
-
-                                // Update the winning bid to ganador = 'si'
-                                java.util.List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(asistente.getIdentificador());
-                                Pujo winningPujo = null;
-                                java.math.BigDecimal finalAmountBD = java.math.BigDecimal.valueOf(finalState.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP);
-                                
-                                for (Pujo p : pujos) {
-                                    if (p.getItem().getIdentificador().equals(item.getIdentificador()) && p.getImporte().compareTo(finalAmountBD) == 0) {
-                                        winningPujo = p;
-                                        break;
-                                    }
-                                }
-                                if (winningPujo == null) {
-                                    winningPujo = new Pujo();
-                                    winningPujo.setAsistente(asistente);
-                                    winningPujo.setItem(item);
-                                    winningPujo.setImporte(finalAmountBD);
-                                }
-                                winningPujo.setGanador("si");
-                                pujoRepository.save(winningPujo);
-
-                                item.setSubastado("si");
-                                itemCatalogoRepository.save(item);
-
-                                Deuda d = new Deuda();
-                                d.setUsuario(user);
-                                d.setMonto(java.math.BigDecimal.valueOf(finalState.getAmount()));
-                                d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
-                                d.setPagada(false);
-                                deudaRepository.save(d);
-
-                                Notificacion notifGanador = new Notificacion();
-                                notifGanador.setUsuario(user);
-                                notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "' por USD " + String.format("%.2f", finalState.getAmount()) + ". Dirígete a Subastas Ganadas para completar el pago.");
-                                notifGanador.setTipo("subasta_ganada");
-                                notifGanador.setReferenciaId(item.getIdentificador());
-                                notifGanador.setFechaCreacion(java.time.LocalDateTime.now());
-                                notificacionRepository.save(notifGanador);
-
-                                if (item.getProducto().getDuenio() != null) {
-                                    java.util.List<Usuario> allUsers = usuarioRepository.findAll();
-                                    for (Usuario u : allUsers) {
-                                        if (u.getDuenio() != null && u.getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
-                                            Notificacion notifDuenio = new Notificacion();
-                                            notifDuenio.setUsuario(u);
-                                            notifDuenio.setMensaje("Tu producto '" + item.getProducto().getDescripcionCatalogo() + "' fue vendido en subasta por USD " + String.format("%.2f", finalState.getAmount()) + ".");
-                                            notifDuenio.setTipo("producto_vendido");
-                                            notifDuenio.setReferenciaId(item.getProducto().getIdentificador().longValue());
-                                            notifDuenio.setFechaCreacion(java.time.LocalDateTime.now());
-                                            notificacionRepository.save(notifDuenio);
+                                if (optUser.isPresent() && optItem.isPresent()) {
+                                    Usuario user = optUser.get();
+                                    ItemCatalogo item = optItem.get();
+                                    
+                                    java.util.List<Asistente> asistentes = asistenteRepository.findByClienteIdentificador(user.getCliente().getIdentificador());
+                                    Asistente asistente = null;
+                                    for (Asistente a : asistentes) {
+                                        if (a.getSubasta().getIdentificador().equals(item.getCatalogo().getSubasta().getIdentificador())) {
+                                            asistente = a;
                                             break;
+                                        }
+                                    }
+                                    if (asistente == null) {
+                                        asistente = new Asistente();
+                                        asistente.setCliente(user.getCliente());
+                                        asistente.setSubasta(item.getCatalogo().getSubasta());
+                                        asistente.setNumeroPostor((int)(Math.random() * 10000) + 1);
+                                        asistente = asistenteRepository.save(asistente);
+                                    }
+
+                                    // Update the winning bid to ganador = 'si'
+                                    java.util.List<Pujo> pujos = pujoRepository.findByAsistenteIdentificador(asistente.getIdentificador());
+                                    Pujo winningPujo = null;
+                                    java.math.BigDecimal finalAmountBD = java.math.BigDecimal.valueOf(finalState.getAmount()).setScale(2, java.math.RoundingMode.HALF_UP);
+                                    
+                                    for (Pujo p : pujos) {
+                                        if (p.getItem().getIdentificador().equals(item.getIdentificador()) && p.getImporte().compareTo(finalAmountBD) == 0) {
+                                            winningPujo = p;
+                                            break;
+                                        }
+                                    }
+                                    if (winningPujo == null) {
+                                        winningPujo = new Pujo();
+                                        winningPujo.setAsistente(asistente);
+                                        winningPujo.setItem(item);
+                                        winningPujo.setImporte(finalAmountBD);
+                                    }
+                                    winningPujo.setGanador("si");
+                                    pujoRepository.save(winningPujo);
+
+                                    item.setSubastado("si");
+                                    itemCatalogoRepository.save(item);
+
+                                    Deuda d = new Deuda();
+                                    d.setUsuario(user);
+                                    d.setMonto(java.math.BigDecimal.valueOf(finalState.getAmount()));
+                                    d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
+                                    d.setPagada(false);
+                                    deudaRepository.save(d);
+
+                                    Notificacion notifGanador = new Notificacion();
+                                    notifGanador.setUsuario(user);
+                                    notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "' por USD " + String.format("%.2f", finalState.getAmount()) + ". Dirígete a Subastas Ganadas para completar el pago.");
+                                    notifGanador.setTipo("subasta_ganada");
+                                    notifGanador.setReferenciaId(item.getIdentificador());
+                                    notifGanador.setFechaCreacion(java.time.LocalDateTime.now());
+                                    notificacionRepository.save(notifGanador);
+
+                                    if (item.getProducto().getDuenio() != null) {
+                                        java.util.List<Usuario> allUsers = usuarioRepository.findAll();
+                                        for (Usuario u : allUsers) {
+                                            if (u.getDuenio() != null && u.getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
+                                                Notificacion notifDuenio = new Notificacion();
+                                                notifDuenio.setUsuario(u);
+                                                notifDuenio.setMensaje("Tu producto '" + item.getProducto().getDescripcionCatalogo() + "' fue vendido en subasta por USD " + String.format("%.2f", finalState.getAmount()) + ".");
+                                                notifDuenio.setTipo("producto_vendido");
+                                                notifDuenio.setReferenciaId(item.getProducto().getIdentificador().longValue());
+                                                notifDuenio.setFechaCreacion(java.time.LocalDateTime.now());
+                                                notificacionRepository.save(notifDuenio);
+                                                break;
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
+                            return null;
+                        });
                     } catch (Exception ex) {
                         System.err.println("ERROR IN AUCTION TIMER TASK: " + ex.getMessage());
                         ex.printStackTrace();

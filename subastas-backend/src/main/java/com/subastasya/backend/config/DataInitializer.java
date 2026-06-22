@@ -105,8 +105,10 @@ public class DataInitializer implements CommandLineRunner {
         } else {
             uOro = optOro.get();
             if (uOro.getCliente() != null) {
-                // Check if cards are present
-                if (medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador()).isEmpty()) {
+                // Check if specific cards are present
+                boolean hasVisa = medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador())
+                                    .stream().anyMatch(mp -> "4000123456789010".equals(mp.getNumero()));
+                if (!hasVisa) {
                     MedioDePago mpValida = new MedioDePago();
                     mpValida.setCliente(uOro.getCliente());
                     mpValida.setTipo("TARJETA");
@@ -160,9 +162,9 @@ public class DataInitializer implements CommandLineRunner {
         final Subasta s1;
         if (!hasLive) {
             Subasta s = new Subasta();
-            // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:25
+            // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:40
             s.setFecha(LocalDate.now());
-            s.setHora(LocalTime.of(15, 25));
+            s.setHora(LocalTime.of(15, 40));
             s.setEstado("abierta");
             s.setCapacidadAsistentes(100);
             s.setTieneDeposito("si");
@@ -185,9 +187,9 @@ public class DataInitializer implements CommandLineRunner {
             s1 = subastaRepository.findAll().stream().filter(s -> "abierta".equals(s.getEstado()) && s.getFecha().equals(LocalDate.now())).findFirst().get();
         }
 
-        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:25
+        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:40
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(15, 25));
+        s1.setHora(LocalTime.of(15, 40));
         subastaRepository.save(s1);
 
         // Register test user to Subasta 1
