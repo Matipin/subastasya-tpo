@@ -43,6 +43,7 @@ public class DataInitializer implements CommandLineRunner {
         // Fix DB state
         try {
             jdbcTemplate.execute("DELETE FROM notificaciones WHERE usuario_id NOT IN (SELECT idusuario FROM usuarios)");
+            jdbcTemplate.execute("DELETE FROM mediosdepago WHERE cliente_id NOT IN (SELECT identificador FROM clientes)");
             jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS seguros (nroPoliza VARCHAR(30) PRIMARY KEY, compania VARCHAR(150) NOT NULL, polizaCombinada VARCHAR(2), importe NUMERIC(18,2) NOT NULL)");
         } catch (Exception e) {
             System.err.println("Error cleaning DB: " + e.getMessage());
@@ -178,6 +179,9 @@ public class DataInitializer implements CommandLineRunner {
             s1.setTieneDeposito("si");
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
+            s1.setFecha(LocalDate.now());
+            s1.setHora(LocalTime.of(16, 30));
+            s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
             subastaRepository.save(s1);
