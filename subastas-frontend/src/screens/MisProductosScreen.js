@@ -56,7 +56,8 @@ export default function MisProductosScreen({ route, navigation }) {
         Alert.alert('Oferta Rechazada', text || 'Has rechazado la oferta sugerida. El producto no entrará a esta subasta.');
         fetchProductos();
       } else {
-        Alert.alert('Error', 'No se pudo rechazar la oferta.');
+        const errorText = await response.text();
+        Alert.alert('Error', `No se pudo rechazar la oferta. Detalles: ${errorText}`);
       }
     } catch (e) {
       Alert.alert('Error', 'Error de conexión.');

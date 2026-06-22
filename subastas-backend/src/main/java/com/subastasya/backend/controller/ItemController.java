@@ -250,30 +250,35 @@ public class ItemController {
             
             return ResponseEntity.ok("Producto aceptado e ingresado al catálogo.");
         } else if ("rechazar".equalsIgnoreCase(decision)) {
-            p.setDisponible("rechazado"); // Cambiado de "no" a "rechazado" para que desaparezca la oferta
-            productoRepository.save(p);
-            
-            // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
-            java.util.List<Notificacion> notifs = notificacionRepository.findByUsuarioIdUsuario(u.getIdUsuario());
-            notifs.stream()
-                .filter(n -> "producto_tasado".equals(n.getTipo()) && n.getReferenciaId() != null && n.getReferenciaId().equals(p.getIdentificador().longValue()))
-                .forEach(notificacionRepository::delete);
+            try {
+                p.setDisponible("rechazado"); // Cambiado de "no" a "rechazado" para que desaparezca la oferta
+                productoRepository.save(p);
+                
+                // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
+                java.util.List<Notificacion> notifs = notificacionRepository.findByUsuarioIdUsuario(u.getIdUsuario());
+                notifs.stream()
+                    .filter(n -> "producto_tasado".equals(n.getTipo()) && n.getReferenciaId() != null && n.getReferenciaId().equals(p.getIdentificador().longValue()))
+                    .forEach(notificacionRepository::delete);
 
-            Deuda deuda = new Deuda();
-            deuda.setUsuario(u);
-            deuda.setMonto(new BigDecimal("50.00")); // Cargo por envío
-            deuda.setMotivo("Cargo de envío por rechazo de tasación: " + p.getDescripcionCatalogo());
-            deudaRepository.save(deuda);
+                Deuda deuda = new Deuda();
+                deuda.setUsuario(u);
+                deuda.setMonto(new BigDecimal("50.00")); // Cargo por envío
+                deuda.setMotivo("Cargo de envío por rechazo de tasación: " + p.getDescripcionCatalogo());
+                deuda = deudaRepository.save(deuda);
 
-            Notificacion notif = new Notificacion();
-            notif.setUsuario(u);
-            notif.setMensaje("Has rechazado la tasación para '" + p.getDescripcionCatalogo() + "'. Se ha generado una deuda de USD 50 por gastos operativos de envío de retorno.");
-            notif.setTipo("deuda");
-            notif.setReferenciaId(deuda.getId());
-            notif.setFechaCreacion(LocalDateTime.now());
-            notificacionRepository.save(notif);
+                Notificacion notif = new Notificacion();
+                notif.setUsuario(u);
+                notif.setMensaje("Has rechazado la tasación para '" + p.getDescripcionCatalogo() + "'. Se ha generado una deuda de USD 50 por gastos operativos de envío de retorno.");
+                notif.setTipo("deuda");
+                notif.setReferenciaId(deuda.getId());
+                notif.setFechaCreacion(LocalDateTime.now());
+                notificacionRepository.save(notif);
 
-            return ResponseEntity.ok("Producto rechazado. Se ha generado cargo de envío.");
+                return ResponseEntity.ok("Producto rechazado. Se ha generado cargo de envío.");
+            } catch (Exception e) {
+                e.printStackTrace();
+                return ResponseEntity.internalServerError().body("Error interno al rechazar: " + e.getMessage() + " | " + e.toString());
+            }
         }
         
         return ResponseEntity.badRequest().body("Decisión no válida.");
