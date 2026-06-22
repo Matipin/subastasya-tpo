@@ -147,10 +147,15 @@ export default function ProfileDashboardScreen({ route, navigation }) {
       </TouchableOpacity>
 
       <TouchableOpacity style={styles.fullButton} onPress={() => {
-        const updatedUsuario = { ...usuario };
-        if (metrics?.categoria && updatedUsuario.cliente) {
-          updatedUsuario.cliente.categoria = metrics.categoria;
+        let catFinal = usuario?.cliente?.categoria || 'comun';
+        if (metrics?.categoria) {
+            catFinal = metrics.categoria;
         }
+        // Pasamos un objeto clonado profundamente para asegurar el trigger en la otra pantalla
+        const updatedUsuario = JSON.parse(JSON.stringify(usuario || {}));
+        if (!updatedUsuario.cliente) updatedUsuario.cliente = {};
+        updatedUsuario.cliente.categoria = catFinal;
+
         navigation.navigate('MiCategoria', { usuario: updatedUsuario });
       }}>
         <View style={styles.buttonContent}>

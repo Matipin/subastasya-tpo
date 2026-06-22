@@ -4,11 +4,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 
 const CATEGORIAS = [
-  { id: 'comun', nombre: 'Común', color: '#9CA3AF', icon: 'person', beneficios: ['Participar en subastas comunes', 'Pujar con límites estándar (1%-20%)'] },
-  { id: 'especial', nombre: 'Especial', color: '#3B82F6', icon: 'star-half', beneficios: ['Todo lo de Común', 'Acceso a subastas especiales', 'Prioridad en inscripción'] },
-  { id: 'plata', nombre: 'Plata', color: '#6B7280', icon: 'star', beneficios: ['Todo lo de Especial', 'Acceso a subastas plata', 'Descuento en comisiones'] },
-  { id: 'oro', nombre: 'Oro', color: '#F59E0B', icon: 'medal', beneficios: ['Todo lo de Plata', 'Acceso a subastas exclusivas ORO', 'Pujas SIN límite máximo', 'Atención preferencial'] },
-  { id: 'platino', nombre: 'Platino', color: '#8B5CF6', icon: 'diamond', beneficios: ['Todo lo de Oro', 'Invitaciones a subastas privadas', 'Pujas SIN límite máximo', 'Asesor personal dedicado'] },
+  { id: 'comun', nombre: 'Común', color: '#9CA3AF', icon: 'person', beneficios: ['Acceso a subastas comunes'] },
+  { id: 'especial', nombre: 'Especial', color: '#3B82F6', icon: 'star-half', beneficios: ['Acceso a subastas comunes', 'Acceso a subastas especiales'] },
+  { id: 'plata', nombre: 'Plata', color: '#6B7280', icon: 'star', beneficios: ['Acceso a subastas comunes', 'Acceso a subastas especiales', 'Acceso a subastas plata'] },
+  { id: 'oro', nombre: 'Oro', color: '#F59E0B', icon: 'medal', beneficios: ['Acceso a subastas comunes', 'Acceso a subastas especiales', 'Acceso a subastas plata', 'Acceso a subastas exclusivas oro'] },
+  { id: 'platino', nombre: 'Platino', color: '#8B5CF6', icon: 'diamond', beneficios: ['Acceso a subastas comunes', 'Acceso a subastas especiales', 'Acceso a subastas plata', 'Acceso a subastas exclusivas oro', 'Acceso a subastas platino'] },
 ];
 
 export default function MiCategoriaScreen({ navigation, route }) {
