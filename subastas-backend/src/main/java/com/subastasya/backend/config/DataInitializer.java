@@ -180,7 +180,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-            s1.setHora(LocalTime.of(16, 50));
+            s1.setHora(LocalTime.of(17, 0));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
@@ -197,9 +197,9 @@ public class DataInitializer implements CommandLineRunner {
             productoRepository.save(p1);
         }
 
-        // Forzar la subasta a estar abierta, hoy a las 16:25
+        // Forzar la subasta a estar abierta, hoy a las 17:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(16, 25));
+        s1.setHora(LocalTime.of(17, 0));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
