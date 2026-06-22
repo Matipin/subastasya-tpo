@@ -170,6 +170,9 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             
+            // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
+            s1 = subastaRepository.save(s1);
+
             Catalogo c = new Catalogo();
             c.setDescripcion("Subasta de Relojería y Arte");
             c.setResponsable(admin);
