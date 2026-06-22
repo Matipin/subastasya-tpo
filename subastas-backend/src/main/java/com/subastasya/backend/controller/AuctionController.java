@@ -14,6 +14,8 @@ import com.subastasya.backend.repository.FotoRepository;
 import com.subastasya.backend.repository.PujoRepository;
 import com.subastasya.backend.repository.AsistenteRepository;
 import com.subastasya.backend.repository.ClienteRepository;
+import com.subastasya.backend.model.Usuario;
+import com.subastasya.backend.repository.UsuarioRepository;
 import com.subastasya.backend.controller.dto.ArticuloDTO;
 import com.subastasya.backend.controller.dto.BidRequest;
 import lombok.RequiredArgsConstructor;
@@ -38,6 +40,7 @@ public class AuctionController {
     private final PujoRepository pujoRepository;
     private final AsistenteRepository asistenteRepository;
     private final ClienteRepository clienteRepository;
+    private final UsuarioRepository usuarioRepository;
 
     @GetMapping
     public ResponseEntity<List<Subasta>> getSubastas() {
@@ -134,11 +137,15 @@ public class AuctionController {
         }
         
         // Validate that the user is not the owner of the item
-        if (request.getClienteId() != null) {
-            Optional<Usuario> usuarioOpt = usuarioRepository.findAll().stream().filter(u -> u.getCliente() != null && u.getCliente().getIdentificador().equals(Long.valueOf(request.getClienteId()))).findFirst();
-            if (usuarioOpt.isPresent() && usuarioOpt.get().getDuenio() != null && item.getProducto().getDuenio() != null) {
-                if (usuarioOpt.get().getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
-                    return ResponseEntity.badRequest().body("No podés pujar en tu propio artículo.");
+        if (request.getAsistenteId() != null) {
+            Optional<Asistente> aOpt = asistenteRepository.findById(Long.valueOf(request.getAsistenteId()));
+            if (aOpt.isPresent() && aOpt.get().getCliente() != null) {
+                Long asisClienteId = aOpt.get().getCliente().getIdentificador();
+                Optional<Usuario> usuarioOpt = usuarioRepository.findAll().stream().filter(u -> u.getCliente() != null && u.getCliente().getIdentificador().equals(asisClienteId)).findFirst();
+                if (usuarioOpt.isPresent() && usuarioOpt.get().getDuenio() != null && item.getProducto().getDuenio() != null) {
+                    if (usuarioOpt.get().getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
+                        return ResponseEntity.badRequest().body("No podés pujar en tu propio artículo.");
+                    }
                 }
             }
         }
