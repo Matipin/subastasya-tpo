@@ -9,4 +9,5 @@ import java.util.List;
 @Repository
 public interface ItemCatalogoRepository extends JpaRepository<ItemCatalogo, Long> {
     List<ItemCatalogo> findByCatalogoIdentificador(Long catalogoId);
+    List<ItemCatalogo> findByProductoIdentificador(Long productoId);
 }

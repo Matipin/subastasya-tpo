@@ -21,6 +21,7 @@ import NotificacionesScreen from './src/screens/NotificacionesScreen';
 import MisSubastasScreen from './src/screens/MisSubastasScreen';
 import SubastasGanadasScreen from './src/screens/SubastasGanadasScreen';
 import MisProductosScreen from './src/screens/MisProductosScreen';
+import MisVentasScreen from './src/screens/MisVentasScreen';
 import MiCategoriaScreen from './src/screens/MiCategoriaScreen';
 import CheckoutGanadorScreen from './src/screens/CheckoutGanadorScreen';
 import HistorialPujasScreen from './src/screens/HistorialPujasScreen';
@@ -54,6 +55,7 @@ export default function App() {
         <Stack.Screen name="MisSubastas" component={MisSubastasScreen} />
         <Stack.Screen name="SubastasGanadas" component={SubastasGanadasScreen} />
         <Stack.Screen name="MisProductos" component={MisProductosScreen} />
+        <Stack.Screen name="MisVentas" component={MisVentasScreen} />
         <Stack.Screen name="MiCategoria" component={MiCategoriaScreen} />
         <Stack.Screen name="CheckoutGanador" component={CheckoutGanadorScreen} />
         <Stack.Screen name="HistorialPujas" component={HistorialPujasScreen} />

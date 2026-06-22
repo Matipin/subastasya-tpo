@@ -27,6 +27,7 @@ public class ItemController {
     private final CatalogoRepository catalogoRepository;
     private final ItemCatalogoRepository itemCatalogoRepository;
     private final FotoRepository fotoRepository;
+    private final SeguroRepository seguroRepository;
 
     @PostMapping("/propose")
     public ResponseEntity<?> proposeItem(@RequestBody ProposeRequest request) {
@@ -134,11 +135,39 @@ public class ItemController {
         notifRecibido.setFechaCreacion(LocalDateTime.now());
         notificacionRepository.save(notifRecibido);
 
+        // Lógica de SEGURO (Monto base simulado: 1500)
+        java.math.BigDecimal valorBase = new java.math.BigDecimal("1500.00");
+        String basePoliza = "POL-" + usuario.getDuenio().getIdentificador();
+        
+        java.util.Optional<Seguro> optSeguro = seguroRepository.findByNroPoliza(basePoliza);
+        Seguro seguro;
+        if (optSeguro.isPresent()) {
+            seguro = optSeguro.get();
+            seguro.setImporte(seguro.getImporte().add(valorBase));
+            seguro.setPolizaCombinada("si");
+        } else {
+            seguro = new Seguro();
+            seguro.setNroPoliza(basePoliza);
+            seguro.setCompania("Aseguradora SubastasYa S.A.");
+            seguro.setImporte(valorBase);
+            seguro.setPolizaCombinada("no");
+        }
+        seguroRepository.save(seguro);
+        
+        producto.setSeguro(seguro.getNroPoliza());
+        productoRepository.save(producto);
+
         // 2. Notificación de TASADO (Simulada después de recibir)
         Notificacion notifTasado = new Notificacion();
         notifTasado.setUsuario(usuario);
         LocalDate fechaSugerida = LocalDate.parse("2026-10-10");
-        notifTasado.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado. Precio Base Sugerido: USD 1500. Fecha de subasta: " + fechaSugerida.toString() + ". Por favor, toma una decisión desde tu panel.");
+        notifTasado.setMensaje("Tu producto '" + producto.getDescripcionCatalogo() + "' ha sido tasado.\n" +
+                               "- Precio Base Sugerido: USD 1500.\n" +
+                               "- Comisión Empresa: 15%.\n" +
+                               "- Fecha sugerida: " + fechaSugerida.toString() + ".\n" +
+                               "- Hora: 10:00 AM.\n" +
+                               "- Lugar: Rivadavia 3421, CABA.\n" +
+                               "Por favor, toma una decisión desde tu panel.");
         notifTasado.setTipo("producto_tasado");
         notifTasado.setReferenciaId(producto.getIdentificador().longValue());
         notifTasado.setFechaCreacion(LocalDateTime.now().plusMinutes(1)); // Un minuto después para ordenar
@@ -224,6 +253,12 @@ public class ItemController {
             p.setDisponible("no"); // Se queda rechazado
             productoRepository.save(p);
             
+            // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
+            java.util.List<Notificacion> notifs = notificacionRepository.findByUsuarioIdUsuario(u.getIdUsuario());
+            notifs.stream()
+                .filter(n -> "producto_tasado".equals(n.getTipo()) && n.getReferenciaId().equals(p.getIdentificador().longValue()))
+                .forEach(notificacionRepository::delete);
+
             Deuda deuda = new Deuda();
             deuda.setUsuario(u);
             deuda.setMonto(new BigDecimal("50.00")); // Cargo por envío

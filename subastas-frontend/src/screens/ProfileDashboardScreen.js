@@ -181,7 +181,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
 
       <TouchableOpacity 
         style={styles.fullButton} 
-        onPress={() => navigation.navigate('MisProductos', { usuario })}
+        onPress={() => navigation.navigate('MisVentas', { usuario })}
       >
         <View style={styles.buttonContent}>
           <Ionicons name="pricetag-outline" size={20} color="#222" />

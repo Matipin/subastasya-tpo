@@ -105,6 +105,7 @@ public class DataInitializer implements CommandLineRunner {
             uOro = optOro.get();
             if (uOro.getCliente() != null) {
                 uOro.getCliente().setCategoria("oro");
+                clienteRepository.save(uOro.getCliente());
                 usuarioRepository.save(uOro);
             }
         }

@@ -30,6 +30,7 @@ public class UserController {
     private final CatalogoRepository catalogoRepository;
     private final ItemCatalogoRepository itemCatalogoRepository;
     private final FotoRepository fotoRepository;
+    private final SeguroRepository seguroRepository;
 
     @GetMapping("/me/medios-de-pago")
     public ResponseEntity<?> obtenerMediosDePago(@RequestParam String email) {
@@ -79,6 +80,7 @@ public class UserController {
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         return ResponseEntity.ok(deudaRepository.findByUsuarioIdUsuario(opt.get().getIdUsuario()));
     }
+
 
     @PostMapping("/me/debts/{id}/pay")
     public ResponseEntity<?> payDebt(@PathVariable Long id, @RequestBody(required = false) Map<String, Object> body) {
@@ -298,6 +300,53 @@ public class UserController {
             map.put("descripcionCompleta", p.getDescripcionCompleta());
             map.put("fecha", p.getFecha());
             map.put("disponible", p.getDisponible());
+            
+            // Ubicación y Seguro
+            map.put("ubicacion", "Depósito Central - Rivadavia 3421");
+            if (p.getSeguro() != null) {
+                java.util.Optional<Seguro> optS = seguroRepository.findByNroPoliza(p.getSeguro());
+                if (optS.isPresent()) {
+                    Seguro s = optS.get();
+                    map.put("nroPoliza", s.getNroPoliza());
+                    map.put("companiaSeguro", s.getCompania());
+                    map.put("montoAsegurado", s.getImporte());
+                }
+            }
+            
+            // Imagen del producto
+            List<Foto> fotos = fotoRepository.findByProductoIdentificador(p.getIdentificador());
+            if (!fotos.isEmpty() && fotos.get(0).getFoto() != null) {
+                map.put("urlImagen", new String(fotos.get(0).getFoto(), java.nio.charset.StandardCharsets.UTF_8));
+            }
+
+            // Información de venta (reutilizada para evitar endpoints nuevos)
+            List<ItemCatalogo> items = itemCatalogoRepository.findByProductoIdentificador(p.getIdentificador());
+            for (ItemCatalogo ic : items) {
+                List<Pujo> pujos = pujoRepository.findByItemIdentificador(ic.getIdentificador());
+                Pujo ganador = pujos.stream().filter(pj -> "si".equals(pj.getGanador())).findFirst().orElse(null);
+                
+                if (ganador != null) {
+                    double montoVenta = ganador.getImporte().doubleValue();
+                    double comisionEmpresa = ic.getComision() != null ? ic.getComision().doubleValue() : (montoVenta * 0.15); 
+                    double pagoAlDuenio = montoVenta - comisionEmpresa;
+                    
+                    map.put("isVendido", true);
+                    map.put("montoVenta", montoVenta);
+                    map.put("comisionEmpresa", comisionEmpresa);
+                    map.put("pagoAlDuenio", pagoAlDuenio);
+                    
+                    List<Deuda> deudasComprador = deudaRepository.findByMotivoContaining("Subasta " + ic.getIdentificador());
+                    boolean pagado = deudasComprador.stream().anyMatch(d -> d.isPagada());
+                    map.put("pagadoPorComprador", pagado);
+                    
+                    if (ic.getCatalogo() != null && ic.getCatalogo().getSubasta() != null) {
+                        map.put("fechaVenta", ic.getCatalogo().getSubasta().getFecha());
+                    } else {
+                        map.put("fechaVenta", "Desconocida");
+                    }
+                }
+            }
+            
             result.add(map);
         }
         return ResponseEntity.ok(result);

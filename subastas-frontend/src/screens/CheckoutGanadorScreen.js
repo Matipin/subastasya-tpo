@@ -47,9 +47,12 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
   const isDeuda = item.isDeuda;
   const valorPujado = item.monto || details.valorPujado;
   
-  // Si es deuda, el monto ya viene con recargo o sin recargo, lo tratamos como "Valor base" + "Recargo"
-  const valorBase = isDeuda ? (valorPujado / 1.10) : valorPujado;
-  const comision = isDeuda ? (valorPujado - valorBase) : (valorPujado * 0.10); // Recargo o Comisión
+  // Chequear si la deuda es un cargo operativo (envío por rechazo de tasación)
+  const isCargoOperativo = isDeuda && (item.itemNombre?.toLowerCase().includes('rechazo') || item.itemNombre?.toLowerCase().includes('envío') || item.itemNombre?.toLowerCase().includes('operativo'));
+  
+  // Si es deuda operativa, el monto es limpio (ej. USD 50). Si es por atraso de subasta, calculamos 10% de recargo.
+  const valorBase = isDeuda ? (isCargoOperativo ? valorPujado : (valorPujado / 1.10)) : valorPujado;
+  const comision = isDeuda ? (isCargoOperativo ? 0 : (valorPujado - valorBase)) : (valorPujado * 0.10); // Recargo o Comisión
   
   const costoEnvio = metodoEntrega === 'domicilio' ? details.costoEnvioDomicilio : 0;
   const totalPagado = isDeuda ? (valorPujado + costoEnvio) : (valorPujado + comision + costoEnvio);
@@ -277,10 +280,12 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
           <Text style={styles.rowLabel}>{isDeuda ? 'Valor original' : 'Valor pujado'}</Text>
           <Text style={styles.rowValue}>${isDeuda ? valorBase.toLocaleString(undefined, {minimumFractionDigits: 2}) : valorPujado.toLocaleString()}</Text>
         </View>
-        <View style={styles.row}>
-          <Text style={styles.rowLabel}>{isDeuda ? 'Recargo por atraso (10%)' : 'Comision (10%)'}</Text>
-          <Text style={styles.rowValue}>${comision.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
-        </View>
+        {comision > 0 && (
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{isDeuda ? 'Recargo por atraso (10%)' : 'Comision (10%)'}</Text>
+            <Text style={styles.rowValue}>${comision.toLocaleString(undefined, {minimumFractionDigits: 2})}</Text>
+          </View>
+        )}
         <View style={styles.row}>
           <Text style={styles.rowLabel}>Costo de envio</Text>
           <Text style={styles.rowValue}>${costoEnvio.toLocaleString()}</Text>

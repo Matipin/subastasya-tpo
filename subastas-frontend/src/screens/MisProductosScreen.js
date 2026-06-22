@@ -99,6 +99,33 @@ export default function MisProductosScreen({ route, navigation }) {
           </View>
         </View>
 
+        {/* Detalles de Custodia y Seguro */}
+        {item.ubicacion && (
+          <View style={styles.custodySection}>
+            <Text style={styles.custodyTitle}>Detalles de Custodia</Text>
+            
+            <View style={styles.custodyRow}>
+              <Ionicons name="location-outline" size={16} color="#4B5563" />
+              <Text style={styles.custodyValue}>{item.ubicacion}</Text>
+            </View>
+
+            {item.nroPoliza ? (
+              <View style={styles.custodyRow}>
+                <Ionicons name="shield-checkmark-outline" size={16} color="#059669" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.custodyValue}>Póliza: {item.nroPoliza}</Text>
+                  <Text style={styles.custodySubValue}>{item.companiaSeguro} - Asegurado por USD {item.montoAsegurado}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.custodyRow}>
+                <Ionicons name="shield-half-outline" size={16} color="#D97706" />
+                <Text style={[styles.custodyValue, { color: '#D97706' }]}>En proceso de aseguramiento</Text>
+              </View>
+            )}
+          </View>
+        )}
+
         {isConOferta && (
           <View style={styles.offerSection}>
             <View style={styles.offerDetails}>
@@ -268,9 +295,7 @@ const styles = StyleSheet.create({
   soldDetails: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#D1FAE5',
-    padding: 12,
-    borderRadius: 8,
+    flex: 1,
   },
   soldTitle: {
     fontSize: 16,
@@ -279,8 +304,39 @@ const styles = StyleSheet.create({
   },
   soldText: {
     fontSize: 13,
-    color: '#047857',
+    color: '#064E3B',
     marginTop: 2,
-    paddingRight: 30,
+    flexWrap: 'wrap',
+  },
+  custodySection: {
+    marginTop: 10,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  custodyTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  custodyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  custodyValue: {
+    fontSize: 13,
+    color: '#4B5563',
+    marginLeft: 6,
+    flex: 1,
+  },
+  custodySubValue: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginLeft: 6,
+    marginTop: 2,
   }
 });
