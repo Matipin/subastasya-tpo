@@ -158,39 +158,44 @@ public class DataInitializer implements CommandLineRunner {
         }
 
         // Subasta 1: EN VIVO
-        boolean hasLive = subastaRepository.findAll().stream().anyMatch(s -> "abierta".equals(s.getEstado()) && s.getFecha().equals(LocalDate.now()));
+        // Buscar la subasta 1 existente
+        Optional<Subasta> optS1 = subastaRepository.findById(1L);
         final Subasta s1;
-        if (!hasLive) {
-            Subasta s = new Subasta();
-            // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:40
-            s.setFecha(LocalDate.now());
-            s.setHora(LocalTime.of(15, 40));
-            s.setEstado("abierta");
-            s.setCapacidadAsistentes(100);
-            s.setTieneDeposito("si");
-            s.setSeguridadPropia("si");
-            s.setCategoria("comun");
-            s = subastaRepository.save(s);
-
+        if (optS1.isPresent()) {
+            s1 = optS1.get();
+        } else {
+            s1 = new Subasta();
+            s1.setCapacidadAsistentes(100);
+            s1.setTieneDeposito("si");
+            s1.setSeguridadPropia("si");
+            s1.setCategoria("comun");
+            
             Catalogo c = new Catalogo();
             c.setDescripcion("Subasta de Relojería y Arte");
             c.setResponsable(admin);
-            c.setSubasta(s);
+            c.setSubasta(s1);
             catalogoRepository.save(c);
 
             Producto p1 = createDemoItem(c, "Reloj Vintage Suizo", admin, duenioBase, "disponible");
             p1.setSeguro(nroPolizaDemo);
             productoRepository.save(p1);
-            
-            s1 = s;
-        } else {
-            s1 = subastaRepository.findAll().stream().filter(s -> "abierta".equals(s.getEstado()) && s.getFecha().equals(LocalDate.now())).findFirst().get();
         }
 
-        // Asegurar que la subasta "en vivo" esté programada exactamente a las 15:40
+        // Forzar la subasta a estar abierta, hoy a las 16:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(15, 40));
+        s1.setHora(LocalTime.of(16, 0));
+        s1.setEstado("abierta");
         subastaRepository.save(s1);
+
+        // Volver a poner todos los items de este catálogo como NO subastados
+        List<Catalogo> catalogosS1 = catalogoRepository.findBySubastaIdentificador(s1.getIdentificador());
+        for (Catalogo cat : catalogosS1) {
+            List<ItemCatalogo> items = itemCatalogoRepository.findByCatalogoIdentificador(cat.getIdentificador());
+            for (ItemCatalogo item : items) {
+                item.setSubastado("no");
+                itemCatalogoRepository.save(item);
+            }
+        }
 
         // Register test user to Subasta 1
         boolean isRegistered = asistenteRepository.findAll().stream()
