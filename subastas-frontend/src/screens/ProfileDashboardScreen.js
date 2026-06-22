@@ -84,7 +84,7 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={styles.categoriaBadge}>
           <Ionicons name="shield-checkmark" size={14} color="#D4AF37" />
-          <Text style={styles.categoriaText}>{(usuario?.cliente?.categoria || 'COMUN').toUpperCase()}</Text>
+          <Text style={styles.categoriaText}>{(metrics?.categoria || usuario?.cliente?.categoria || 'COMUN').toUpperCase()}</Text>
         </View>
       </View>
 
@@ -146,7 +146,13 @@ export default function ProfileDashboardScreen({ route, navigation }) {
         </View>
       </TouchableOpacity>
 
-      <TouchableOpacity style={styles.fullButton} onPress={() => navigation.navigate('MiCategoria', { usuario })}>
+      <TouchableOpacity style={styles.fullButton} onPress={() => {
+        const updatedUsuario = { ...usuario };
+        if (metrics?.categoria && updatedUsuario.cliente) {
+          updatedUsuario.cliente.categoria = metrics.categoria;
+        }
+        navigation.navigate('MiCategoria', { usuario: updatedUsuario });
+      }}>
         <View style={styles.buttonContent}>
           <Ionicons name="ribbon-outline" size={20} color="#222" />
           <Text style={styles.btnText}>Mi categoría</Text>

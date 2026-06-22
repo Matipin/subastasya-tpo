@@ -71,6 +71,7 @@ export default function MisProductosScreen({ route, navigation }) {
       case 'Subastado': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Subastado' };
       case 'si': return { color: '#10B981', bg: '#D1FAE5', icon: 'checkmark-circle', text: 'Aprobado' };
       case 'vendido': return { color: '#059669', bg: '#A7F3D0', icon: 'cash', text: 'Vendido' };
+      case 'rechazado': return { color: '#DC2626', bg: '#FEE2E2', icon: 'close-circle', text: 'Rechazado' };
       default: return { color: '#6B7280', bg: '#F3F4F6', icon: 'time', text: status || 'En revisión' };
     }
   };

@@ -208,6 +208,9 @@ public class UserController {
         metrics.put("ventasRealizadas", ventasRealizadas);
         metrics.put("totalOfertado", totalOfertado);
         metrics.put("totalPagado", totalPagado);
+        if (user.getCliente() != null) {
+            metrics.put("categoria", user.getCliente().getCategoria());
+        }
 
         return ResponseEntity.ok(metrics);
     }

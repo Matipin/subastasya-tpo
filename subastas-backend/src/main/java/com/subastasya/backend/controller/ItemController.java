@@ -250,7 +250,7 @@ public class ItemController {
             
             return ResponseEntity.ok("Producto aceptado e ingresado al catálogo.");
         } else if ("rechazar".equalsIgnoreCase(decision)) {
-            p.setDisponible("no"); // Se queda rechazado
+            p.setDisponible("rechazado"); // Cambiado de "no" a "rechazado" para que desaparezca la oferta
             productoRepository.save(p);
             
             // Eliminar la notificación de tasación para evitar generacion de deudas infinitas
