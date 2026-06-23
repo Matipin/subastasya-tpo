@@ -111,47 +111,55 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                 }
                 activeUserAuctions.put(bidMessage.getEmail(), bidMessage.getAuctionId().toString());
 
-                java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
-                java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
-                if (optUser.isPresent() && optItem.isPresent()) {
-                    Usuario user = optUser.get();
-                    ItemCatalogo item = optItem.get();
+                Boolean[] isValid = {true};
+                try {
+                    transactionTemplate.execute(status -> {
+                        java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
+                        java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
+                        if (optUser.isPresent() && optItem.isPresent()) {
+                            Usuario user = optUser.get();
+                            ItemCatalogo item = optItem.get();
 
-                    // Validación 2: Categoría del usuario
-                    String subastaCat = item.getCatalogo().getSubasta().getCategoria();
-                    String userCat = user.getCliente() != null ? user.getCliente().getCategoria() : "comun";
-                    if (catToInt(userCat) < catToInt(subastaCat)) {
-                        bidMessage.setType("ERROR");
-                        bidMessage.setContent("Tu categoría (" + userCat + ") no te permite participar en subastas " + subastaCat);
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
-                        return;
-                    }
+                            String subastaCat = item.getCatalogo().getSubasta().getCategoria();
+                            String userCat = user.getCliente() != null ? user.getCliente().getCategoria() : "comun";
+                            if (catToInt(userCat) < catToInt(subastaCat)) {
+                                bidMessage.setType("ERROR");
+                                bidMessage.setContent("Tu categoría (" + userCat + ") no te permite participar en subastas " + subastaCat);
+                                isValid[0] = false;
+                                return null;
+                            }
 
-                    // Validación 3: Medio de pago verificado
-                    java.util.List<MedioDePago> medios = medioDePagoRepository.findByCliente_Identificador(user.getCliente().getIdentificador());
-                    if (medios.isEmpty()) { // Idealmente chequear .isVerificado(), pero la consigna pide tener uno.
-                        bidMessage.setType("ERROR");
-                        bidMessage.setContent("Debes tener al menos un medio de pago para pujar.");
-                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
-                        return;
-                    }
+                            java.util.List<MedioDePago> medios = medioDePagoRepository.findByCliente_Identificador(user.getCliente().getIdentificador());
+                            if (medios.isEmpty()) { 
+                                bidMessage.setType("ERROR");
+                                bidMessage.setContent("Debes tener al menos un medio de pago para pujar.");
+                                isValid[0] = false;
+                                return null;
+                            }
 
-                    // Validación 4: Regla del 1% al 20%
-                    if (!"oro".equalsIgnoreCase(subastaCat) && !"platino".equalsIgnoreCase(subastaCat)) {
-                        Double basePrice = item.getPrecioBase().doubleValue();
-                        Double currentTop = currentState.getAmount() != null && currentState.getAmount() >= basePrice ? currentState.getAmount() : basePrice;
-                        Double minReq = currentTop + (basePrice * 0.01);
-                        Double maxReq = currentTop + (basePrice * 0.20);
-                        
-                        // Si la subasta apenas arranca, el currentTop es 100 por defecto en el JOIN mock, 
-                        // pero la regla dice: incremento del 1% al 20% del valor base.
-                        if (bidMessage.getAmount() < minReq || bidMessage.getAmount() > maxReq) {
-                            bidMessage.setType("ERROR");
-                            bidMessage.setContent(String.format("La puja debe incrementar entre $%.2f y $%.2f", minReq, maxReq));
-                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
-                            return;
+                            if (!"oro".equalsIgnoreCase(subastaCat) && !"platino".equalsIgnoreCase(subastaCat)) {
+                                Double basePrice = item.getPrecioBase().doubleValue();
+                                Double currentTop = currentState.getAmount() != null && currentState.getAmount() >= basePrice ? currentState.getAmount() : basePrice;
+                                Double minReq = currentTop + (basePrice * 0.01);
+                                Double maxReq = currentTop + (basePrice * 0.20);
+                                
+                                if (bidMessage.getAmount() < minReq || bidMessage.getAmount() > maxReq) {
+                                    bidMessage.setType("ERROR");
+                                    bidMessage.setContent(String.format("La puja debe incrementar entre $%.2f y $%.2f", minReq, maxReq));
+                                    isValid[0] = false;
+                                    return null;
+                                }
+                            }
                         }
-                    }
+                        return null;
+                    });
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+
+                if (!isValid[0]) {
+                    session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
+                    return;
                 }
             }
             // --- FIN VALIDACIONES ---
