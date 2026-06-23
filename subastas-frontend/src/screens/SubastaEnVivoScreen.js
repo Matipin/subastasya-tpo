@@ -87,6 +87,9 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         } else {
           Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con $${msg.amount}`);
         }
+      } else if (msg.type === 'ERROR') {
+        setBidding(false);
+        Alert.alert('Error de Puja', msg.content);
       }
     };
 
