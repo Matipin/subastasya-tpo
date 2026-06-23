@@ -174,10 +174,10 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             <TouchableOpacity 
               style={[
                 styles.actionButton, 
-                (isOneHourBefore || (articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador)) && { backgroundColor: '#CCC' }
+                (isOneHourBefore || (articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador)) && { backgroundColor: '#CCC' }
               ]} 
               onPress={() => {
-                if (articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador) {
+                if (articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador) {
                   Alert.alert('Acceso Denegado', 'Sos el dueño de este artículo, no podés anotarte para pujar en tu propia subasta.');
                 } else if (isOneHourBefore) {
                   Alert.alert('Inscripción Cerrada', 'Ya no es posible anotarse a esta subasta. Las inscripciones cierran 1 hora antes de su inicio.');
@@ -187,7 +187,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
               }} 
             >
               <Text style={styles.actionText}>
-                {articulo?.producto?.duenio?.identificador === usuario?.duenio?.identificador 
+                {articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador 
                   ? 'Sos el dueño' 
                   : isOneHourBefore ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}
               </Text>
