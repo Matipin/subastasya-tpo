@@ -71,7 +71,7 @@ public class DeudaScheduler {
                         Deuda multa = new Deuda();
                         multa.setUsuario(usuario);
                         multa.setMonto(multaMonto);
-                        multa.setMotivo("Multa por mora (10%) de Deuda ID: " + deuda.getIdentificador());
+                        multa.setMotivo("Multa por mora (10%) de Deuda ID: " + deuda.getId());
                         multa.setPagada(false);
                         deudaRepository.save(multa);
 
