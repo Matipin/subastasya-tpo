@@ -317,7 +317,7 @@ public class DataInitializer implements CommandLineRunner {
             c3.setSubasta(s3);
             catalogoRepository.save(c3);
 
-            createDemoItem(c3, "Ferrari 250 GTO 1962", admin, duenioBase, "disponible");
+            createDemoItem(c3, "Ferrari 250 GTO 1962", admin, uPlatino.getDuenio(), "disponible");
         }
 
         // -------------------------
