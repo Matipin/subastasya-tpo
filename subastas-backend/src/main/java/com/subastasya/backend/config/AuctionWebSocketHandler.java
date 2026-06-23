@@ -33,9 +33,24 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
     @Autowired private DeudaRepository deudaRepository;
     @Autowired private NotificacionRepository notificacionRepository;
     @Autowired private TransactionTemplate transactionTemplate;
+    @Autowired private MedioDePagoRepository medioDePagoRepository;
+    @Autowired private SubastaDetalleRepository subastaDetalleRepository;
 
     private final Map<String, BidMessageDTO> auctionStates = new ConcurrentHashMap<>();
     private final Map<String, Timer> auctionTimers = new ConcurrentHashMap<>();
+    private final Map<String, String> activeUserAuctions = new ConcurrentHashMap<>();
+
+    private int catToInt(String cat) {
+        if (cat == null) return 0;
+        switch (cat.toLowerCase()) {
+            case "comun": return 1;
+            case "especial": return 2;
+            case "plata": return 3;
+            case "oro": return 4;
+            case "platino": return 5;
+            default: return 0;
+        }
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) {
@@ -74,6 +89,72 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
             if ("ENDED".equals(currentState.getType())) {
                 return;
             }
+
+            // --- VALIDACIONES DE NEGOCIO ---
+            if (bidMessage.getEmail() != null) {
+                // Validación 1: Concurrencia (1 subasta a la vez por usuario)
+                String currentActive = activeUserAuctions.get(bidMessage.getEmail());
+                if (currentActive != null && !currentActive.equals(bidMessage.getAuctionId().toString())) {
+                    boolean isStillActive = false;
+                    for (BidMessageDTO state : auctionStates.values()) {
+                        if (state.getAuctionId().toString().equals(currentActive) && !"ENDED".equals(state.getType())) {
+                            isStillActive = true;
+                            break;
+                        }
+                    }
+                    if (isStillActive) {
+                        bidMessage.setType("ERROR");
+                        bidMessage.setContent("Ya estás participando activamente en otra subasta.");
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
+                        return;
+                    }
+                }
+                activeUserAuctions.put(bidMessage.getEmail(), bidMessage.getAuctionId().toString());
+
+                java.util.Optional<Usuario> optUser = usuarioRepository.findByEmail(bidMessage.getEmail());
+                java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
+                if (optUser.isPresent() && optItem.isPresent()) {
+                    Usuario user = optUser.get();
+                    ItemCatalogo item = optItem.get();
+
+                    // Validación 2: Categoría del usuario
+                    String subastaCat = item.getCatalogo().getSubasta().getCategoria();
+                    String userCat = user.getCliente() != null ? user.getCliente().getCategoria() : "comun";
+                    if (catToInt(userCat) < catToInt(subastaCat)) {
+                        bidMessage.setType("ERROR");
+                        bidMessage.setContent("Tu categoría (" + userCat + ") no te permite participar en subastas " + subastaCat);
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
+                        return;
+                    }
+
+                    // Validación 3: Medio de pago verificado
+                    java.util.List<MedioDePago> medios = medioDePagoRepository.findByCliente_Identificador(user.getCliente().getIdentificador());
+                    if (medios.isEmpty()) { // Idealmente chequear .isVerificado(), pero la consigna pide tener uno.
+                        bidMessage.setType("ERROR");
+                        bidMessage.setContent("Debes tener al menos un medio de pago para pujar.");
+                        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
+                        return;
+                    }
+
+                    // Validación 4: Regla del 1% al 20%
+                    if (!"oro".equalsIgnoreCase(subastaCat) && !"platino".equalsIgnoreCase(subastaCat)) {
+                        Double basePrice = item.getPrecioBase().doubleValue();
+                        Double currentTop = currentState.getAmount() != null && currentState.getAmount() >= basePrice ? currentState.getAmount() : basePrice;
+                        Double minReq = currentTop + (basePrice * 0.01);
+                        Double maxReq = currentTop + (basePrice * 0.20);
+                        
+                        // Si la subasta apenas arranca, el currentTop es 100 por defecto en el JOIN mock, 
+                        // pero la regla dice: incremento del 1% al 20% del valor base.
+                        if (bidMessage.getAmount() < minReq || bidMessage.getAmount() > maxReq) {
+                            bidMessage.setType("ERROR");
+                            bidMessage.setContent(String.format("La puja debe incrementar entre $%.2f y $%.2f", minReq, maxReq));
+                            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(bidMessage)));
+                            return;
+                        }
+                    }
+                }
+            }
+            // --- FIN VALIDACIONES ---
 
             Double newMinBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.01);
             Double newMaxBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.20);
@@ -199,18 +280,33 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                     item.setSubastado("si");
                                     itemCatalogoRepository.save(item);
 
+                                    // LÓGICA DE COBRO (Puja + Comisión 10% + Envío)
+                                    Double pujaGanadora = finalState.getAmount();
+                                    Double comisionComprador = pujaGanadora * 0.10;
+                                    Double costoEnvio = 50.0;
+                                    String monedaStr = "USD";
+                                    
+                                    java.util.Optional<SubastaDetalle> detalleOpt = subastaDetalleRepository.findBySubastaIdentificador(item.getCatalogo().getSubasta().getIdentificador());
+                                    if (detalleOpt.isPresent()) {
+                                        SubastaDetalle det = detalleOpt.get();
+                                        if (det.getCostoEnvioBase() != null) costoEnvio = det.getCostoEnvioBase().doubleValue();
+                                        if (det.getMoneda() != null) monedaStr = det.getMoneda().equalsIgnoreCase("pesos") ? "ARS" : "USD";
+                                    }
+                                    
+                                    Double montoTotalDeuda = pujaGanadora + comisionComprador + costoEnvio;
+
                                     Deuda d = new Deuda();
                                     d.setUsuario(user);
-                                    d.setMonto(java.math.BigDecimal.valueOf(finalState.getAmount()));
-                                    d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador());
+                                    d.setMonto(java.math.BigDecimal.valueOf(montoTotalDeuda).setScale(2, java.math.RoundingMode.HALF_UP));
+                                    d.setMotivo("Adjudicación Item de Subasta " + item.getIdentificador() + " (Incluye comisión y envío)");
                                     d.setPagada(false);
                                     deudaRepository.save(d);
 
                                     Notificacion notifGanador = new Notificacion();
                                     notifGanador.setUsuario(user);
-                                    notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "' por USD " + String.format("%.2f", finalState.getAmount()) + ". Dirígete a Subastas Ganadas para completar el pago.");
+                                    notifGanador.setMensaje("¡Felicidades! Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "'. Puja: " + monedaStr + " " + String.format("%.2f", pujaGanadora) + " | Comisiones y Envío: " + monedaStr + " " + String.format("%.2f", (comisionComprador + costoEnvio)) + ".");
                                     notifGanador.setTipo("subasta_ganada");
-                                    notifGanador.setReferenciaId(item.getIdentificador());
+                                    notifGanador.setReferenciaId(item.getIdentificador().longValue());
                                     notifGanador.setFechaCreacion(java.time.LocalDateTime.now());
                                     notificacionRepository.save(notifGanador);
 
@@ -218,9 +314,13 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                                         java.util.List<Usuario> allUsers = usuarioRepository.findAll();
                                         for (Usuario u : allUsers) {
                                             if (u.getDuenio() != null && u.getDuenio().getIdentificador().equals(item.getProducto().getDuenio().getIdentificador())) {
+                                                // Calcular comisión del vendedor (15%) para restárselo de sus ganancias en el futuro
+                                                Double comisionVendedor = pujaGanadora * 0.15;
+                                                Double pagoAlVendedor = pujaGanadora - comisionVendedor;
+
                                                 Notificacion notifDuenio = new Notificacion();
                                                 notifDuenio.setUsuario(u);
-                                                notifDuenio.setMensaje("Tu producto '" + item.getProducto().getDescripcionCatalogo() + "' fue vendido en subasta por USD " + String.format("%.2f", finalState.getAmount()) + ".");
+                                                notifDuenio.setMensaje("Tu producto '" + item.getProducto().getDescripcionCatalogo() + "' fue vendido en subasta por " + monedaStr + " " + String.format("%.2f", pujaGanadora) + ". Tu ganancia neta (descontando 15% de comisión) será de " + monedaStr + " " + String.format("%.2f", pagoAlVendedor) + ".");
                                                 notifDuenio.setTipo("producto_vendido");
                                                 notifDuenio.setReferenciaId(item.getProducto().getIdentificador().longValue());
                                                 notifDuenio.setFechaCreacion(java.time.LocalDateTime.now());
