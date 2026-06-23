@@ -217,7 +217,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 45));
+        s1.setHora(LocalTime.of(2, 50));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
@@ -236,7 +236,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Forzar la subasta a estar abierta, hoy a las 17:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 45));
+        s1.setHora(LocalTime.of(2, 50));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
@@ -270,6 +270,17 @@ public class DataInitializer implements CommandLineRunner {
             aOro.setSubasta(s1);
             aOro.setNumeroPostor((int)(Math.random() * 1000) + 1);
             asistenteRepository.save(aOro);
+        }
+
+        // Register platino user to Subasta 1
+        boolean isPlatinoRegistered = asistenteRepository.findAll().stream()
+            .anyMatch(a -> a.getCliente().getIdentificador().equals(uPlatino.getCliente().getIdentificador()) && a.getSubasta().getIdentificador().equals(s1.getIdentificador()));
+        if (!isPlatinoRegistered) {
+            Asistente aPlatino = new Asistente();
+            aPlatino.setCliente(uPlatino.getCliente());
+            aPlatino.setSubasta(s1);
+            aPlatino.setNumeroPostor((int)(Math.random() * 1000) + 1);
+            asistenteRepository.save(aPlatino);
         }
 
         // Subasta 2: FUTURA (Comentada para que no aparezca el Cuadro Picasso)
