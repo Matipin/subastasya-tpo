@@ -59,10 +59,10 @@ public class DeudaScheduler {
                     Cliente cliente = usuario.getCliente();
                     
                     // Solo penalizar si el cliente está activo
-                    if (!"inactivo".equalsIgnoreCase(cliente.getEstado())) {
+                    if (!"incativo".equalsIgnoreCase(cliente.getEstado())) {
                         
-                        // 1. Bloquear cuenta (estado inactivo)
-                        cliente.setEstado("inactivo");
+                        // 1. Bloquear cuenta (estado inactivo typo: incativo)
+                        cliente.setEstado("incativo");
                         clienteRepository.save(cliente);
 
                         // 2. Generar multa del 10%

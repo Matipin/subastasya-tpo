@@ -114,35 +114,42 @@ public class DataInitializer implements CommandLineRunner {
             uOro = usuarioRepository.save(tempOro);
         } else {
             uOro = optOro.get();
-            if (uOro.getCliente() != null) {
-                // Check if specific cards are present
-                boolean hasVisa = medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador())
-                                    .stream().anyMatch(mp -> "4000123456789010".equals(mp.getNumero()));
-                if (!hasVisa) {
-                    MedioDePago mpValida = new MedioDePago();
-                    mpValida.setCliente(uOro.getCliente());
-                    mpValida.setTipo("TARJETA");
-                    mpValida.setEntidad("VISA ORO");
-                    mpValida.setNumero("4000123456789010");
-                    mpValida.setTitular("TEST ORO");
-                    mpValida.setVerificado(true);
-                    mpValida.setMontoGarantia(new java.math.BigDecimal("50000.00")); // Valid funds
-                    medioDePagoRepository.save(mpValida);
-
-                    MedioDePago mpInvalida = new MedioDePago();
-                    mpInvalida.setCliente(uOro.getCliente());
-                    mpInvalida.setTipo("TARJETA");
-                    mpInvalida.setEntidad("MASTERCARD");
-                    mpInvalida.setNumero("5000123456780000");
-                    mpInvalida.setTitular("TEST ORO");
-                    mpInvalida.setVerificado(true);
-                    mpInvalida.setMontoGarantia(new java.math.BigDecimal("10.00")); // Insufficient funds
-                    medioDePagoRepository.save(mpInvalida);
-                }
-                uOro.getCliente().setCategoria("oro");
-                clienteRepository.save(uOro.getCliente());
+            if (uOro.getCliente() == null) {
+                Cliente cOro = new Cliente();
+                cOro.setNombre("Test Oro");
+                cOro.setDocumento("99998888");
+                cOro.setCategoria("oro");
+                uOro.setCliente(cOro);
                 usuarioRepository.save(uOro);
             }
+            
+            // Check if specific cards are present
+            boolean hasVisa = medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador())
+                                .stream().anyMatch(mp -> "4000123456789010".equals(mp.getNumero()));
+            if (!hasVisa) {
+                MedioDePago mpValida = new MedioDePago();
+                mpValida.setCliente(uOro.getCliente());
+                mpValida.setTipo("TARJETA");
+                mpValida.setEntidad("VISA ORO");
+                mpValida.setNumero("4000123456789010");
+                mpValida.setTitular("TEST ORO");
+                mpValida.setVerificado(true);
+                mpValida.setMontoGarantia(new java.math.BigDecimal("50000.00")); // Valid funds
+                medioDePagoRepository.save(mpValida);
+
+                MedioDePago mpInvalida = new MedioDePago();
+                mpInvalida.setCliente(uOro.getCliente());
+                mpInvalida.setTipo("TARJETA");
+                mpInvalida.setEntidad("MASTERCARD");
+                mpInvalida.setNumero("5000123456780000");
+                mpInvalida.setTitular("TEST ORO");
+                mpInvalida.setVerificado(true);
+                mpInvalida.setMontoGarantia(new java.math.BigDecimal("10.00")); // Insufficient funds
+                medioDePagoRepository.save(mpInvalida);
+            }
+            uOro.getCliente().setCategoria("oro");
+            clienteRepository.save(uOro.getCliente());
+            usuarioRepository.save(uOro);
         }
 
         Duenio duenioBase = duenioRepository.findAll().stream().filter(d -> "11111111".equals(d.getDocumento())).findFirst().orElseGet(() -> {
@@ -180,7 +187,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 5));
+        s1.setHora(LocalTime.of(2, 15));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
@@ -199,7 +206,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Forzar la subasta a estar abierta, hoy a las 17:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 5));
+        s1.setHora(LocalTime.of(2, 15));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
