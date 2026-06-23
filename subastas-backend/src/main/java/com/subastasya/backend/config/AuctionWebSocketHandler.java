@@ -217,7 +217,11 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
         String response = objectMapper.writeValueAsString(bidMessage);
         for (WebSocketSession s : sessions) {
             if (s.isOpen()) {
-                s.sendMessage(new TextMessage(response));
+                try {
+                    s.sendMessage(new TextMessage(response));
+                } catch (IOException e) {
+                    System.err.println("Failed to send message to a session: " + e.getMessage());
+                }
             }
         }
     }
