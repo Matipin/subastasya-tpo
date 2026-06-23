@@ -122,34 +122,64 @@ public class DataInitializer implements CommandLineRunner {
                 uOro.setCliente(cOro);
                 usuarioRepository.save(uOro);
             }
-            
-            // Check if specific cards are present
-            boolean hasVisa = medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador())
-                                .stream().anyMatch(mp -> "4000123456789010".equals(mp.getNumero()));
-            if (!hasVisa) {
-                MedioDePago mpValida = new MedioDePago();
-                mpValida.setCliente(uOro.getCliente());
-                mpValida.setTipo("TARJETA");
-                mpValida.setEntidad("VISA ORO");
-                mpValida.setNumero("4000123456789010");
-                mpValida.setTitular("TEST ORO");
-                mpValida.setVerificado(true);
-                mpValida.setMontoGarantia(new java.math.BigDecimal("50000.00")); // Valid funds
-                medioDePagoRepository.save(mpValida);
-
-                MedioDePago mpInvalida = new MedioDePago();
-                mpInvalida.setCliente(uOro.getCliente());
-                mpInvalida.setTipo("TARJETA");
-                mpInvalida.setEntidad("MASTERCARD");
-                mpInvalida.setNumero("5000123456780000");
-                mpInvalida.setTitular("TEST ORO");
-                mpInvalida.setVerificado(true);
-                mpInvalida.setMontoGarantia(new java.math.BigDecimal("10.00")); // Insufficient funds
-                medioDePagoRepository.save(mpInvalida);
-            }
             uOro.getCliente().setCategoria("oro");
             clienteRepository.save(uOro.getCliente());
             usuarioRepository.save(uOro);
+        }
+
+        // Create or update PLATINO user
+        Optional<Usuario> optPlatino = usuarioRepository.findByEmail("platino@sello.com");
+        final Usuario uPlatino;
+        if (optPlatino.isEmpty()) {
+            Usuario tempPlatino = new Usuario();
+            tempPlatino.setEmail("platino@sello.com");
+            tempPlatino.setPassword("123456");
+            tempPlatino.setEstadoRegistro(EstadoRegistro.ACTIVO);
+            
+            Cliente cPlatino = new Cliente();
+            cPlatino.setNombre("Test Platino");
+            cPlatino.setDocumento("99997777");
+            cPlatino.setCategoria("platino");
+
+            Duenio dPlatino = new Duenio();
+            dPlatino.setNombre("Test Platino");
+            dPlatino.setDocumento("99997777");
+            dPlatino.setVerificador(admin);
+            
+            tempPlatino.setCliente(cPlatino);
+            tempPlatino.setDuenio(dPlatino);
+            
+            uPlatino = usuarioRepository.save(tempPlatino);
+        } else {
+            uPlatino = optPlatino.get();
+            if (uPlatino.getCliente() == null) {
+                Cliente cPlatino = new Cliente();
+                cPlatino.setNombre("Test Platino");
+                cPlatino.setDocumento("99997777");
+                cPlatino.setCategoria("platino");
+                uPlatino.setCliente(cPlatino);
+                usuarioRepository.save(uPlatino);
+            }
+            uPlatino.getCliente().setCategoria("platino");
+            clienteRepository.save(uPlatino.getCliente());
+            usuarioRepository.save(uPlatino);
+        }
+
+        // Ensure Platino has a valid card
+        if (uPlatino.getCliente() != null) {
+            boolean hasVisa = medioDePagoRepository.findByCliente_Identificador(uPlatino.getCliente().getIdentificador())
+                                .stream().anyMatch(mp -> "4000123456789010".equals(mp.getNumero()));
+            if (!hasVisa) {
+                MedioDePago mpValida = new MedioDePago();
+                mpValida.setCliente(uPlatino.getCliente());
+                mpValida.setTipo("TARJETA");
+                mpValida.setEntidad("VISA PLATINO");
+                mpValida.setNumero("4000123456789010");
+                mpValida.setTitular("TEST PLATINO");
+                mpValida.setVerificado(true);
+                mpValida.setMontoGarantia(new java.math.BigDecimal("150000.00")); // Valid funds
+                medioDePagoRepository.save(mpValida);
+            }
         }
 
         Duenio duenioBase = duenioRepository.findAll().stream().filter(d -> "11111111".equals(d.getDocumento())).findFirst().orElseGet(() -> {
@@ -187,7 +217,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 15));
+        s1.setHora(LocalTime.of(2, 22));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
@@ -206,7 +236,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Forzar la subasta a estar abierta, hoy a las 17:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 15));
+        s1.setHora(LocalTime.of(2, 22));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
