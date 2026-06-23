@@ -217,7 +217,7 @@ public class DataInitializer implements CommandLineRunner {
             s1.setSeguridadPropia("si");
             s1.setCategoria("comun");
             s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 34));
+        s1.setHora(LocalTime.of(2, 45));
             s1.setEstado("abierta");
             
             // SAVE SUBASTA BEFORE CATALOGO TO PREVENT TRANSIENT EXCEPTION
@@ -236,7 +236,7 @@ public class DataInitializer implements CommandLineRunner {
 
         // Forzar la subasta a estar abierta, hoy a las 17:00
         s1.setFecha(LocalDate.now());
-        s1.setHora(LocalTime.of(2, 34));
+        s1.setHora(LocalTime.of(2, 45));
         s1.setEstado("abierta");
         subastaRepository.save(s1);
 
@@ -317,7 +317,7 @@ public class DataInitializer implements CommandLineRunner {
             c3.setSubasta(s3);
             catalogoRepository.save(c3);
 
-            createDemoItem(c3, "Ferrari 250 GTO 1962", admin, uPlatino.getDuenio(), "disponible");
+            createDemoItem(c3, "Ferrari 250 GTO 1962", admin, duenioBase, "disponible");
         }
 
         // -------------------------
