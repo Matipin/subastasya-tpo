@@ -65,6 +65,10 @@ public class AuctionController {
                     dto.setNombre(item.getProducto().getDescripcionCatalogo());
                     dto.setDescripcion(item.getProducto().getDescripcionCompleta());
                     dto.setPrecioBase(item.getPrecioBase().doubleValue());
+                    if (item.getProducto().getDuenio() != null) {
+                        dto.setDuenioId(item.getProducto().getDuenio().getIdentificador());
+                        dto.setDuenioNombre(item.getProducto().getDuenio().getNombre());
+                    }
                     List<Foto> fotos = fotoRepository.findByProductoIdentificador(item.getProducto().getIdentificador());
                     if (!fotos.isEmpty() && fotos.get(0).getFoto() != null) {
                         dto.setUrlImagen(new String(fotos.get(0).getFoto(), java.nio.charset.StandardCharsets.UTF_8));

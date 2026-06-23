@@ -13,4 +13,6 @@ public class ArticuloDTO {
     private String descripcion; // Descripcion completa
     private String urlImagen;
     private Double precioBase;
+    private Long duenioId;
+    private String duenioNombre;
 }

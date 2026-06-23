@@ -80,7 +80,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     } catch(e) { console.log(e); }
 
     // Evitar que el dueño se anote a su propia subasta
-    const duenioIdArticulo = articulo?.producto?.duenio?.identificador;
+    const duenioIdArticulo = articulo?.duenioId || articulo?.producto?.duenio?.identificador;
     const duenioIdUsuario = usuario?.duenio?.identificador;
     if (duenioIdArticulo && duenioIdUsuario && duenioIdArticulo === duenioIdUsuario) {
       Alert.alert('Acceso Denegado', 'Sos el dueño de este artículo, no podés anotarte para pujar en tu propia subasta.');
@@ -140,7 +140,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
         
         <View style={{ marginTop: 10 }}>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Precio Base:</Text> {articulo.precioBase || '1.000.000'}</Text>
-          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Actual dueño:</Text> {articulo.producto?.duenio?.nombre || 'Juan Perez'}</Text>
+          <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Actual dueño:</Text> {articulo?.duenioNombre || articulo?.producto?.duenio?.nombre || 'Juan Perez'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Fecha de subasta:</Text> {(subasta?.fechaInicio || subasta?.fecha) ? `${subasta.fechaInicio || subasta.fecha} a las ${Array.isArray(subasta.hora) ? subasta.hora.map(String).map(s => s.padStart(2, '0')).join(':').slice(0,5) : (subasta.hora?.slice(0,5) || '14:00')}` : '10/10/2026'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Categoria minima:</Text> {subasta?.categoria || 'Bronce'}</Text>
           <Text style={styles.infoText}><Text style={{fontWeight: 'bold'}}>Direccion:</Text> {subasta?.ubicacion || 'Rivadavia 3421'}</Text>
@@ -174,10 +174,11 @@ export default function DetalleArticuloScreen({ route, navigation }) {
             <TouchableOpacity 
               style={[
                 styles.actionButton, 
-                (isOneHourBefore || (articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador)) && { backgroundColor: '#CCC' }
+                (isOneHourBefore || ( (articulo?.duenioId || articulo?.producto?.duenio?.identificador) && (articulo?.duenioId || articulo?.producto?.duenio?.identificador) === usuario?.duenio?.identificador)) && { backgroundColor: '#CCC' }
               ]} 
               onPress={() => {
-                if (articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador) {
+                const idArticulo = articulo?.duenioId || articulo?.producto?.duenio?.identificador;
+                if (idArticulo && idArticulo === usuario?.duenio?.identificador) {
                   Alert.alert('Acceso Denegado', 'Sos el dueño de este artículo, no podés anotarte para pujar en tu propia subasta.');
                 } else if (isOneHourBefore) {
                   Alert.alert('Inscripción Cerrada', 'Ya no es posible anotarse a esta subasta. Las inscripciones cierran 1 hora antes de su inicio.');
@@ -187,7 +188,7 @@ export default function DetalleArticuloScreen({ route, navigation }) {
               }} 
             >
               <Text style={styles.actionText}>
-                {articulo?.producto?.duenio?.identificador && articulo.producto.duenio.identificador === usuario?.duenio?.identificador 
+                {(articulo?.duenioId || articulo?.producto?.duenio?.identificador) && (articulo?.duenioId || articulo?.producto?.duenio?.identificador) === usuario?.duenio?.identificador 
                   ? 'Sos el dueño' 
                   : isOneHourBefore ? 'Inscripción Cerrada' : 'Anotarse a la Subasta'}
               </Text>
