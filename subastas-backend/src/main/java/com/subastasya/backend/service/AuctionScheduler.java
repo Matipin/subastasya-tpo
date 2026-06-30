@@ -24,6 +24,7 @@ public class AuctionScheduler {
 
     // Se ejecuta cada minuto
     @Scheduled(fixedRate = 60000)
+    @org.springframework.transaction.annotation.Transactional
     public void closeExpiredAuctions() {
         List<Subasta> subastas = subastaRepository.findAll();
         LocalDate today = LocalDate.now();
