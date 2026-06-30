@@ -112,6 +112,7 @@ public class AuctionScheduler {
                         }
                     }
                 }
+                }
             } catch (Exception e) {
                 System.err.println("Error procesando subasta ID " + s.getIdentificador() + ": " + e.getMessage());
                 e.printStackTrace();

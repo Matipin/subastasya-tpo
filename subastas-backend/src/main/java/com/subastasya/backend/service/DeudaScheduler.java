@@ -89,8 +89,9 @@ public class DeudaScheduler {
                         deudaRepository.save(deuda);
                     }
                 }
+                }
             } catch (Exception e) {
-                System.err.println("Error procesando deuda ID " + deuda.getIdentificador() + ": " + e.getMessage());
+                System.err.println("Error procesando deuda ID " + deuda.getId() + ": " + e.getMessage());
             }
         }
     }
