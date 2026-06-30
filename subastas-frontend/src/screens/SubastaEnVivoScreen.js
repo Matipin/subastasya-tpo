@@ -129,6 +129,11 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       return;
     }
     
+    if (amountToBid > 99999999999999) {
+      Alert.alert('Error', 'El monto ingresado es demasiado grande.');
+      return;
+    }
+    
     if (!isOroOrPlatino && amountToBid > status.puja_maxima) {
       Alert.alert('Error', `La puja máxima permitida es de USD ${status.puja_maxima}`);
       return;
