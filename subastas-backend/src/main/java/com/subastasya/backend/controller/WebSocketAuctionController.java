@@ -16,14 +16,25 @@ public class WebSocketAuctionController {
                                          @DestinationVariable Long itemId, 
                                          @Payload BidMessageDTO message) {
         
-        // Reglas de negocio básicas para pujas
+        // Reglas de negocio para pujas en tiempo real
         if ("BID".equals(message.getType())) {
-            // Aquí iría la lógica contra la BBDD (verificar que amount > minBid y amount <= maxBid)
-            // Por simplicidad para el componente live, delegamos al frontend o a un service de pujas.
+            Double amount = message.getAmount();
+            if (amount == null || amount <= 0) {
+                message.setType("ERROR");
+                message.setContent("Monto de puja inválido.");
+                return message;
+            }
             
-            // Calculamos nuevos límites hipotéticos
-            Double newMinBid = message.getAmount() + (message.getAmount() * 0.01);
-            Double newMaxBid = message.getAmount() + (message.getAmount() * 0.20);
+            // Validar contra minBid enviado (si el frontend lo manda)
+            if (message.getMinBid() != null && amount < message.getMinBid()) {
+                message.setType("ERROR");
+                message.setContent("La puja debe ser al menos USD " + String.format("%.2f", message.getMinBid()));
+                return message;
+            }
+            
+            // Calcular nuevos límites sobre el monto ACTUAL pujado (consistente con REST)
+            Double newMinBid = amount + (amount * 0.01);
+            Double newMaxBid = amount + (amount * 0.20);
             
             message.setMinBid(newMinBid);
             message.setMaxBid(newMaxBid);

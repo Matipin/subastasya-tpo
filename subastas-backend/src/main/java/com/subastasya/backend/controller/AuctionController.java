@@ -103,22 +103,26 @@ public class AuctionController {
     @GetMapping("/{id}/items/{item_id}/status")
     public ResponseEntity<?> getStatus(@PathVariable Integer id, @PathVariable Integer item_id) {
         List<Pujo> pujos = pujoRepository.findByItemIdentificador(Long.valueOf(item_id));
+        Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(Long.valueOf(item_id));
+        double base = itemOpt.isPresent() ? itemOpt.get().getPrecioBase().doubleValue() : 0;
+
         if (pujos.isEmpty()) {
-            Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(Long.valueOf(item_id));
             if (itemOpt.isPresent()) {
-                return ResponseEntity.ok(new StatusResponse(itemOpt.get().getPrecioBase(), itemOpt.get().getPrecioBase().doubleValue() * 1.01, itemOpt.get().getPrecioBase().doubleValue() * 1.20, "Nadie"));
+                // Sin pujas: monto_actual = precioBase. La puja minima es el precioBase mismo (o +1% del base).
+                double minBid = base + (base * 0.01);
+                double maxBid = base + (base * 0.20);
+                return ResponseEntity.ok(new StatusResponse(base, minBid, maxBid, "Nadie"));
             }
         }
         Pujo maxPujo = pujos.stream().max((p1, p2) -> p1.getImporte().compareTo(p2.getImporte())).orElse(null);
         if (maxPujo != null) {
-            Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(Long.valueOf(item_id));
-            double base = itemOpt.isPresent() ? itemOpt.get().getPrecioBase().doubleValue() : 0;
             double actual = maxPujo.getImporte().doubleValue();
-            double min = actual + (base * 0.01);
-            double max = actual + (base * 0.20);
-            return ResponseEntity.ok(new StatusResponse(maxPujo.getImporte(), min, max, "ID Asistente: " + maxPujo.getAsistente().getIdentificador()));
+            // Incrementos basados en el monto actual (no en la base)
+            double min = actual + (actual * 0.01);
+            double max = actual + (actual * 0.20);
+            return ResponseEntity.ok(new StatusResponse(actual, min, max, "ID Asistente: " + maxPujo.getAsistente().getIdentificador()));
         }
-        return ResponseEntity.ok(new StatusResponse(0.0, 0.0, 0.0, "Nadie"));
+        return ResponseEntity.ok(new StatusResponse(base, base + (base * 0.01), base + (base * 0.20), "Nadie"));
     }
 
     @PostMapping("/{id}/items/{item_id}/bid")
@@ -133,8 +137,11 @@ public class AuctionController {
         List<Pujo> pujos = pujoRepository.findByItemIdentificador(Long.valueOf(item_id));
         double maxActual = pujos.stream().mapToDouble(p -> p.getImporte().doubleValue()).max().orElse(base);
         
-        double minAceptado = maxActual == base ? base : maxActual + (base * 0.01);
-        double maxAceptado = maxActual == base ? base + (base * 0.20) : maxActual + (base * 0.20);
+        // Si no hay pujas, la primera puja debe ser >= precioBase
+        // Si ya hay pujas, la siguiente debe ser al menos un 1% más que la actual
+        double referencia = pujos.isEmpty() ? base : maxActual;
+        double minAceptado = pujos.isEmpty() ? base : referencia + (referencia * 0.01);
+        double maxAceptado = referencia + (referencia * 0.20);
 
         if (request.getAmount() < minAceptado) {
             return ResponseEntity.badRequest().body("La oferta debe ser al menos " + minAceptado);

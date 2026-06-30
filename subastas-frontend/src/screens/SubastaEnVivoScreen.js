@@ -6,7 +6,13 @@ import { API_BASE_URL } from './api';
 
 export default function SubastaEnVivoScreen({ route, navigation }) {
   const { articulo, subasta, usuario } = route.params || {};
-  const [status, setStatus] = useState(null);
+  const [status, setStatus] = useState({
+    monto_actual: articulo?.precioBase || 0,
+    puja_minima: null,
+    puja_maxima: null,
+    ultimo_postor: 'Nadie',
+    isEnded: false,
+  });
   const [loading, setLoading] = useState(true);
   const [bidding, setBidding] = useState(false);
   const [customBid, setCustomBid] = useState('');
@@ -19,6 +25,10 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       if (response.ok) {
         const data = await response.json();
         setStatus(data);
+        // Pre-cargar el campo de puja con la puja mínima recibida del servidor
+        if (data.puja_minima != null) {
+          setCustomBid(Number(data.puja_minima).toFixed(2));
+        }
       }
     } catch (e) {
       console.error(e);
@@ -59,7 +69,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           puja_maxima: msg.maxBid,
           ultimo_postor: msg.user,
         }));
-        setCustomBid(msg.minBid.toString());
+        setCustomBid(Number(msg.minBid).toFixed(2));
         setTimeLeft(60); // reset local timer 60s
         
         // Desbloquear UI si fuimos nosotros
@@ -166,7 +176,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     setChatInput('');
   };
 
-  if (loading && !status) {
+  if (loading && !status?.puja_minima) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
         <ActivityIndicator size="large" color={COLORS.PRIMARY} />
@@ -199,7 +209,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         {/* Status Board */}
         <View style={styles.statusBoard}>
           <Text style={styles.statusLabel}>Monto Actual</Text>
-          <Text style={styles.currentAmount}>USD {status?.monto_actual || articulo?.precioBase || '0'}</Text>
+          <Text style={styles.currentAmount}>USD {Number(status?.monto_actual || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           
           <View style={styles.postorInfo}>
             <Ionicons name="person" size={16} color="#852221" />
@@ -217,12 +227,12 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         <View style={styles.bidControls}>
           <View style={styles.bidInfoRow}>
             <Text style={styles.bidInfoLabel}>Siguiente puja sugerida (Mínima)</Text>
-            <Text style={styles.bidInfoValue}>USD {status?.puja_minima?.toFixed(2) || '0.00'}</Text>
+            <Text style={styles.bidInfoValue}>USD {Number(status?.puja_minima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
           {!(subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino') && (
             <View style={styles.bidInfoRow}>
               <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
-              <Text style={styles.bidInfoValue}>USD {status?.puja_maxima?.toFixed(2) || '0.00'}</Text>
+              <Text style={styles.bidInfoValue}>USD {Number(status?.puja_maxima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
           )}
         </View>
