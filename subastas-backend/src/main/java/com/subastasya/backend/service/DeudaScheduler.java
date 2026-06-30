@@ -47,8 +47,9 @@ public class DeudaScheduler {
         List<Deuda> deudasImpagas = deudaRepository.findAll();
         
         for (Deuda deuda : deudasImpagas) {
-            // Filtrar las que no están pagadas, no son multas ya aplicadas, etc.
-            if (!deuda.isPagada() && deuda.getMotivo() != null && !deuda.getMotivo().contains("Multa por mora")) {
+            try {
+                // Filtrar las que no están pagadas, no son multas ya aplicadas, etc.
+                if (!deuda.isPagada() && deuda.getMotivo() != null && !deuda.getMotivo().contains("Multa por mora")) {
                 
                 // NOTA: Idealmente comprobaríamos: if(deuda.getFecha().isBefore(now().minusHours(72))) 
                 // pero como TPO_DAI no permite modificar el SQL base (y no tenemos fecha en Deuda),
@@ -88,6 +89,8 @@ public class DeudaScheduler {
                         deudaRepository.save(deuda);
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("Error procesando deuda ID " + deuda.getIdentificador() + ": " + e.getMessage());
             }
         }
     }

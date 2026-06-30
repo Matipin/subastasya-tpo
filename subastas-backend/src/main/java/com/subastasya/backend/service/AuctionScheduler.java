@@ -30,11 +30,14 @@ public class AuctionScheduler {
         LocalTime now = LocalTime.now();
 
         for (Subasta s : subastas) {
-            if ("abierta".equals(s.getEstado())) {
-                // Se cierra la subasta 5 minutos después de su hora de inicio (para que sea funcional y rápida)
-                if (s.getFecha().isBefore(today) || (s.getFecha().isEqual(today) && s.getHora().plusMinutes(5).isBefore(now))) {
-                    s.setEstado("cerrada");
-                    subastaRepository.save(s);
+            try {
+                if (s.getFecha() == null || s.getHora() == null) continue;
+                
+                if ("abierta".equals(s.getEstado())) {
+                    // Se cierra la subasta 5 minutos después de su hora de inicio (para que sea funcional y rápida)
+                    if (s.getFecha().isBefore(today) || (s.getFecha().isEqual(today) && s.getHora().plusMinutes(5).isBefore(now))) {
+                        s.setEstado("cerrada");
+                        subastaRepository.save(s);
 
                     List<Catalogo> catalogos = catalogoRepository.findBySubastaIdentificador(s.getIdentificador());
                     for (Catalogo c : catalogos) {
@@ -108,6 +111,9 @@ public class AuctionScheduler {
                         }
                     }
                 }
+            } catch (Exception e) {
+                System.err.println("Error procesando subasta ID " + s.getIdentificador() + ": " + e.getMessage());
+                e.printStackTrace();
             }
         }
     }
