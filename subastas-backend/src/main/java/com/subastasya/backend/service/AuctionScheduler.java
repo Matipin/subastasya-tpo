@@ -57,9 +57,12 @@ public class AuctionScheduler {
                                     // Crear notificación de ganancia
                                     if (maxPujo.getAsistente() != null && maxPujo.getAsistente().getCliente() != null) {
                                         java.util.Optional<Usuario> winnerOpt = usuarioRepository.findByCliente(maxPujo.getAsistente().getCliente());
-                                        if (winnerOpt.isPresent()) {
+                                        if (winnerOpt.isPresent() && winnerOpt.get().getIdUsuario() != null) {
                                             Notificacion notif = new Notificacion();
-                                            notif.setUsuario(winnerOpt.get());
+                                            // Usar referencia liviana con solo el ID para evitar errores de FK con entidades detached
+                                            Usuario usuarioRef = new Usuario();
+                                            usuarioRef.setIdUsuario(winnerOpt.get().getIdUsuario());
+                                            notif.setUsuario(usuarioRef);
                                             notif.setMensaje("¡Ganaste la subasta de '" + item.getProducto().getDescripcionCatalogo() + "'! Por favor dirígete a la sección de pagos.");
                                             notif.setTipo("subasta_ganada");
                                             notif.setReferenciaId(item.getIdentificador().longValue());
@@ -71,9 +74,12 @@ public class AuctionScheduler {
                                     // La subasta quedó desierta. La empresa compra el producto al precio base.
                                     if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
                                         java.util.Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
-                                        if (duenioOpt.isPresent()) {
+                                        if (duenioOpt.isPresent() && duenioOpt.get().getIdUsuario() != null) {
                                             Notificacion notif = new Notificacion();
-                                            notif.setUsuario(duenioOpt.get());
+                                            // Usar referencia liviana con solo el ID para evitar errores de FK con entidades detached
+                                            Usuario usuarioRef = new Usuario();
+                                            usuarioRef.setIdUsuario(duenioOpt.get().getIdUsuario());
+                                            notif.setUsuario(usuarioRef);
                                             notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de $" + item.getPrecioBase() + ". El pago se procesará a la brevedad.");
                                             notif.setTipo("articulo_vendido");
                                             notif.setReferenciaId(item.getIdentificador().longValue());
@@ -100,9 +106,12 @@ public class AuctionScheduler {
                                 
                         for (Asistente a : asistentes) {
                             java.util.Optional<Usuario> uOpt = usuarioRepository.findByCliente(a.getCliente());
-                            if (uOpt.isPresent()) {
+                            if (uOpt.isPresent() && uOpt.get().getIdUsuario() != null) {
                                 Notificacion notif = new Notificacion();
-                                notif.setUsuario(uOpt.get());
+                                // Usar referencia liviana con solo el ID para evitar errores de FK con entidades detached
+                                Usuario usuarioRef = new Usuario();
+                                usuarioRef.setIdUsuario(uOpt.get().getIdUsuario());
+                                notif.setUsuario(usuarioRef);
                                 notif.setMensaje("La subasta está a punto de comenzar (en 5 minutos o menos). ¡Prepárate para pujar!");
                                 notif.setTipo("subasta_en_vivo");
                                 notif.setReferenciaId(s.getIdentificador().longValue());

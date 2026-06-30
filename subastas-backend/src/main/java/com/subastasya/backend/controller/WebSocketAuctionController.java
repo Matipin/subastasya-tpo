@@ -32,9 +32,12 @@ public class WebSocketAuctionController {
                 return message;
             }
             
-            // Calcular nuevos límites sobre el monto ACTUAL pujado (consistente con REST)
-            Double newMinBid = amount + (amount * 0.01);
-            Double newMaxBid = amount + (amount * 0.20);
+            // Calcular nuevos límites sobre el monto ACTUAL pujado
+            // Oro/platino (sinLimite=true): mínima = amount + $1, sin máximo (-1)
+            // Comun: mínima = amount + 1%, máxima = amount + 20%
+            boolean esSinLimite = Boolean.TRUE.equals(message.getSinLimite());
+            Double newMinBid = esSinLimite ? amount + 1.0 : amount + (amount * 0.01);
+            Double newMaxBid = esSinLimite ? -1.0 : amount + (amount * 0.20);
             
             message.setMinBid(newMinBid);
             message.setMaxBid(newMaxBid);

@@ -133,19 +133,22 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
     const amountToBid = parseFloat(customBid);
     const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
+    const pujaMinima = status.puja_minima || (status.monto_actual + 1);
     
-    if (isNaN(amountToBid) || amountToBid < status.puja_minima) {
-      Alert.alert('Error', `La puja mínima es de USD ${status.puja_minima}`);
+    if (isNaN(amountToBid) || amountToBid < pujaMinima) {
+      Alert.alert('Error', `La puja mínima es de USD ${Number(pujaMinima).toFixed(2)}`);
       return;
     }
     
-    if (amountToBid > 99999999999999) {
+    if (amountToBid > 999999999999) {
       Alert.alert('Error', 'El monto ingresado es demasiado grande.');
       return;
     }
     
-    if (!isOroOrPlatino && amountToBid > status.puja_maxima) {
-      Alert.alert('Error', `La puja máxima permitida es de USD ${status.puja_maxima}`);
+    // puja_maxima = -1 significa sin límite (subastas oro/platino)
+    const hayLimiteMax = status.puja_maxima != null && status.puja_maxima > 0;
+    if (!isOroOrPlatino && hayLimiteMax && amountToBid > status.puja_maxima) {
+      Alert.alert('Error', `La puja máxima permitida es de USD ${Number(status.puja_maxima).toFixed(2)}`);
       return;
     }
 
@@ -157,7 +160,8 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       user: usuario?.nombre || 'Usuario App',
       email: usuario?.email,
       type: 'BID',
-      amount: amountToBid
+      amount: amountToBid,
+      sinLimite: isOroOrPlatino  // Indica al backend que no aplique límite máximo
     };
 
     ws.send(JSON.stringify(bidMsg));
@@ -229,7 +233,8 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
             <Text style={styles.bidInfoLabel}>Siguiente puja sugerida (Mínima)</Text>
             <Text style={styles.bidInfoValue}>USD {Number(status?.puja_minima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
-          {!(subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino') && (
+          {/* puja_maxima > 0 significa que hay límite (para subastas comunes) */}
+          {status?.puja_maxima > 0 && (
             <View style={styles.bidInfoRow}>
               <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
               <Text style={styles.bidInfoValue}>USD {Number(status?.puja_maxima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>

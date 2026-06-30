@@ -106,23 +106,38 @@ public class AuctionController {
         Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(Long.valueOf(item_id));
         double base = itemOpt.isPresent() ? itemOpt.get().getPrecioBase().doubleValue() : 0;
 
+        // Determinar si la subasta es oro o platino (sin límite de puja máxima)
+        boolean sinLimite = false;
+        Optional<Subasta> subastaOpt = subastaRepository.findById(Long.valueOf(id));
+        if (subastaOpt.isPresent()) {
+            String cat = subastaOpt.get().getCategoria();
+            if ("oro".equalsIgnoreCase(cat) || "platino".equalsIgnoreCase(cat)) {
+                sinLimite = true;
+            }
+        }
+
         if (pujos.isEmpty()) {
             if (itemOpt.isPresent()) {
-                // Sin pujas: monto_actual = precioBase. La puja minima es el precioBase mismo (o +1% del base).
-                double minBid = base + (base * 0.01);
-                double maxBid = base + (base * 0.20);
+                // Sin pujas: monto_actual = precioBase
+                // Oro/platino: mínima = base + 1, sin máximo
+                // Comun: mínima = base + 1%, máxima = base + 20%
+                double minBid = sinLimite ? base + 1.0 : base + (base * 0.01);
+                double maxBid = sinLimite ? -1.0 : base + (base * 0.20);
                 return ResponseEntity.ok(new StatusResponse(base, minBid, maxBid, "Nadie"));
             }
         }
         Pujo maxPujo = pujos.stream().max((p1, p2) -> p1.getImporte().compareTo(p2.getImporte())).orElse(null);
         if (maxPujo != null) {
             double actual = maxPujo.getImporte().doubleValue();
-            // Incrementos basados en el monto actual (no en la base)
-            double min = actual + (actual * 0.01);
-            double max = actual + (actual * 0.20);
+            // Oro/platino: mínima = actual + 1, sin máximo (-1 como indicador)
+            // Comun: mínima = actual + 1%, máxima = actual + 20%
+            double min = sinLimite ? actual + 1.0 : actual + (actual * 0.01);
+            double max = sinLimite ? -1.0 : actual + (actual * 0.20);
             return ResponseEntity.ok(new StatusResponse(actual, min, max, "ID Asistente: " + maxPujo.getAsistente().getIdentificador()));
         }
-        return ResponseEntity.ok(new StatusResponse(base, base + (base * 0.01), base + (base * 0.20), "Nadie"));
+        double fallbackMin = sinLimite ? base + 1.0 : base + (base * 0.01);
+        double fallbackMax = sinLimite ? -1.0 : base + (base * 0.20);
+        return ResponseEntity.ok(new StatusResponse(base, fallbackMin, fallbackMax, "Nadie"));
     }
 
     @PostMapping("/{id}/items/{item_id}/bid")
@@ -136,12 +151,28 @@ public class AuctionController {
 
         List<Pujo> pujos = pujoRepository.findByItemIdentificador(Long.valueOf(item_id));
         double maxActual = pujos.stream().mapToDouble(p -> p.getImporte().doubleValue()).max().orElse(base);
-        
-        // Si no hay pujas, la primera puja debe ser >= precioBase
-        // Si ya hay pujas, la siguiente debe ser al menos un 1% más que la actual
+
+        Optional<Subasta> subastaOpt = subastaRepository.findById(Long.valueOf(id));
+        boolean sinLimite = false;
+        if (subastaOpt.isPresent()) {
+            String cat = subastaOpt.get().getCategoria();
+            if ("oro".equalsIgnoreCase(cat) || "platino".equalsIgnoreCase(cat)) {
+                sinLimite = true;
+            }
+        }
+
+        // Oro/platino: sin límite máximo, mínima = actual + $1 (primera puja: >= base)
+        // Comun: mínima = actual + 1%, máxima = actual + 20%
         double referencia = pujos.isEmpty() ? base : maxActual;
-        double minAceptado = pujos.isEmpty() ? base : referencia + (referencia * 0.01);
-        double maxAceptado = referencia + (referencia * 0.20);
+        double minAceptado;
+        double maxAceptado;
+        if (sinLimite) {
+            minAceptado = pujos.isEmpty() ? base : referencia + 1.0;
+            maxAceptado = Double.MAX_VALUE; // Sin límite
+        } else {
+            minAceptado = pujos.isEmpty() ? base : referencia + (referencia * 0.01);
+            maxAceptado = referencia + (referencia * 0.20);
+        }
 
         if (request.getAmount() < minAceptado) {
             return ResponseEntity.badRequest().body("La oferta debe ser al menos " + minAceptado);
@@ -158,15 +189,6 @@ public class AuctionController {
                         return ResponseEntity.badRequest().body("No podés pujar en tu propio artículo.");
                     }
                 }
-            }
-        }
-        
-        Optional<Subasta> subastaOpt = subastaRepository.findById(Long.valueOf(id));
-        boolean sinLimite = false;
-        if (subastaOpt.isPresent()) {
-            String cat = subastaOpt.get().getCategoria();
-            if ("oro".equalsIgnoreCase(cat) || "platino".equalsIgnoreCase(cat)) {
-                sinLimite = true;
             }
         }
         

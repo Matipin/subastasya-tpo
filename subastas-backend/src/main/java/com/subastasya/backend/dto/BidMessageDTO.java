@@ -17,4 +17,5 @@ public class BidMessageDTO {
     private Double amount;
     private Double minBid;
     private Double maxBid;
+    private Boolean sinLimite; // true para subastas oro/platino (sin límite máximo)
 }
