@@ -122,8 +122,15 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     }
 
     const amountToBid = parseFloat(customBid);
-    if (isNaN(amountToBid) || amountToBid < status.puja_minima || amountToBid > status.puja_maxima) {
-      Alert.alert('Error', `La puja debe estar entre USD ${status.puja_minima} y USD ${status.puja_maxima}`);
+    const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
+    
+    if (isNaN(amountToBid) || amountToBid < status.puja_minima) {
+      Alert.alert('Error', `La puja mínima es de USD ${status.puja_minima}`);
+      return;
+    }
+    
+    if (!isOroOrPlatino && amountToBid > status.puja_maxima) {
+      Alert.alert('Error', `La puja máxima permitida es de USD ${status.puja_maxima}`);
       return;
     }
 
@@ -207,10 +214,12 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
             <Text style={styles.bidInfoLabel}>Siguiente puja sugerida (Mínima)</Text>
             <Text style={styles.bidInfoValue}>USD {status?.puja_minima?.toFixed(2) || '0.00'}</Text>
           </View>
-          <View style={styles.bidInfoRow}>
-            <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
-            <Text style={styles.bidInfoValue}>USD {status?.puja_maxima?.toFixed(2) || '0.00'}</Text>
-          </View>
+          {!(subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino') && (
+            <View style={styles.bidInfoRow}>
+              <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
+              <Text style={styles.bidInfoValue}>USD {status?.puja_maxima?.toFixed(2) || '0.00'}</Text>
+            </View>
+          )}
         </View>
 
         {/* Chat en Vivo */}
