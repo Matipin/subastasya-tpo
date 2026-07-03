@@ -201,6 +201,8 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     setChatInput('');
   };
 
+  const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
+
   if (loading && !status?.puja_minima) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
@@ -234,7 +236,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         {/* Status Board */}
         <View style={styles.statusBoard}>
           <Text style={styles.statusLabel}>Monto Actual</Text>
-          <Text style={styles.currentAmount}>USD {Number(status?.monto_actual || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+          <Text style={styles.currentAmount} numberOfLines={1} adjustsFontSizeToFit>USD {Number(status?.monto_actual || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           
           <View style={styles.postorInfo}>
             <Ionicons name="person" size={16} color="#852221" />
@@ -252,13 +254,13 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         <View style={styles.bidControls}>
           <View style={styles.bidInfoRow}>
             <Text style={styles.bidInfoLabel}>Siguiente puja sugerida (Mínima)</Text>
-            <Text style={styles.bidInfoValue}>USD {Number(status?.puja_minima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+            <Text style={styles.bidInfoValue} numberOfLines={1} adjustsFontSizeToFit>USD {Number(status?.puja_minima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
           </View>
-          {/* puja_maxima > 0 significa que hay límite (para subastas comunes) */}
-          {status?.puja_maxima > 0 && (
+          {/* Ocultamos puja_maxima si es oro o platino */}
+          {!isOroOrPlatino && status?.puja_maxima > 0 && (
             <View style={styles.bidInfoRow}>
               <Text style={styles.bidInfoLabel}>Puja Máxima Permitida</Text>
-              <Text style={styles.bidInfoValue}>USD {Number(status?.puja_maxima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+              <Text style={styles.bidInfoValue} numberOfLines={1} adjustsFontSizeToFit>USD {Number(status?.puja_maxima || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
             </View>
           )}
         </View>
