@@ -85,17 +85,38 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         
         const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
         if (isWinner) {
-          Alert.alert('¡Subasta Finalizada!', `¡Felicidades! Ganaste la subasta por $${msg.amount}. Podrás realizar el pago desde 'Subastas Ganadas' una vez que toda la sesión de subasta cierre de forma oficial.`, [
-            { 
-              text: 'Entendido', 
-              style: 'default',
-              onPress: () => {
-                // No navegamos de inmediato, el usuario debe esperar a que termine toda la sesión
+          // Navegar inmediatamente al checkout para que el usuario elija envío y método de pago
+          Alert.alert(
+            '🏆 ¡Ganaste la Subasta!',
+            `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Ahora debes completar el pago.`,
+            [
+              {
+                text: 'Ir a Pagar',
+                onPress: () => {
+                  navigation.replace('CheckoutGanador', {
+                    articulo: {
+                      id: articulo?.id,
+                      nombre: articulo?.nombre,
+                      itemNombre: articulo?.nombre,
+                      monto: msg.amount,
+                      estado_pago: 'pendiente',
+                      urlImagen: articulo?.urlImagen,
+                    },
+                    checkoutDetails: {
+                      valorPujado: msg.amount,
+                      comision: msg.amount * 0.10,
+                      costoEnvioDomicilio: 50,
+                      medioPago: '',
+                    },
+                    usuario,
+                  });
+                }
               }
-            }
-          ]);
+            ],
+            { cancelable: false }
+          );
         } else {
-          Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con $${msg.amount}`);
+          Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         }
       } else if (msg.type === 'ERROR') {
         setBidding(false);

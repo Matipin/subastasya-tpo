@@ -28,16 +28,30 @@ export default function HistorialPujasScreen({ route, navigation }) {
     }
   };
 
-  const renderItem = ({ item }) => (
-    <View style={styles.pujaCard}>
-      <View style={styles.pujaHeader}>
-        <Text style={styles.articuloTitle}>{item.articulo}</Text>
-        <Text style={styles.monto}>${item.monto.toLocaleString()}</Text>
+  const renderItem = ({ item }) => {
+    const isWinner = item.ganador === true;
+    const montoFormateado = `USD ${Number(item.monto).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    
+    return (
+      <View style={[styles.pujaCard, isWinner && styles.pujaCardGanador]}>
+        <View style={styles.pujaHeader}>
+          <Text style={styles.articuloTitle} numberOfLines={1}>{item.articulo}</Text>
+          <Text style={[styles.monto, isWinner && styles.montoGanador]}>{montoFormateado}</Text>
+        </View>
+        <Text style={styles.subastaText}>{item.subasta}</Text>
+        <View style={styles.pujaFooter}>
+          <Text style={styles.fechaText}>
+            {item.fecha ? new Date(item.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A'}
+          </Text>
+          <View style={[styles.badge, isWinner ? styles.badgeGanador : styles.badgePerdedor]}>
+            <Text style={[styles.badgeText, isWinner ? styles.badgeGanadorText : styles.badgePerdedorText]}>
+              {isWinner ? '🏆 Ganador' : 'Participación'}
+            </Text>
+          </View>
+        </View>
       </View>
-      <Text style={styles.subastaText}>{item.subasta}</Text>
-      <Text style={styles.fechaText}>Fecha de puja: {item.fecha ? new Date(item.fecha).toLocaleDateString() : 'N/A'}</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -47,7 +61,7 @@ export default function HistorialPujasScreen({ route, navigation }) {
         </TouchableOpacity>
         <View style={styles.headerTextContainer}>
           <Text style={styles.headerTitle}>Historial de pujas</Text>
-          <Text style={styles.headerSubtitle}>realizadas(monto, subasta y articulo)</Text>
+          <Text style={styles.headerSubtitle}>Todas las pujas realizadas</Text>
         </View>
       </View>
 
@@ -145,5 +159,39 @@ const styles = StyleSheet.create({
     color: '#666',
     marginTop: 40,
     fontSize: 16,
-  }
+  },
+  pujaCardGanador: {
+    borderLeftColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+  montoGanador: {
+    color: '#059669',
+  },
+  pujaFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  badge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  badgeGanador: {
+    backgroundColor: '#D1FAE5',
+  },
+  badgePerdedor: {
+    backgroundColor: '#F3F4F6',
+  },
+  badgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  badgeGanadorText: {
+    color: '#065F46',
+  },
+  badgePerdedorText: {
+    color: '#6B7280',
+  },
 });

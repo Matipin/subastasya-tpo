@@ -20,24 +20,23 @@ export default function EditarPerfilScreen({ route, navigation }) {
 
     setIsLoading(true);
     try {
-      const payload = {
-        email: usuario.email,
-        nombre: nombre,
-        domicilio: domicilio,
-        isUpdate: true, // Esto le dice al backend que actualice en vez de crear
-      };
-
-      const response = await fetch(API_BASE_URL + '/registro', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      const usersBase = API_BASE_URL.replace('/auth', '/users');
+      const response = await fetch(
+        `${usersBase}/me/profile?email=${encodeURIComponent(usuario.email)}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre: nombre,
+            domicilio: domicilio,
+          }),
+        }
+      );
 
       if (response.ok) {
-        Alert.alert('Éxito', 'Perfil actualizado correctamente.');
-        // Para reflejar los cambios habría que recargar el usuario,
-        // por ahora volvemos atrás.
-        navigation.goBack();
+        Alert.alert('Éxito', 'Perfil actualizado correctamente.', [
+          { text: 'OK', onPress: () => navigation.goBack() }
+        ]);
       } else {
         const errorText = await response.text();
         Alert.alert('Error', errorText || 'No se pudo actualizar el perfil.');

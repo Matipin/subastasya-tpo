@@ -88,7 +88,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
       if (!dId) {
         const wonRes = await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email)}`);
         const wonItems = await wonRes.json();
-        const wonMatch = wonItems.find(w => w.id === item.id || w.id === item.id.toString());
+        const wonMatch = wonItems.find(w => w.id === item.id || w.id === item.id?.toString());
         if (wonMatch && wonMatch.deudaId) {
           dId = wonMatch.deudaId;
         }
@@ -104,7 +104,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
       }
 
       if (dId) {
-        await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/debts/${dId}/pay`, {
+        const payRes = await fetch(`${API_BASE_URL.replace('/auth', '/users')}/me/debts/${dId}/pay`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -114,11 +114,26 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
             renunciaSeguro: metodoEntrega === 'retiro',
           })
         });
+
+        if (!payRes.ok) {
+          // El backend rechazó el pago (fondos insuficientes u otro error)
+          const errorMsg = await payRes.text();
+          Alert.alert(
+            '❌ Pago Rechazado',
+            errorMsg || 'No fue posible procesar el pago. Verificá tu saldo y volvé a intentarlo.',
+            [{ text: 'Entendido', style: 'cancel' }]
+          );
+          return; // No navegar, dejar al usuario en el checkout
+        }
       }
-    } catch(e) { console.error(e); }
+    } catch(e) {
+      console.error(e);
+      Alert.alert('Error', 'Ocurrió un problema de conexión. Intentá nuevamente.');
+      return;
+    }
     
-    Alert.alert('Pago realizado', 'El pago se procesó exitosamente con tu medio de pago.', [
-      { text: 'Volver', onPress: () => navigation.navigate('Home', { usuario }) }
+    Alert.alert('✅ Pago realizado', 'El pago se procesó exitosamente.', [
+      { text: 'Ver mis compras', onPress: () => navigation.navigate('Home', { usuario }) }
     ]);
   };
 

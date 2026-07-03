@@ -86,7 +86,16 @@ public class DataInitializer implements CommandLineRunner {
             mp.setNumero("4509953566233704");
             mp.setTitular("APRO");
             mp.setVerificado(true);
+            mp.setMontoGarantia(new java.math.BigDecimal("500000.00")); // Saldo suficiente para tests
             medioDePagoRepository.save(mp);
+        } else {
+            // Asegurar que tenga saldo suficiente
+            medioDePagoRepository.findByCliente_Identificador(u1.getCliente().getIdentificador()).forEach(mp -> {
+                if (mp.getMontoGarantia() == null || mp.getMontoGarantia().compareTo(new java.math.BigDecimal("1000")) < 0) {
+                    mp.setMontoGarantia(new java.math.BigDecimal("500000.00"));
+                    medioDePagoRepository.save(mp);
+                }
+            });
         }
 
         // Create or update ORO user
@@ -420,6 +429,54 @@ public class DataInitializer implements CommandLineRunner {
 
             Producto p3 = createDemoItem(null, "Anillo de Zafiro", admin, uOro.getDuenio(), "Con Oferta");
             createNotificacion(uOro, "¡Tienes una oferta sugerida de 5,000 USD por tu artículo 'Anillo de Zafiro'! Revisa tus productos para aceptar o rechazar.", "producto_tasado", p3.getIdentificador().longValue());
+        }
+
+        // -------------------------
+        // CUENTA EMPRESA SUBASTASYA
+        // -------------------------
+        // Esta cuenta actúa como intermediaria real de todas las transacciones
+        Optional<Usuario> optEmpresa = usuarioRepository.findByEmail("subastasya@admin.com");
+        if (optEmpresa.isEmpty()) {
+            Usuario uEmpresa = new Usuario();
+            uEmpresa.setEmail("subastasya@admin.com");
+            uEmpresa.setPassword("admin_empresa_2026");
+            uEmpresa.setEstadoRegistro(EstadoRegistro.ACTIVO);
+
+            Cliente cEmpresa = new Cliente();
+            cEmpresa.setNombre("SubastasYa S.A.");
+            cEmpresa.setDocumento("30-71234567-0");
+            cEmpresa.setCategoria("platino");
+
+            uEmpresa.setCliente(cEmpresa);
+            uEmpresa = usuarioRepository.save(uEmpresa);
+
+            // Crear cuenta empresa con saldo alto
+            MedioDePago mpEmpresa = new MedioDePago();
+            mpEmpresa.setCliente(uEmpresa.getCliente());
+            mpEmpresa.setTipo("CUENTA_EMPRESA");
+            mpEmpresa.setEntidad("SubastasYa Cuenta Operativa");
+            mpEmpresa.setNumero("CUENTA-EMPRESA-SUBASTASYA");
+            mpEmpresa.setTitular("SubastasYa S.A.");
+            mpEmpresa.setVerificado(true);
+            mpEmpresa.setMontoGarantia(new java.math.BigDecimal("9999999.00"));
+            medioDePagoRepository.save(mpEmpresa);
+        } else {
+            // Asegurar que la cuenta empresa tenga saldo alto siempre
+            Usuario uEmpresa = optEmpresa.get();
+            if (uEmpresa.getCliente() != null) {
+                List<MedioDePago> mpList = medioDePagoRepository.findByCliente_Identificador(uEmpresa.getCliente().getIdentificador());
+                if (mpList.isEmpty()) {
+                    MedioDePago mpEmpresa = new MedioDePago();
+                    mpEmpresa.setCliente(uEmpresa.getCliente());
+                    mpEmpresa.setTipo("CUENTA_EMPRESA");
+                    mpEmpresa.setEntidad("SubastasYa Cuenta Operativa");
+                    mpEmpresa.setNumero("CUENTA-EMPRESA-SUBASTASYA");
+                    mpEmpresa.setTitular("SubastasYa S.A.");
+                    mpEmpresa.setVerificado(true);
+                    mpEmpresa.setMontoGarantia(new java.math.BigDecimal("9999999.00"));
+                    medioDePagoRepository.save(mpEmpresa);
+                }
+            }
         }
     }
 

@@ -67,17 +67,26 @@ export default function NotificacionesScreen({ route, navigation }) {
   }, []);
 
   const handleDismiss = async (id) => {
+    // Optimistic update: quitar de la UI inmediatamente
     setNotificaciones(prev => prev.filter(n => n.id !== id));
     try {
-      const key = `dismissed_notifications_${usuario?.email}`;
-      const dismissedStr = await AsyncStorage.getItem(key);
-      const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
-      if (!dismissedIds.includes(id)) {
-        dismissedIds.push(id);
-        await AsyncStorage.setItem(key, JSON.stringify(dismissedIds));
-      }
+      // Eliminar del backend (solución permanente)
+      const url = `${API_BASE_URL.replace('/auth', '/users')}/me/notifications/${id}?email=${encodeURIComponent(usuario?.email || '')}`;
+      await fetch(url, { method: 'DELETE' });
     } catch (e) {
-      console.error('Error saving dismissed notification:', e);
+      console.error('Error eliminando notificación del backend:', e);
+      // Fallback: guardar en AsyncStorage si falla el backend
+      try {
+        const key = `dismissed_notifications_${usuario?.email}`;
+        const dismissedStr = await AsyncStorage.getItem(key);
+        const dismissedIds = dismissedStr ? JSON.parse(dismissedStr) : [];
+        if (!dismissedIds.includes(id)) {
+          dismissedIds.push(id);
+          await AsyncStorage.setItem(key, JSON.stringify(dismissedIds));
+        }
+      } catch (asyncErr) {
+        console.error('Error en fallback AsyncStorage:', asyncErr);
+      }
     }
   };
 

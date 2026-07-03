@@ -75,6 +75,42 @@ public class UserController {
         return ResponseEntity.ok(user);
     }
 
+    /**
+     * Nuevo endpoint dedicado para actualizar perfil (nombre y dirección).
+     * Reemplaza el workaround de usar /auth/registro con isUpdate:true.
+     */
+    @PutMapping("/me/profile")
+    public ResponseEntity<?> updateProfile(@RequestParam String email, @RequestBody Map<String, Object> body) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado.");
+        
+        Usuario user = opt.get();
+        Cliente cliente = user.getCliente();
+        if (cliente == null) return ResponseEntity.badRequest().body("El usuario no tiene perfil de cliente.");
+
+        if (body.containsKey("nombre") && body.get("nombre") != null) {
+            String nombre = body.get("nombre").toString().trim();
+            if (!nombre.isEmpty()) {
+                // Si viene apellido separado, concatenar
+                if (body.containsKey("apellido") && body.get("apellido") != null) {
+                    nombre = nombre + " " + body.get("apellido").toString().trim();
+                }
+                cliente.setNombre(nombre);
+            }
+        }
+        if (body.containsKey("domicilio") && body.get("domicilio") != null) {
+            String domicilio = body.get("domicilio").toString().trim();
+            if (!domicilio.isEmpty()) {
+                cliente.setDireccion(domicilio);
+            }
+        }
+        
+        clienteRepository.save(cliente);
+        return ResponseEntity.ok("Perfil actualizado correctamente.");
+    }
+
+    private final com.subastasya.backend.repository.ClienteRepository clienteRepository;
+
     @GetMapping("/me/debts")
     public ResponseEntity<?> getDebts(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
@@ -88,85 +124,166 @@ public class UserController {
         Optional<Deuda> deudaOpt = deudaRepository.findById(id);
         if (deudaOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         Deuda deuda = deudaOpt.get();
-        deuda.setPagada(true);
-        deuda.setFechaPago(LocalDateTime.now());
         
         // Extraer info del checkout si viene en el body
+        String metodoEnvio = "domicilio";
+        boolean renunciaSeguro = false;
+        Long medioPagoId = null;
+        
         if (body != null) {
             if (body.containsKey("metodoEnvio")) {
-                deuda.setMetodoEnvio((String) body.get("metodoEnvio"));
+                metodoEnvio = (String) body.get("metodoEnvio");
             }
             if (body.containsKey("renunciaSeguro")) {
-                deuda.setRenunciaSeguro(Boolean.TRUE.equals(body.get("renunciaSeguro")));
+                renunciaSeguro = Boolean.TRUE.equals(body.get("renunciaSeguro"));
             }
             if (body.containsKey("medioPagoId")) {
-                // Buscar el nombre del medio de pago
                 try {
-                    Long mpId = Long.valueOf(body.get("medioPagoId").toString());
-                    Optional<MedioDePago> mpOpt = medioDePagoRepository.findById(mpId);
-                    if (mpOpt.isPresent()) {
-                        MedioDePago mp = mpOpt.get();
-                        
-                        // VALIDACIÓN DE FONDOS REAL (Usando montoGarantia como saldo disponible)
-                        BigDecimal saldoDisponible = mp.getMontoGarantia() != null ? mp.getMontoGarantia() : BigDecimal.ZERO;
-                        BigDecimal montoACobrar = deuda.getMonto();
-                        
-                        if (saldoDisponible.compareTo(montoACobrar) < 0) {
-                            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                                    .body("Transacción rechazada: Fondos insuficientes en el medio de pago. Saldo disponible: $" + saldoDisponible);
-                        }
-                        
-                        // Restar el saldo si la compra es exitosa
-                        mp.setMontoGarantia(saldoDisponible.subtract(montoACobrar));
-                        medioDePagoRepository.save(mp);
-
-                        deuda.setMedioPagoUsado(mp.getTipo() + " " + (mp.getEntidad() != null ? mp.getEntidad() : "") + " ****" + (mp.getNumero() != null && mp.getNumero().length() >= 4 ? mp.getNumero().substring(mp.getNumero().length() - 4) : "****"));
-                    }
-                } catch (Exception e) {
-                    // Si falla, usar un valor genérico
-                    deuda.setMedioPagoUsado("Medio de pago registrado");
-                }
+                    medioPagoId = Long.valueOf(body.get("medioPagoId").toString());
+                } catch (Exception e) { /* ignorar */ }
             }
-            if (body.containsKey("medioPagoNombre")) {
+        }
+
+        // VALIDACIÓN Y COBRO DEL MEDIO DE PAGO
+        if (medioPagoId != null) {
+            Optional<MedioDePago> mpOpt = medioDePagoRepository.findById(medioPagoId);
+            if (mpOpt.isPresent()) {
+                MedioDePago mp = mpOpt.get();
+                BigDecimal saldoDisponible = mp.getMontoGarantia() != null ? mp.getMontoGarantia() : BigDecimal.ZERO;
+                BigDecimal montoACobrar = deuda.getMonto();
+
+                if (saldoDisponible.compareTo(montoACobrar) < 0) {
+                    // Generar multa del 10% automáticamente y suspender cuenta
+                    generarMultaYSuspenderCuenta(deuda);
+                    return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                            .body("Transacción rechazada: Fondos insuficientes. Saldo disponible: USD " +
+                                  String.format("%.2f", saldoDisponible) +
+                                  " — Monto requerido: USD " + String.format("%.2f", montoACobrar) +
+                                  ". Se ha generado una multa del 10% y tu cuenta ha sido suspendida temporalmente. Tienes 72 horas para regularizar tu situación.");
+                }
+
+                // Descontar del comprador
+                mp.setMontoGarantia(saldoDisponible.subtract(montoACobrar));
+                medioDePagoRepository.save(mp);
+
+                String ultimosCuatro = (mp.getNumero() != null && mp.getNumero().length() >= 4)
+                    ? mp.getNumero().substring(mp.getNumero().length() - 4) : "****";
+                deuda.setMedioPagoUsado(mp.getTipo() + " " + (mp.getEntidad() != null ? mp.getEntidad() : "") + " ****" + ultimosCuatro);
+
+                // FLUJO REAL: Comprador → SubastasYa → Dueño
+                procesarPagoViaSubastasYa(deuda, montoACobrar);
+            } else if (body != null && body.containsKey("medioPagoNombre")) {
                 deuda.setMedioPagoUsado((String) body.get("medioPagoNombre"));
             }
+        } else if (body != null && body.containsKey("medioPagoNombre")) {
+            deuda.setMedioPagoUsado((String) body.get("medioPagoNombre"));
         }
-        
+
+        deuda.setPagada(true);
+        deuda.setFechaPago(LocalDateTime.now());
+        deuda.setMetodoEnvio(metodoEnvio);
+        deuda.setRenunciaSeguro(renunciaSeguro);
         deudaRepository.save(deuda);
 
-        // Notificar al dueño si la deuda es por un artículo de subasta
-        if (deuda.getMotivo() != null && deuda.getMotivo().contains("Subasta")) {
-            try {
+        return ResponseEntity.ok("Deuda pagada correctamente.");
+    }
+
+    /**
+     * Procesa el flujo real de pago:
+     * 1. Suma el monto recibido a la cuenta de SubastasYa.
+     * 2. SubastasYa descuenta su comisión (15%) y acredita al dueño.
+     * 3. Notifica al dueño con el monto real.
+     */
+    private void procesarPagoViaSubastasYa(Deuda deuda, BigDecimal montoRecibido) {
+        try {
+            // 1. Sumar a la cuenta de SubastasYa
+            Optional<Usuario> empresaOpt = usuarioRepository.findByEmail("subastasya@admin.com");
+            MedioDePago cuentaEmpresa = null;
+            if (empresaOpt.isPresent()) {
+                List<MedioDePago> mpEmpresa = medioDePagoRepository.findByCliente_Identificador(
+                    empresaOpt.get().getCliente().getIdentificador());
+                if (!mpEmpresa.isEmpty()) {
+                    cuentaEmpresa = mpEmpresa.get(0);
+                    BigDecimal saldoActual = cuentaEmpresa.getMontoGarantia() != null
+                        ? cuentaEmpresa.getMontoGarantia() : BigDecimal.ZERO;
+                    cuentaEmpresa.setMontoGarantia(saldoActual.add(montoRecibido));
+                    medioDePagoRepository.save(cuentaEmpresa);
+                }
+            }
+
+            // 2. Encontrar el ítem y dueño a partir del motivo de la deuda
+            if (deuda.getMotivo() != null && deuda.getMotivo().contains("Subasta")) {
+                // Extraer ID del ítem del motivo (formato: "Adjudicación Item de Subasta {itemId}")
                 String[] parts = deuda.getMotivo().split(" ");
-                // El motivo suele ser "Pago por ítem de Subasta {identificador}"
-                String idStr = parts[parts.length - 1];
+                String idStr = parts[parts.length - 1].replaceAll("[^0-9]", "");
+                if (idStr.isEmpty()) return;
+                
                 Long itemId = Long.valueOf(idStr);
                 Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(itemId);
-                if (itemOpt.isPresent()) {
-                    ItemCatalogo item = itemOpt.get();
-                    if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
-                        Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
-                        if (duenioOpt.isPresent()) {
-                            Notificacion notif = new Notificacion();
-                            notif.setUsuario(duenioOpt.get());
-                            notif.setMensaje("¡Buenas noticias! Se ha confirmado el pago de USD " + deuda.getMonto() + " por tu artículo '" + item.getProducto().getDescripcionCatalogo() + "'. El dinero ha sido transferido a tu cuenta.");
-                            notif.setTipo("pago_recibido");
-                            notif.setReferenciaId(itemId);
-                            notif.setFechaCreacion(LocalDateTime.now());
-                            notificacionRepository.save(notif);
+                if (itemOpt.isEmpty()) return;
+                
+                ItemCatalogo item = itemOpt.get();
+                if (item.getProducto() == null || item.getProducto().getDuenio() == null) return;
 
-                            // Cambiar disponibilidad a vendido
-                            item.getProducto().setDisponible("vendido");
-                            productoRepository.save(item.getProducto());
+                // Calcular comisión y pago al dueño
+                // El montoRecibido ya incluye comisión del comprador (10%). 
+                // El precio de venta puro es lo que pagó el ganador en la puja (excluimos comisión comprador y envío).
+                // Buscamos la puja ganadora para obtener el precio real.
+                List<Pujo> pujos = pujoRepository.findByItemIdentificador(itemId);
+                Pujo pujoGanador = pujos.stream()
+                    .filter(p -> "si".equals(p.getGanador()))
+                    .findFirst().orElse(null);
+                
+                BigDecimal precioVenta = pujoGanador != null ? pujoGanador.getImporte() : montoRecibido;
+                BigDecimal comisionEmpresa = precioVenta.multiply(new BigDecimal("0.15")).setScale(2, java.math.RoundingMode.HALF_UP);
+                BigDecimal pagoAlDuenio = precioVenta.subtract(comisionEmpresa).setScale(2, java.math.RoundingMode.HALF_UP);
+
+                // 3. Acreditar al dueño
+                Optional<Usuario> duenioUsuarioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
+                if (duenioUsuarioOpt.isPresent()) {
+                    Usuario duenioUsuario = duenioUsuarioOpt.get();
+                    
+                    // Buscar medio de pago del dueño para acreditarle
+                    if (duenioUsuario.getCliente() != null) {
+                        List<MedioDePago> mpDuenio = medioDePagoRepository.findByCliente_Identificador(
+                            duenioUsuario.getCliente().getIdentificador());
+                        if (!mpDuenio.isEmpty()) {
+                            MedioDePago cuentaDuenio = mpDuenio.get(0);
+                            BigDecimal saldoDuenio = cuentaDuenio.getMontoGarantia() != null
+                                ? cuentaDuenio.getMontoGarantia() : BigDecimal.ZERO;
+                            cuentaDuenio.setMontoGarantia(saldoDuenio.add(pagoAlDuenio));
+                            medioDePagoRepository.save(cuentaDuenio);
+
+                            // Descontar de SubastasYa el pago al dueño
+                            if (cuentaEmpresa != null) {
+                                BigDecimal saldoEmpresa = cuentaEmpresa.getMontoGarantia();
+                                cuentaEmpresa.setMontoGarantia(saldoEmpresa.subtract(pagoAlDuenio));
+                                medioDePagoRepository.save(cuentaEmpresa);
+                            }
                         }
                     }
-                }
-            } catch (Exception e) {
-                System.err.println("Error notificando al dueño: " + e.getMessage());
-            }
-        }
 
-        return ResponseEntity.ok("Deuda pagada correctamente.");
+                    // Notificar al dueño con montos reales
+                    Notificacion notif = new Notificacion();
+                    notif.setUsuario(duenioUsuario);
+                    notif.setMensaje("¡Pago confirmado! Tu artículo '" + item.getProducto().getDescripcionCatalogo() +
+                        "' fue vendido por USD " + String.format("%.2f", precioVenta) +
+                        ". Comisión SubastasYa (15%): USD " + String.format("%.2f", comisionEmpresa) +
+                        ". Monto acreditado en tu cuenta: USD " + String.format("%.2f", pagoAlDuenio) + ".");
+                    notif.setTipo("pago_recibido");
+                    notif.setReferenciaId(itemId);
+                    notif.setFechaCreacion(LocalDateTime.now());
+                    notificacionRepository.save(notif);
+
+                    // Marcar producto como vendido
+                    item.getProducto().setDisponible("vendido");
+                    productoRepository.save(item.getProducto());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error en flujo de pago vía SubastasYa: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     @GetMapping("/me/notifications")
@@ -174,6 +291,28 @@ public class UserController {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
         if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
         return ResponseEntity.ok(notificacionRepository.findByUsuarioIdUsuario(opt.get().getIdUsuario()));
+    }
+
+    /**
+     * Nuevo endpoint para eliminar una notificación del backend.
+     * Esto soluciona que las notificaciones "eliminadas" volvieran al limpiar el caché.
+     */
+    @DeleteMapping("/me/notifications/{id}")
+    public ResponseEntity<?> deleteNotification(@PathVariable Long id, @RequestParam String email) {
+        Optional<Usuario> opt = usuarioRepository.findByEmail(email);
+        if (opt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Usuario no encontrado.");
+        
+        Optional<Notificacion> notifOpt = notificacionRepository.findById(id);
+        if (notifOpt.isEmpty()) return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Notificación no encontrada.");
+        
+        // Verificar que la notificación pertenece al usuario
+        Notificacion notif = notifOpt.get();
+        if (!notif.getUsuario().getIdUsuario().equals(opt.get().getIdUsuario())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado.");
+        }
+        
+        notificacionRepository.delete(notif);
+        return ResponseEntity.ok("Notificación eliminada.");
     }
 
     @GetMapping("/me/metrics")
@@ -230,8 +369,6 @@ public class UserController {
         return ResponseEntity.ok(metrics);
     }
 
-    // Removed duplicate getBidHistory method
-
     @GetMapping("/me/items/won")
     public ResponseEntity<?> getWonAuctions(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
@@ -246,7 +383,7 @@ public class UserController {
                     if ("si".equals(p.getGanador())) {
                         Map<String, Object> map = new HashMap<>();
                         map.put("id", p.getIdentificador());
-                        map.put("monto", p.getImporte());
+                        map.put("monto", p.getImporte().doubleValue());
                         map.put("itemNombre", p.getItem().getProducto().getDescripcionCatalogo());
                         map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
                         map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
@@ -269,29 +406,23 @@ public class UserController {
                         }
 
                         List<Deuda> deudas = deudaRepository.findByUsuarioIdUsuario(user.getIdUsuario());
-                        boolean isPaid = deudas.stream().anyMatch(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()) && d.isPagada());
-                        if (isPaid) {
-                            map.put("estado_pago", "pagado");
-                        } else {
-                            // Check if debt exists but unpaid
-                            boolean hasPendingDebt = deudas.stream().anyMatch(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()) && !d.isPagada());
-                            map.put("estado_pago", hasPendingDebt ? "pendiente" : "pendiente");
-                        }
-                        
-                        // Info de pago para ítems ya pagados
                         Optional<Deuda> relatedDebt = deudas.stream()
-                            .filter(d -> d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()))
+                            .filter(d -> d.getMotivo() != null && d.getMotivo().contains("Subasta " + p.getItem().getIdentificador()))
                             .findFirst();
+                        
                         if (relatedDebt.isPresent()) {
                             Deuda deuda = relatedDebt.get();
                             map.put("deudaId", deuda.getId());
+                            map.put("estado_pago", deuda.isPagada() ? "pagado" : "pendiente");
                             if (deuda.isPagada()) {
                                 map.put("medioPagoUsado", deuda.getMedioPagoUsado() != null ? deuda.getMedioPagoUsado() : "Medio de pago registrado");
                                 map.put("fechaPago", deuda.getFechaPago());
                                 map.put("metodoEnvio", deuda.getMetodoEnvio() != null ? deuda.getMetodoEnvio() : "domicilio");
                                 map.put("renunciaSeguro", deuda.isRenunciaSeguro());
-                                map.put("recibido", true); // Para ítems pagados, asumimos recibido
+                                map.put("recibido", true);
                             }
+                        } else {
+                            map.put("estado_pago", "pendiente");
                         }
 
                         result.add(map);
@@ -339,7 +470,7 @@ public class UserController {
                 map.put("urlImagen", new String(fotos.get(0).getFoto(), java.nio.charset.StandardCharsets.UTF_8));
             }
 
-            // Información de venta (reutilizada para evitar endpoints nuevos)
+            // Información de venta
             List<ItemCatalogo> items = itemCatalogoRepository.findByProductoIdentificador(p.getIdentificador());
             for (ItemCatalogo ic : items) {
                 List<Pujo> pujos = pujoRepository.findByItemIdentificador(ic.getIdentificador());
@@ -372,6 +503,10 @@ public class UserController {
         return ResponseEntity.ok(result);
     }
 
+    /**
+     * Historial completo de pujas del usuario.
+     * Incluye todas las pujas realizadas (ganes o pierdas), con estado ganador y monto formateado.
+     */
     @GetMapping("/me/bids")
     public ResponseEntity<?> getBids(@RequestParam String email) {
         Optional<Usuario> opt = usuarioRepository.findByEmail(email);
@@ -387,13 +522,73 @@ public class UserController {
                     map.put("id", p.getIdentificador() != null ? p.getIdentificador().toString() : java.util.UUID.randomUUID().toString());
                     map.put("articulo", p.getItem().getProducto().getDescripcionCatalogo());
                     map.put("subasta", p.getItem().getCatalogo().getDescripcion());
-                    map.put("monto", p.getImporte());
+                    // Usar doubleValue() para asegurar serialización numérica limpia
+                    map.put("monto", p.getImporte().doubleValue());
                     map.put("fecha", p.getItem().getCatalogo().getSubasta().getFecha());
+                    // Estado ganador: true/false en lugar de "si"/"no" para el frontend
+                    map.put("ganador", "si".equals(p.getGanador()));
+                    map.put("subastaId", p.getItem().getCatalogo().getSubasta().getIdentificador());
+                    map.put("itemId", p.getItem().getIdentificador());
                     result.add(map);
                 }
             }
+            // Ordenar por monto descendente para mostrar las pujas más importantes primero
+            result.sort((a2, b2) -> Double.compare(((Number) b2.get("monto")).doubleValue(), ((Number) a2.get("monto")).doubleValue()));
         }
         return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Genera una multa del 10% sobre el monto de la deuda y suspende la cuenta del usuario.
+     * Se invoca cuando el usuario intenta pagar y no tiene fondos suficientes.
+     */
+    private void generarMultaYSuspenderCuenta(Deuda deuda) {
+        try {
+            Usuario usuario = deuda.getUsuario();
+            if (usuario == null) return;
+
+            // Verificar si ya existe una multa para esta deuda para no duplicar
+            boolean yaMultada = deudaRepository.findByUsuarioIdUsuario(usuario.getIdUsuario())
+                .stream().anyMatch(d -> d.getMotivo() != null &&
+                    d.getMotivo().contains("Multa por fondos insuficientes") &&
+                    d.getMotivo().contains("Deuda ID: " + deuda.getId()));
+            if (yaMultada) return;
+
+            // Crear multa del 10%
+            BigDecimal multaMonto = deuda.getMonto()
+                .multiply(new BigDecimal("0.10"))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+
+            Deuda multa = new Deuda();
+            multa.setUsuario(usuario);
+            multa.setMonto(multaMonto);
+            multa.setMotivo("Multa por fondos insuficientes (10%) - Deuda ID: " + deuda.getId());
+            multa.setPagada(false);
+            deudaRepository.save(multa);
+
+            // Suspender cuenta del cliente
+            if (usuario.getCliente() != null) {
+                usuario.getCliente().setEstado("incativo");
+                clienteRepository.save(usuario.getCliente());
+            }
+
+            // Marcar la deuda original como penalizada para evitar doble multa
+            deuda.setMotivo(deuda.getMotivo() + " (Penalizada)");
+            deudaRepository.save(deuda);
+
+            // Notificar al usuario
+            Notificacion notif = new Notificacion();
+            notif.setUsuario(usuario);
+            notif.setMensaje("Tu cuenta ha sido SUSPENDIDA temporalmente por fondos insuficientes al intentar pagar. " +
+                "Se generó una multa del 10% (USD " + String.format("%.2f", multaMonto) + "). " +
+                "Tienes 72 horas para abonar la deuda original y la multa para rehabilitar tu cuenta.");
+            notif.setTipo("deuda");
+            notif.setFechaCreacion(LocalDateTime.now());
+            notificacionRepository.save(notif);
+
+        } catch (Exception e) {
+            System.err.println("Error generando multa: " + e.getMessage());
+        }
     }
 
 }
