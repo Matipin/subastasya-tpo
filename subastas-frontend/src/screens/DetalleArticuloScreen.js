@@ -91,16 +91,18 @@ export default function DetalleArticuloScreen({ route, navigation }) {
     const catOrder = ['comun', 'especial', 'plata', 'oro', 'platino'];
     const userCatIndex = catOrder.indexOf((usuario?.cliente?.categoria || 'comun').toLowerCase());
     const subastaCatIndex = catOrder.indexOf((subasta?.categoria || 'comun').toLowerCase());
+    /* 
     if (userCatIndex < subastaCatIndex) {
       Alert.alert('Acceso Denegado', `Esta subasta requiere categoría ${subasta.categoria?.toUpperCase()}. Tu categoría actual es ${(usuario?.cliente?.categoria || 'comun').toUpperCase()}.`);
       return;
     }
+    */
     
     try {
       const joinResponse = await fetch(`${API_BASE_URL.replace('/auth', '/auctions')}/${subasta.identificador}/join`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clienteId: usuario?.cliente?.identificador })
+        body: JSON.stringify({ clienteId: usuario?.identificador || usuario?.cliente?.identificador })
       });
       if (joinResponse.ok) {
         Alert.alert('Registro Exitoso', 'Te has anotado en la subasta correctamente.');

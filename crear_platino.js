@@ -17,22 +17,21 @@ async function run() {
         const dueRes = await client.query('SELECT identificador FROM duenios LIMIT 1');
         const duenioId = dueRes.rows[0].identificador;
 
-        // Fecha y hora actual (para que esté ABIERTA ya mismo)
-        const date = new Date();
-        const fecha = date.toISOString().split('T')[0];
-        const hora = date.toISOString().split('T')[1].split('.')[0]; // Formato HH:MM:SS (UTC)
+        // Fecha y hora solicitada: 15:00 hora local (18:00 UTC)
+        const fecha = '2026-07-03';
+        const hora = '18:00:00'; // Formato HH:MM:SS (UTC)
 
         // 2. Insertar Subasta Platino
         const subastaRes = await client.query(`
-            INSERT INTO subastas (categoria, estado, fecha, hora, capacidad_asistentes, tiene_deposito, seguridad_propia, nombre)
-            VALUES ('platino', 'abierta', $1, $2, 20, 'si', 'si', 'Subasta Platino Exclusiva')
+            INSERT INTO subastas (categoria, estado, fecha, hora, capacidadasistentes, tienedeposito, seguridadpropia)
+            VALUES ('platino', 'abierta', $1, $2, 20, 'si', 'si')
             RETURNING identificador;
         `, [fecha, hora]);
         const subastaId = subastaRes.rows[0].identificador;
 
         // 3. Insertar Catálogo
         const catalogoRes = await client.query(`
-            INSERT INTO catalogos (descripcion, responsable_identificador, subasta)
+            INSERT INTO catalogos (descripcion, responsable, subasta)
             VALUES ('Catálogo Platino', $1, $2)
             RETURNING identificador;
         `, [adminId, subastaId]);
@@ -40,15 +39,15 @@ async function run() {
 
         // 4. Insertar Producto (Mansión)
         const productoRes = await client.query(`
-            INSERT INTO productos (descripcion_catalogo, descripcion_completa, disponible, estado_revision, duenio_identificador)
-            VALUES ('Mansión en Miami', 'Espectacular mansión de 5 habitaciones frente al mar, seguridad 24hs.', 'disponible', 'aprobado', $1)
+            INSERT INTO productos (descripcioncatalogo, descripcioncompleta, disponible, revisor, duenio)
+            VALUES ('Mansión en Miami', 'Espectacular mansión de 5 habitaciones frente al mar, seguridad 24hs.', 'si', $1, $2)
             RETURNING identificador;
-        `, [duenioId]);
+        `, [adminId, duenioId]);
         const productoId = productoRes.rows[0].identificador;
 
         // 5. Insertar ItemCatálogo
         await client.query(`
-            INSERT INTO item_catalogo (precio_base, comision, subastado, catalogo, producto)
+            INSERT INTO itemscatalogo (preciobase, comision, subastado, catalogo, producto)
             VALUES (2500000.00, 375000.00, 'no', $1, $2);
         `, [catalogoId, productoId]);
 
