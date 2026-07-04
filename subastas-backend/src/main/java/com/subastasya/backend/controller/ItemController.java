@@ -222,6 +222,7 @@ public class ItemController {
             subasta.setCapacidadAsistentes(100);
             subasta.setTieneDeposito("si");
             subasta.setSeguridadPropia("si");
+            subasta.setCategoria("comun");
             subasta = subastaRepository.save(subasta);
 
             // Crear Catalogo
