@@ -49,7 +49,7 @@ public class DeudaScheduler {
         for (Deuda deuda : deudasImpagas) {
             try {
                 // Filtrar las que no están pagadas, no son multas ya aplicadas, etc.
-                if (!deuda.isPagada() && deuda.getMotivo() != null && !deuda.getMotivo().contains("Multa por mora")) {
+                if (!deuda.isPagada() && deuda.getMotivo() != null && !deuda.getMotivo().contains("Multa por mora") && !deuda.getMotivo().contains("(Penalizada)")) {
                 
                 // NOTA: Idealmente comprobaríamos: if(deuda.getFecha().isBefore(now().minusHours(72))) 
                 // pero como TPO_DAI no permite modificar el SQL base (y no tenemos fecha en Deuda),

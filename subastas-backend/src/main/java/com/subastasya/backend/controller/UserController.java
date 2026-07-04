@@ -579,9 +579,15 @@ public class UserController {
                 clienteRepository.save(usuario.getCliente());
             }
 
-            // Marcar la deuda original como penalizada para evitar doble multa
-            deuda.setMotivo(deuda.getMotivo() + " (Penalizada)");
-            deudaRepository.save(deuda);
+            // Bloquear cuenta y marcar deuda original
+            Cliente cliente = usuario.getCliente();
+            cliente.setEstado("incativo");
+            clienteRepository.save(cliente);
+        
+            if (deuda.getMotivo() != null && !deuda.getMotivo().contains("(Multada por falta de fondos)")) {
+                deuda.setMotivo(deuda.getMotivo() + " (Multada por falta de fondos)");
+                deudaRepository.save(deuda);
+            }
 
             // Notificar al usuario
             Notificacion notif = new Notificacion();
