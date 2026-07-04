@@ -218,7 +218,7 @@ public class ItemController {
             subasta.setFecha(LocalDate.parse("2026-10-10"));
             subasta.setHora(java.time.LocalTime.of(10, 0));
             subasta.setUbicacion("Rivadavia 3421");
-            subasta.setEstado("programada");
+            subasta.setEstado("abierta");
             subasta.setCapacidadAsistentes(100);
             subasta.setTieneDeposito("si");
             subasta.setSeguridadPropia("si");
