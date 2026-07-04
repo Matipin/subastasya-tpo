@@ -74,9 +74,33 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
                 currentState.setAuctionId(bidMessage.getAuctionId());
                 currentState.setItemId(bidMessage.getItemId());
                 currentState.setType("STATE");
-                currentState.setAmount(100.0);
-                currentState.setMinBid(101.0);
-                currentState.setMaxBid(120.0);
+                try {
+                    transactionTemplate.execute(status -> {
+                        java.util.Optional<ItemCatalogo> optItem = itemCatalogoRepository.findById(bidMessage.getItemId());
+                        if (optItem.isPresent()) {
+                            ItemCatalogo item = optItem.get();
+                            Double base = item.getPrecioBase().doubleValue();
+                            currentState.setAmount(base);
+                            String cat = item.getCatalogo().getSubasta().getCategoria();
+                            if ("oro".equalsIgnoreCase(cat) || "platino".equalsIgnoreCase(cat)) {
+                                currentState.setMinBid(base + 1.0);
+                                currentState.setMaxBid(-1.0);
+                            } else {
+                                currentState.setMinBid(base + (base * 0.01));
+                                currentState.setMaxBid(base + (base * 0.20));
+                            }
+                        } else {
+                            currentState.setAmount(100.0);
+                            currentState.setMinBid(101.0);
+                            currentState.setMaxBid(120.0);
+                        }
+                        return null;
+                    });
+                } catch (Exception e) {
+                    currentState.setAmount(100.0);
+                    currentState.setMinBid(101.0);
+                    currentState.setMaxBid(120.0);
+                }
                 currentState.setUser("Nadie");
                 auctionStates.put(stateKey, currentState);
             }
@@ -163,10 +187,17 @@ public class AuctionWebSocketHandler extends TextWebSocketHandler {
             }
             // --- FIN VALIDACIONES ---
 
-            Double newMinBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.01);
-            Double newMaxBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.20);
-            bidMessage.setMinBid(newMinBid);
-            bidMessage.setMaxBid(newMaxBid);
+            if (Boolean.TRUE.equals(bidMessage.getSinLimite())) {
+                Double newMinBid = bidMessage.getAmount() + 1.0;
+                Double newMaxBid = -1.0;
+                bidMessage.setMinBid(newMinBid);
+                bidMessage.setMaxBid(newMaxBid);
+            } else {
+                Double newMinBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.01);
+                Double newMaxBid = bidMessage.getAmount() + (bidMessage.getAmount() * 0.20);
+                bidMessage.setMinBid(newMinBid);
+                bidMessage.setMaxBid(newMaxBid);
+            }
             bidMessage.setType("BID");
             
             try {
