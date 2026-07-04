@@ -150,7 +150,14 @@ public class UserController {
             if (mpOpt.isPresent()) {
                 MedioDePago mp = mpOpt.get();
                 BigDecimal saldoDisponible = mp.getMontoGarantia() != null ? mp.getMontoGarantia() : BigDecimal.ZERO;
-                BigDecimal montoACobrar = deuda.getMonto();
+                BigDecimal montoPujo = deuda.getMonto();
+                BigDecimal montoACobrar = montoPujo;
+                
+                if (deuda.getMotivo() != null && deuda.getMotivo().contains("Adjudicación Item de Subasta")) {
+                    BigDecimal comision = montoPujo.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+                    BigDecimal envio = "domicilio".equals(metodoEnvio) ? new BigDecimal("50.00") : BigDecimal.ZERO;
+                    montoACobrar = montoPujo.add(comision).add(envio);
+                }
 
                 if (saldoDisponible.compareTo(montoACobrar) < 0) {
                     // Generar multa del 10% automáticamente y suspender cuenta

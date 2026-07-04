@@ -152,7 +152,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       return;
     }
 
-    const amountToBid = parseFloat(customBid);
+    const amountToBid = parseFloat(customBid.replace(/,/g, ''));
     const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
     const pujaMinima = status.puja_minima || (status.monto_actual + 1);
     

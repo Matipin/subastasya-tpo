@@ -70,7 +70,7 @@ public class DataInitializer implements CommandLineRunner {
             Cliente c1 = new Cliente();
             c1.setNombre("Test Comun");
             c1.setDocumento("12345678");
-            c1.setCategoria("comun");
+            c1.setCategoria("platino");
             
             tempU1.setCliente(c1);
             u1 = usuarioRepository.save(tempU1);
@@ -477,6 +477,66 @@ public class DataInitializer implements CommandLineRunner {
                     medioDePagoRepository.save(mpEmpresa);
                 }
             }
+        }
+
+        // -------------------------
+        // CREAR SUBASTA KINGTIGER
+        // -------------------------
+        boolean kingtigerExists = subastaRepository.findAll().stream()
+            .anyMatch(s -> "platino".equals(s.getCategoria()) && s.getCapacidadAsistentes() == 500);
+            
+        if (!kingtigerExists) {
+            Subasta s2 = new Subasta();
+            s2.setCapacidadAsistentes(500);
+            s2.setTieneDeposito("si");
+            s2.setSeguridadPropia("si");
+            s2.setCategoria("platino");
+            s2.setFecha(LocalDate.now());
+            s2.setHora(LocalTime.now().plusMinutes(15));
+            s2.setEstado("abierta");
+            subastaRepository.save(s2);
+
+            Catalogo c2 = new Catalogo();
+            c2.setDescripcion("Subasta Platino - Piezas Históricas Raras");
+            c2.setResponsable(admin);
+            c2.setSubasta(s2);
+            catalogoRepository.save(c2);
+
+            Producto p2 = new Producto();
+            p2.setDescripcionCatalogo("Tanque King Tiger (PzKpfw VIB)");
+            p2.setDescripcionCompleta("Estado: Impecable. Tanque pesado alemán de la Segunda Guerra Mundial totalmente restaurado. Pieza de colección extremadamente rara en condiciones de funcionamiento (cañón desactivado según normativas). Motor Maybach original. Listo para ser adquirido en subasta platino.");
+            p2.setDisponible("no");
+            p2.setRevisor(admin);
+            p2.setDuenio(uOro.getDuenio()); // dueño oro@sello.com
+            p2.setFecha(LocalDate.now());
+            p2.setSeguro(nroPolizaDemo);
+            productoRepository.save(p2);
+
+            Foto f2 = new Foto();
+            f2.setProducto(p2);
+            f2.setFoto("https://images.unsplash.com/photo-1596700877995-1f9f2575e5f3?q=80&w=200".getBytes(StandardCharsets.UTF_8));
+            fotoRepository.save(f2);
+
+            ItemCatalogo ic2 = new ItemCatalogo();
+            ic2.setCatalogo(c2);
+            ic2.setProducto(p2);
+            ic2.setPrecioBase(new BigDecimal("1500000.00"));
+            ic2.setComision(new BigDecimal("150000.00"));
+            ic2.setSubastado("no");
+            itemCatalogoRepository.save(ic2);
+
+            // Anotar a test@sello.com y platino@sello.com
+            Asistente a1 = new Asistente();
+            a1.setCliente(u1.getCliente());
+            a1.setSubasta(s2);
+            a1.setNumeroPostor(777);
+            asistenteRepository.save(a1);
+
+            Asistente a2 = new Asistente();
+            a2.setCliente(uPlatino.getCliente());
+            a2.setSubasta(s2);
+            a2.setNumeroPostor(888);
+            asistenteRepository.save(a2);
         }
     }
 
