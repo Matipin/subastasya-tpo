@@ -136,6 +136,23 @@ public class DataInitializer implements CommandLineRunner {
             usuarioRepository.save(uOro);
         }
 
+        // Ensure ORO user has a valid payment method to receive money
+        if (uOro.getCliente() != null) {
+            boolean hasCardOro = medioDePagoRepository.findByCliente_Identificador(uOro.getCliente().getIdentificador())
+                                .stream().anyMatch(mp -> "4000111122223333".equals(mp.getNumero()));
+            if (!hasCardOro) {
+                MedioDePago mpOro = new MedioDePago();
+                mpOro.setCliente(uOro.getCliente());
+                mpOro.setTipo("TARJETA");
+                mpOro.setEntidad("VISA ORO");
+                mpOro.setNumero("4000111122223333");
+                mpOro.setTitular("TEST ORO");
+                mpOro.setVerificado(true);
+                mpOro.setMontoGarantia(new java.math.BigDecimal("250000.00")); // Valid funds
+                medioDePagoRepository.save(mpOro);
+            }
+        }
+
         // Create or update PLATINO user
         Optional<Usuario> optPlatino = usuarioRepository.findByEmail("platino@sello.com");
         final Usuario uPlatino;
