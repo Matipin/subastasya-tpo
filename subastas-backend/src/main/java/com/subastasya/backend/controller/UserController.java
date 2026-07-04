@@ -282,8 +282,8 @@ public class UserController {
                     notif.setFechaCreacion(LocalDateTime.now());
                     notificacionRepository.save(notif);
 
-                    // Marcar producto como vendido
-                    item.getProducto().setDisponible("vendido");
+                    // Marcar producto como vendido ("no" disponible)
+                    item.getProducto().setDisponible("no");
                     productoRepository.save(item.getProducto());
                 }
             }
