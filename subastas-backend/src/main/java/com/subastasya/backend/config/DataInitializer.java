@@ -531,7 +531,7 @@ public class DataInitializer implements CommandLineRunner {
 
             Foto f2 = new Foto();
             f2.setProducto(p2);
-            f2.setFoto("https://images.unsplash.com/photo-1596700877995-1f9f2575e5f3?q=80&w=200".getBytes(StandardCharsets.UTF_8));
+            f2.setFoto("https://upload.wikimedia.org/wikipedia/commons/4/41/KingTigerBovington.jpg".getBytes(StandardCharsets.UTF_8));
             fotoRepository.save(f2);
 
             ItemCatalogo ic2 = new ItemCatalogo();
