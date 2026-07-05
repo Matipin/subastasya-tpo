@@ -226,9 +226,32 @@ public class AuctionController {
             return ResponseEntity.badRequest().body("Subasta o cliente no encontrado.");
         }
 
+        Cliente cliente = clienteOpt.get();
+        Subasta subasta = subastaOpt.get();
+
+        // Check if user owns any product in this auction
+        Optional<Usuario> usuarioOpt = usuarioRepository.findAll().stream()
+                .filter(u -> u.getCliente() != null && u.getCliente().getIdentificador().equals(cliente.getIdentificador()))
+                .findFirst();
+
+        if (usuarioOpt.isPresent() && usuarioOpt.get().getDuenio() != null) {
+            Long duenioId = usuarioOpt.get().getDuenio().getIdentificador();
+            List<Catalogo> catalogos = catalogoRepository.findBySubastaIdentificador(subasta.getIdentificador());
+            for (Catalogo cat : catalogos) {
+                List<ItemCatalogo> items = itemCatalogoRepository.findByCatalogoIdentificador(cat.getIdentificador());
+                for (ItemCatalogo item : items) {
+                    if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
+                        if (item.getProducto().getDuenio().getIdentificador().equals(duenioId)) {
+                            return ResponseEntity.badRequest().body("No podés anotarte a una subasta donde tenés artículos propios a la venta.");
+                        }
+                    }
+                }
+            }
+        }
+
         Asistente asistente = new Asistente();
-        asistente.setSubasta(subastaOpt.get());
-        asistente.setCliente(clienteOpt.get());
+        asistente.setSubasta(subasta);
+        asistente.setCliente(cliente);
         asistente.setNumeroPostor((int)(Math.random() * 1000));
         asistenteRepository.save(asistente);
         return ResponseEntity.ok(asistente);
