@@ -8,7 +8,7 @@ export default function EditarPerfilScreen({ route, navigation }) {
   const { usuario } = route.params;
 
   const [nombre, setNombre] = useState(usuario?.nombre || '');
-  const [domicilio, setDomicilio] = useState(usuario?.cliente?.direccion || '');
+  const [domicilio, setDomicilio] = useState(usuario?.direccion || usuario?.cliente?.direccion || '');
   const [telefono, setTelefono] = useState(''); // No hay en BD pero lo permitimos en form
   const [isLoading, setIsLoading] = useState(false);
 
@@ -34,8 +34,10 @@ export default function EditarPerfilScreen({ route, navigation }) {
       );
 
       if (response.ok) {
+        // Create an updated user object
+        const updatedUser = { ...usuario, nombre: nombre, direccion: domicilio };
         Alert.alert('Éxito', 'Perfil actualizado correctamente.', [
-          { text: 'OK', onPress: () => navigation.goBack() }
+          { text: 'OK', onPress: () => navigation.navigate('ProfileDashboard', { usuario: updatedUser }) }
         ]);
       } else {
         const errorText = await response.text();
