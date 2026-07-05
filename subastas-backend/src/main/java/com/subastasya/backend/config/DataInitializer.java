@@ -110,6 +110,7 @@ public class DataInitializer implements CommandLineRunner {
             Cliente cOro = new Cliente();
             cOro.setNombre("Test Oro");
             cOro.setDocumento("99998888");
+            cOro.setDireccion("Calle Oro 123");
             cOro.setCategoria("oro");
 
             Duenio dOro = new Duenio();
