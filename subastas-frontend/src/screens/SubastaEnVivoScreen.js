@@ -71,50 +71,149 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         }));
         setCustomBid(Number(msg.minBid).toFixed(2));
         setTimeLeft(60); // reset local timer 60s
-        
+
         // Desbloquear UI si fuimos nosotros
         if (msg.user === (usuario?.nombre || 'Usuario App')) {
-           setBidding(false);
-           Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
+          setBidding(false);
+          Alert.alert('¡Éxito!', 'Tu puja ha sido registrada.');
         }
       } else if (msg.type === 'CHAT') {
         setChatMessages(prev => [...prev, msg]);
       } else if (msg.type === 'ENDED') {
         setStatus(prev => ({ ...prev, isEnded: true }));
         setTimeLeft(0);
-        
+
         const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
         if (isWinner) {
-          // Navegar inmediatamente al checkout para que el usuario elija envío y método de pago
-          Alert.alert(
-            '🏆 ¡Ganaste la Subasta!',
-            `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Ahora debes completar el pago.`,
-            [
-              {
-                text: 'Ir a Pagar',
-                onPress: () => {
-                  navigation.replace('CheckoutGanador', {
-                    articulo: {
-                      id: articulo?.id,
-                      nombre: articulo?.nombre,
-                      itemNombre: articulo?.nombre,
-                      monto: msg.amount,
-                      estado_pago: 'pendiente',
-                      urlImagen: articulo?.urlImagen,
-                    },
-                    checkoutDetails: {
-                      valorPujado: msg.amount,
-                      comision: msg.amount * 0.10,
-                      costoEnvioDomicilio: 50,
-                      medioPago: '',
-                    },
-                    usuario,
-                  });
+          // ============================================================
+          // COBRO AUTOMÁTICO
+          // ============================================================
+          (async () => {
+            try {
+
+              let medioPagoId = null;
+              let medioPagoNombre = 'Medio de pago registrado';
+              try {
+                const mpRes = await fetch(
+                  `${API_BASE_URL.replace('/auth', '/users')}/me/medios-de-pago?email=${encodeURIComponent(usuario?.email || '')}`
+                );
+                if (mpRes.ok) {
+                  const mpData = await mpRes.json();
+                  if (mpData && mpData.length > 0) {
+                    medioPagoId = mpData[0].identificador;
+                    const mp = mpData[0];
+                    medioPagoNombre = `${mp.tipo} ${mp.entidad || ''} ****${mp.numero?.slice(-4) || '****'}`;
+                  }
                 }
+              } catch (mpErr) {
+                console.error('Error obteniendo medios de pago:', mpErr);
               }
-            ],
-            { cancelable: false }
-          );
+
+              // 2. Obtener el deudaId del ítem ganado
+              let dId = null;
+              try {
+                const wonRes = await fetch(
+                  `${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email || '')}`
+                );
+                if (wonRes.ok) {
+                  const wonItems = await wonRes.json();
+                  const wonMatch = wonItems.find(
+                    w => w.id === articulo?.id || w.id === articulo?.id?.toString()
+                  );
+                  if (wonMatch?.deudaId) {
+                    dId = wonMatch.deudaId;
+                  }
+                }
+              } catch (wonErr) {
+                console.error('Error obteniendo items ganados:', wonErr);
+              }
+
+              // 3. Intentar el cobro automático
+              if (dId) {
+                const payRes = await fetch(
+                  `${API_BASE_URL.replace('/auth', '/users')}/me/debts/${dId}/pay`,
+                  {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      metodoEnvio: 'domicilio',        // envío a domicilio por defecto
+                      medioPagoNombre: medioPagoNombre,
+                      medioPagoId: medioPagoId,
+                      renunciaSeguro: false,
+                    }),
+                  }
+                );
+
+                if (payRes.ok) {
+                  // Pago exitoso
+                  Alert.alert(
+                    '🏆 ¡Ganaste y el pago fue procesado!',
+                    `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.\n\nEl pago se realizó automáticamente con ${medioPagoNombre}.`,
+                    [{ text: 'Ver mis compras', onPress: () => navigation.navigate('Home', { usuario }) }],
+                    { cancelable: false }
+                  );
+                } else {
+                  // Fondos insuficientes → multa generada por el backend
+                  const errorMsg = await payRes.text();
+                  Alert.alert(
+                    '⚠️ Pago rechazado – Multa generada',
+                    `No se pudo cobrar el monto de la subasta. Se ha generado una multa en tu cuenta.\n\n${errorMsg || 'Verificá tus medios de pago y regularizá tu deuda desde "Mis Compras".'}`,
+                    [{ text: 'Entendido', onPress: () => navigation.navigate('Home', { usuario }) }],
+                    { cancelable: false }
+                  );
+                }
+              } else {
+                // No se encontró deuda, igual informar al ganador
+                Alert.alert(
+                  '🏆 ¡Ganaste la Subasta!',
+                  `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.\n\nPodés gestionar el pago desde "Mis Compras".`,
+                  [{ text: 'Ver mis compras', onPress: () => navigation.navigate('Home', { usuario }) }],
+                  { cancelable: false }
+                );
+              }
+            } catch (autoPayErr) {
+              console.error('Error en cobro automático:', autoPayErr);
+              Alert.alert(
+                '🏆 ¡Ganaste la Subasta!',
+                `¡Felicidades! Ganaste "${articulo?.nombre}". Hubo un problema procesando el pago automáticamente. Podés pagarlo desde "Mis Compras".`,
+                [{ text: 'Entendido', onPress: () => navigation.navigate('Home', { usuario }) }],
+                { cancelable: false }
+              );
+            }
+          })();
+
+          // ============================================================
+          // CÓDIGO ORIGINAL 
+          // ============================================================
+          // Alert.alert(
+          //   '🏆 ¡Ganaste la Subasta!',
+          //   `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}. Ahora debes completar el pago.`,
+          //   [
+          //     {
+          //       text: 'Ir a Pagar',
+          //       onPress: () => {
+          //         navigation.replace('CheckoutGanador', {
+          //           articulo: {
+          //             id: articulo?.id,
+          //             nombre: articulo?.nombre,
+          //             itemNombre: articulo?.nombre,
+          //             monto: msg.amount,
+          //             estado_pago: 'pendiente',
+          //             urlImagen: articulo?.urlImagen,
+          //           },
+          //           checkoutDetails: {
+          //             valorPujado: msg.amount,
+          //             comision: msg.amount * 0.10,
+          //             costoEnvioDomicilio: 50,
+          //             medioPago: '',
+          //           },
+          //           usuario,
+          //         });
+          //       }
+          //     }
+          //   ],
+          //   { cancelable: false }
+          // );
         } else {
           Alert.alert('Subasta Finalizada', `El ganador es ${msg.user} con USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
         }
@@ -159,17 +258,17 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
     const amountToBid = parseFloat(cleanStr);
     const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
     const pujaMinima = status.puja_minima || (status.monto_actual + 1);
-    
+
     if (isNaN(amountToBid) || amountToBid < pujaMinima) {
       Alert.alert('Error', `La puja mínima es de USD ${Number(pujaMinima).toFixed(2)}`);
       return;
     }
-    
+
     if (amountToBid > 999999999999) {
       Alert.alert('Error', 'El monto ingresado es demasiado grande.');
       return;
     }
-    
+
     // puja_maxima = -1 significa sin límite (subastas oro/platino)
     const hayLimiteMax = status.puja_maxima != null && status.puja_maxima > 0;
     if (!isOroOrPlatino && hayLimiteMax && amountToBid > status.puja_maxima) {
@@ -241,7 +340,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         <View style={styles.statusBoard}>
           <Text style={styles.statusLabel}>Monto Actual</Text>
           <Text style={styles.currentAmount} numberOfLines={1} adjustsFontSizeToFit>USD {Number(status?.monto_actual || 0).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
-          
+
           <View style={styles.postorInfo}>
             <Ionicons name="person" size={16} color="#852221" />
             <Text style={styles.postorText}>Líder: {status?.ultimo_postor || 'Nadie'}</Text>
@@ -250,7 +349,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           <View style={styles.timerBadge}>
             <Ionicons name="time-outline" size={18} color="#852221" />
             <Text style={styles.timerText}>
-              {timeLeft > 0 ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60) < 10 ? '0'+(timeLeft % 60) : timeLeft % 60}` : 'FINALIZADO'}
+              {timeLeft > 0 ? `${Math.floor(timeLeft / 60)}:${(timeLeft % 60) < 10 ? '0' + (timeLeft % 60) : timeLeft % 60}` : 'FINALIZADO'}
             </Text>
           </View>
         </View>
@@ -291,9 +390,9 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
       {/* Action Footer */}
       <View style={styles.footer}>
-        <View style={{flexDirection: 'row', alignItems: 'center', marginBottom: 10}}>
-          <Text style={{fontWeight: 'bold', marginRight: 10}}>Tu Puja:</Text>
-          <TextInput 
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
+          <Text style={{ fontWeight: 'bold', marginRight: 10 }}>Tu Puja:</Text>
+          <TextInput
             style={styles.customBidInput}
             keyboardType="numeric"
             value={customBid}
@@ -302,8 +401,8 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
           />
         </View>
 
-        <TouchableOpacity 
-          style={[styles.bidButton, (status?.isEnded || timeLeft === 0) && {backgroundColor: '#CCC'}]} 
+        <TouchableOpacity
+          style={[styles.bidButton, (status?.isEnded || timeLeft === 0) && { backgroundColor: '#CCC' }]}
           onPress={handleBid}
           disabled={bidding || status?.isEnded || timeLeft === 0}
         >
