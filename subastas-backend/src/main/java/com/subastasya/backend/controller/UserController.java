@@ -183,7 +183,11 @@ public class UserController {
         }
 
         // FLUJO REAL: Comprador → SubastasYa → Dueño (Aplica para medio interno o MercadoPago simulado)
-        procesarPagoViaSubastasYa(deuda, montoACobrar);
+        String logTransferencia = procesarPagoViaSubastasYaDiagnostic(deuda, montoACobrar);
+        System.out.println("LOG TRANSFERENCIA: " + logTransferencia);
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Paths.get("transfer_log.txt"), logTransferencia);
+        } catch (Exception e) {}
 
         deuda.setPagada(true);
         deuda.setFechaPago(LocalDateTime.now());
@@ -191,7 +195,7 @@ public class UserController {
         deuda.setRenunciaSeguro(renunciaSeguro);
         deudaRepository.save(deuda);
 
-        return ResponseEntity.ok("Deuda pagada correctamente.");
+        return ResponseEntity.ok("Deuda pagada correctamente. Detalles de la transferencia interna: " + logTransferencia);
     }
 
     public String procesarPagoViaSubastasYaDiagnostic(Deuda deuda, BigDecimal montoRecibido) {
