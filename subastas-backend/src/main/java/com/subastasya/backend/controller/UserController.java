@@ -266,20 +266,20 @@ public class UserController {
                                 cuentaEmpresa.setMontoGarantia(saldoEmpresa.subtract(pagoAlDuenio));
                                 medioDePagoRepository.save(cuentaEmpresa);
                             }
+
+                            // Notificar al dueño con montos reales
+                            Notificacion notif = new Notificacion();
+                            notif.setUsuario(duenioUsuario);
+                            notif.setMensaje("¡Pago confirmado! Tu artículo '" + item.getProducto().getDescripcionCatalogo() +
+                                "' fue vendido por USD " + String.format("%.2f", precioVenta) +
+                                ". Comisión SubastasYa (15%): USD " + String.format("%.2f", comisionEmpresa) +
+                                ". Monto acreditado en tu cuenta: USD " + String.format("%.2f", pagoAlDuenio) + ".");
+                            notif.setTipo("transferencia_recibida");
+                            notif.setReferenciaId(itemId);
+                            notif.setFechaCreacion(LocalDateTime.now());
+                            notificacionRepository.save(notif);
                         }
                     }
-
-                    // Notificar al dueño con montos reales
-                    Notificacion notif = new Notificacion();
-                    notif.setUsuario(duenioUsuario);
-                    notif.setMensaje("¡Pago confirmado! Tu artículo '" + item.getProducto().getDescripcionCatalogo() +
-                        "' fue vendido por USD " + String.format("%.2f", precioVenta) +
-                        ". Comisión SubastasYa (15%): USD " + String.format("%.2f", comisionEmpresa) +
-                        ". Monto acreditado en tu cuenta: USD " + String.format("%.2f", pagoAlDuenio) + ".");
-                    notif.setTipo("pago_recibido");
-                    notif.setReferenciaId(itemId);
-                    notif.setFechaCreacion(LocalDateTime.now());
-                    notificacionRepository.save(notif);
 
                     // Marcar producto como vendido ("no" disponible)
                     item.getProducto().setDisponible("no");
