@@ -86,7 +86,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
         const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
         if (isWinner) {
           // ============================================================
-          // COBRO AUTOMÁTICO
+          // COBRO AUTOMATICO
           // ============================================================
           (async () => {
             try {
@@ -109,26 +109,34 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                 console.error('Error obteniendo medios de pago:', mpErr);
               }
 
-              // 2. Obtener el deudaId del ítem ganado
+
+              // Reintentar hasta 5 veces con 1.5s de delay para darle tiempo al backend
+              // a generar la deuda después de que finaliza la subasta
               let dId = null;
-              try {
-                const wonRes = await fetch(
-                  `${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email || '')}`
-                );
-                if (wonRes.ok) {
-                  const wonItems = await wonRes.json();
-                  const wonMatch = wonItems.find(
-                    w => w.id === articulo?.id || w.id === articulo?.id?.toString()
-                  );
-                  if (wonMatch?.deudaId) {
-                    dId = wonMatch.deudaId;
+              for (let intento = 0; intento < 5; intento++) {
+                try {
+                  if (intento > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 1500));
                   }
+                  const wonRes = await fetch(
+                    `${API_BASE_URL.replace('/auth', '/users')}/me/items/won?email=${encodeURIComponent(usuario?.email || '')}`
+                  );
+                  if (wonRes.ok) {
+                    const wonItems = await wonRes.json();
+                    const wonMatch = wonItems.find(
+                      w => w.id === articulo?.id || w.id === articulo?.id?.toString()
+                    );
+                    if (wonMatch?.deudaId) {
+                      dId = wonMatch.deudaId;
+                      break; // encontrado, salir del loop
+                    }
+                  }
+                } catch (wonErr) {
+                  console.error(`Error obteniendo items ganados (intento ${intento + 1}):`, wonErr);
                 }
-              } catch (wonErr) {
-                console.error('Error obteniendo items ganados:', wonErr);
               }
 
-              // 3. Intentar el cobro automático
+
               if (dId) {
                 const payRes = await fetch(
                   `${API_BASE_URL.replace('/auth', '/users')}/me/debts/${dId}/pay`,
@@ -136,7 +144,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                      metodoEnvio: 'domicilio',        // envío a domicilio por defecto
+                      metodoEnvio: 'domicilio',
                       medioPagoNombre: medioPagoNombre,
                       medioPagoId: medioPagoId,
                       renunciaSeguro: false,
@@ -145,7 +153,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                 );
 
                 if (payRes.ok) {
-                  // Pago exitoso
+
                   Alert.alert(
                     '🏆 ¡Ganaste y el pago fue procesado!',
                     `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.\n\nEl pago se realizó automáticamente con ${medioPagoNombre}.`,
@@ -153,7 +161,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                     { cancelable: false }
                   );
                 } else {
-                  // Fondos insuficientes → multa generada por el backend
+
                   const errorMsg = await payRes.text();
                   Alert.alert(
                     '⚠️ Pago rechazado – Multa generada',
@@ -163,7 +171,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                   );
                 }
               } else {
-                // No se encontró deuda, igual informar al ganador
+
                 Alert.alert(
                   '🏆 ¡Ganaste la Subasta!',
                   `¡Felicidades! Ganaste "${articulo?.nombre}" por USD ${Number(msg.amount).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.\n\nPodés gestionar el pago desde "Mis Compras".`,

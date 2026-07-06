@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, FlatList, ActivityIndicator, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS } from '../theme/colors';
 import { API_BASE_URL } from './api';
@@ -29,7 +29,19 @@ export default function SubastasGanadasScreen({ route, navigation }) {
   }, []);
 
   const handleNavigate = (item) => {
-    // Pasar toda la info al CheckoutGanador
+    const isPaid = item.estado_pago === 'finalizado' || item.estado_pago === 'pagado';
+
+    if (!isPaid) {
+      // Los ítems pendientes se cobran automáticamente — no hay checkout manual
+      Alert.alert(
+        '⏳ Pago en proceso',
+        'El pago de este ítem se procesa automáticamente al ganar la subasta.\n\nSi el cobro fue rechazado, revisá la sección de Deudas para regularizar tu situación.',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
+    // Solo ítems ya pagados navegan al resumen de compra
     navigation.navigate('CheckoutGanador', { 
       articulo: {
         id: item.id,
@@ -52,6 +64,31 @@ export default function SubastasGanadasScreen({ route, navigation }) {
       },
       usuario 
     });
+
+    // ============================================================
+    // CÓDIGO ORIGINAL — COMENTADO (navegaba siempre al checkout)
+    // ============================================================
+    // navigation.navigate('CheckoutGanador', { 
+    //   articulo: {
+    //     id: item.id,
+    //     nombre: item.itemNombre,
+    //     itemNombre: item.itemNombre,
+    //     monto: item.monto,
+    //     estado_pago: item.estado_pago,
+    //     deudaId: item.deudaId,
+    //     urlImagen: item.urlImagen,
+    //     fecha: item.fecha,
+    //     subastaId: item.subastaId,
+    //     subastaNombre: item.subastaNombre,
+    //     comision: item.comision,
+    //     medioPagoUsado: item.medioPagoUsado,
+    //     fechaPago: item.fechaPago,
+    //     metodoEnvio: item.metodoEnvio,
+    //     renunciaSeguro: item.renunciaSeguro,
+    //     recibido: item.recibido,
+    //   },
+    //   usuario 
+    // });
   };
 
   const renderItem = ({ item }) => {
