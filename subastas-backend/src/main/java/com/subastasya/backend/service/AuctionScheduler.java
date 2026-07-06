@@ -74,7 +74,7 @@ public class AuctionScheduler {
                                 } else {
                                     // La subasta quedó desierta. La empresa compra el producto al precio base.
                                     if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
-                                        java.util.Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
+                                        java.util.Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio_Identificador(item.getProducto().getDuenio().getIdentificador());
                                         if (duenioOpt.isPresent() && duenioOpt.get().getIdUsuario() != null) {
                                             Usuario uDuenio = duenioOpt.get();
                                             
@@ -89,6 +89,18 @@ public class AuctionScheduler {
                                                     // Agregar el valor base
                                                     mp.setMontoGarantia(mp.getMontoGarantia().add(item.getPrecioBase()));
                                                     medioDePagoRepository.save(mp);
+                                                    
+                                                    // Descontar de la cuenta de la empresa
+                                                    java.util.Optional<Usuario> empresaOpt = usuarioRepository.findByEmail("subastasya@admin.com");
+                                                    if (empresaOpt.isPresent()) {
+                                                        List<MedioDePago> mpEmpresa = medioDePagoRepository.findByCliente_Identificador(empresaOpt.get().getCliente().getIdentificador());
+                                                        if (!mpEmpresa.isEmpty()) {
+                                                            MedioDePago cuentaEmpresa = mpEmpresa.get(0);
+                                                            java.math.BigDecimal saldoActual = cuentaEmpresa.getMontoGarantia() != null ? cuentaEmpresa.getMontoGarantia() : java.math.BigDecimal.ZERO;
+                                                            cuentaEmpresa.setMontoGarantia(saldoActual.subtract(item.getPrecioBase()));
+                                                            medioDePagoRepository.save(cuentaEmpresa);
+                                                        }
+                                                    }
                                                 }
                                             }
 
@@ -97,8 +109,8 @@ public class AuctionScheduler {
                                             Usuario usuarioRef = new Usuario();
                                             usuarioRef.setIdUsuario(uDuenio.getIdUsuario());
                                             notif.setUsuario(usuarioRef);
-                                            notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de $" + item.getPrecioBase() + ". El monto ha sido depositado en tu Medio de Pago.");
-                                            notif.setTipo("articulo_vendido");
+                                            notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de USD " + item.getPrecioBase() + ". El monto ha sido depositado en tu Medio de Pago.");
+                                            notif.setTipo("transferencia_recibida");
                                             notif.setReferenciaId(item.getIdentificador().longValue());
                                             notif.setFechaCreacion(java.time.LocalDateTime.now());
                                             notificacionRepository.save(notif);
