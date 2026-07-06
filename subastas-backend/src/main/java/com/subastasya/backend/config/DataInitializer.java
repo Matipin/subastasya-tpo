@@ -379,7 +379,7 @@ public class DataInitializer implements CommandLineRunner {
             Deuda d1 = new Deuda();
             d1.setUsuario(u1);
             d1.setMonto(new BigDecimal("1500.00"));
-            d1.setMotivo("Adjudicación Item de Subasta " + ih1.getIdentificador());
+            d1.setMotivo("Adjudicación Item de Subasta " + ih1.getIdentificador() + " (Penalizada)");
             d1.setPagada(true);
             d1.setFechaPago(LocalDateTime.now().minusDays(8));
             d1.setMedioPagoUsado("VISA ****3704");
@@ -397,7 +397,7 @@ public class DataInitializer implements CommandLineRunner {
             Deuda d2 = new Deuda();
             d2.setUsuario(u1);
             d2.setMonto(new BigDecimal("850.00"));
-            d2.setMotivo("Adjudicación Item de Subasta " + ih2.getIdentificador());
+            d2.setMotivo("Adjudicación Item de Subasta " + ih2.getIdentificador() + " (Penalizada)");
             d2.setPagada(true);
             d2.setFechaPago(LocalDateTime.now().minusDays(5));
             d2.setMedioPagoUsado("VISA ****3704");
@@ -415,7 +415,7 @@ public class DataInitializer implements CommandLineRunner {
             Deuda d3 = new Deuda();
             d3.setUsuario(u1);
             d3.setMonto(new BigDecimal("2300.00"));
-            d3.setMotivo("Adjudicación Item de Subasta " + ih3.getIdentificador());
+            d3.setMotivo("Adjudicación Item de Subasta " + ih3.getIdentificador() + " (Penalizada)");
             d3.setPagada(false);
             deudaRepository.save(d3);
 
@@ -434,7 +434,7 @@ public class DataInitializer implements CommandLineRunner {
             Deuda deudaOro = new Deuda();
             deudaOro.setUsuario(uOro);
             deudaOro.setMonto(new BigDecimal("10000.00"));
-            deudaOro.setMotivo("Pago por adjudicación de Diamante Bruto");
+            deudaOro.setMotivo("Pago por adjudicación de Diamante Bruto (Penalizada)");
             deudaOro.setPagada(false);
             deudaRepository.save(deudaOro);
 
