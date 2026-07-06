@@ -311,6 +311,9 @@ public class UserController {
     private void procesarPagoViaSubastasYa(Deuda deuda, BigDecimal montoRecibido) {
         String log = procesarPagoViaSubastasYaDiagnostic(deuda, montoRecibido);
         System.out.println("LOG TRANSFERENCIA: " + log);
+        try {
+            java.nio.file.Files.writeString(java.nio.file.Paths.get("transfer_log.txt"), log);
+        } catch (Exception e) {}
     }
 
     @GetMapping("/me/notifications")
