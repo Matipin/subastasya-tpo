@@ -85,9 +85,9 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
 
         const isWinner = msg.user === (usuario?.nombre || 'Usuario App');
         if (isWinner) {
-          // ============================================================
+          // 
           // COBRO AUTOMATICO
-          // ============================================================
+          // 
           (async () => {
             try {
 
@@ -110,8 +110,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
               }
 
 
-              // Reintentar hasta 5 veces con 1.5s de delay para darle tiempo al backend
-              // a generar la deuda después de que finaliza la subasta
+
               let dId = null;
               for (let intento = 0; intento < 5; intento++) {
                 try {
@@ -128,7 +127,7 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
                     );
                     if (wonMatch?.deudaId) {
                       dId = wonMatch.deudaId;
-                      break; // encontrado, salir del loop
+                      break;
                     }
                   }
                 } catch (wonErr) {
