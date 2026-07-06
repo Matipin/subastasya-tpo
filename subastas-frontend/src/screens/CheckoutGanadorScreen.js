@@ -47,15 +47,12 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
   const isDeuda = item.isDeuda;
   const valorPujado = item.monto || details.valorPujado;
   
-  // Chequear si la deuda es un cargo operativo (envío por rechazo de tasación)
-  const isCargoOperativo = isDeuda && (item.itemNombre?.toLowerCase().includes('rechazo') || item.itemNombre?.toLowerCase().includes('envío') || item.itemNombre?.toLowerCase().includes('operativo'));
+  const isAdjudicacion = isDeuda ? (item.motivo && item.motivo.includes('Adjudicación Item de Subasta')) : true;
   
-  // Si es deuda operativa, el monto es limpio (ej. USD 50). Si es por atraso de subasta, calculamos 10% de recargo.
-  const valorBase = isDeuda ? (isCargoOperativo ? valorPujado : (valorPujado / 1.10)) : valorPujado;
-  const comision = isDeuda ? (isCargoOperativo ? 0 : (valorPujado - valorBase)) : (valorPujado * 0.10); // Recargo o Comisión
-  
-  const costoEnvio = metodoEntrega === 'domicilio' ? details.costoEnvioDomicilio : 0;
-  const totalPagado = isDeuda ? (valorPujado + costoEnvio) : (valorPujado + comision + costoEnvio);
+  const valorBase = valorPujado;
+  const comision = isAdjudicacion ? (valorBase * 0.10) : 0;
+  const costoEnvio = (isAdjudicacion && metodoEntrega === 'domicilio') ? 50 : 0;
+  const totalPagado = valorBase + comision + costoEnvio;
 
   const handleConfirmar = () => {
     if (!selectedMedioId && !showMPBrick) {
@@ -324,7 +321,7 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
           <Ionicons name={metodoEntrega === 'domicilio' ? 'radio-button-on' : 'radio-button-off'} size={22} color={metodoEntrega === 'domicilio' ? COLORS.PRIMARY : '#9CA3AF'} />
           <Text style={styles.deliveryTitle}>Envío a domicilio</Text>
         </View>
-        <Text style={styles.deliverySubtitle}>Con seguro incluido - ${details.costoEnvioDomicilio.toLocaleString()}</Text>
+        <Text style={styles.deliverySubtitle}>Con seguro incluido - $50</Text>
       </TouchableOpacity>
 
       <TouchableOpacity 
