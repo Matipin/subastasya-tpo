@@ -194,18 +194,14 @@ public class UserController {
         return ResponseEntity.ok("Deuda pagada correctamente.");
     }
 
-    /**
-     * Procesa el flujo real de pago:
-     * 1. Suma el monto recibido a la cuenta de SubastasYa.
-     * 2. SubastasYa descuenta su comisión (15%) y acredita al dueño.
-     * 3. Notifica al dueño con el monto real.
-     */
-    private void procesarPagoViaSubastasYa(Deuda deuda, BigDecimal montoRecibido) {
+    public String procesarPagoViaSubastasYaDiagnostic(Deuda deuda, BigDecimal montoRecibido) {
+        StringBuilder trace = new StringBuilder();
         try {
-            // 1. Sumar a la cuenta de SubastasYa
+            trace.append("1. Inicio procesarPagoViaSubastasYa. ");
             Optional<Usuario> empresaOpt = usuarioRepository.findByEmail("subastasya@admin.com");
             MedioDePago cuentaEmpresa = null;
             if (empresaOpt.isPresent()) {
+                trace.append("Empresa encontrada. ");
                 List<MedioDePago> mpEmpresa = medioDePagoRepository.findByCliente_Identificador(
                     empresaOpt.get().getCliente().getIdentificador());
                 if (!mpEmpresa.isEmpty()) {
@@ -214,27 +210,41 @@ public class UserController {
                         ? cuentaEmpresa.getMontoGarantia() : BigDecimal.ZERO;
                     cuentaEmpresa.setMontoGarantia(saldoActual.add(montoRecibido));
                     medioDePagoRepository.save(cuentaEmpresa);
+                    trace.append("Saldo empresa actualizado (+").append(montoRecibido).append("). ");
+                } else {
+                    trace.append("Empresa no tiene tarjeta. ");
                 }
+            } else {
+                trace.append("Empresa no encontrada. ");
             }
 
-            // 2. Encontrar el ítem y dueño a partir del motivo de la deuda
             if (deuda.getMotivo() != null && deuda.getMotivo().contains("Subasta")) {
-                // Extraer ID del ítem del motivo (formato: "Adjudicación Item de Subasta {itemId}")
+                trace.append("Motivo contiene Subasta. ");
                 String[] parts = deuda.getMotivo().split(" ");
                 String idStr = parts[parts.length - 1].replaceAll("[^0-9]", "");
-                if (idStr.isEmpty()) return;
+                if (idStr.isEmpty()) {
+                    trace.append("Fallo: idStr vacío. ");
+                    return trace.toString();
+                }
                 
                 Long itemId = Long.valueOf(idStr);
                 Optional<ItemCatalogo> itemOpt = itemCatalogoRepository.findById(itemId);
-                if (itemOpt.isEmpty()) return;
+                if (itemOpt.isEmpty()) {
+                    trace.append("Fallo: itemCatalogo ").append(itemId).append(" no encontrado. ");
+                    return trace.toString();
+                }
                 
                 ItemCatalogo item = itemOpt.get();
-                if (item.getProducto() == null || item.getProducto().getDuenio() == null) return;
+                if (item.getProducto() == null) {
+                    trace.append("Fallo: producto nulo. ");
+                    return trace.toString();
+                }
+                if (item.getProducto().getDuenio() == null) {
+                    trace.append("Fallo: duenio nulo. ");
+                    return trace.toString();
+                }
+                trace.append("Duenio del item identificado: ").append(item.getProducto().getDuenio().getNombre()).append(". ");
 
-                // Calcular comisión y pago al dueño
-                // El montoRecibido ya incluye comisión del comprador (10%). 
-                // El precio de venta puro es lo que pagó el ganador en la puja (excluimos comisión comprador y envío).
-                // Buscamos la puja ganadora para obtener el precio real.
                 List<Pujo> pujos = pujoRepository.findByItemIdentificador(itemId);
                 Pujo pujoGanador = pujos.stream()
                     .filter(p -> "si".equals(p.getGanador()))
@@ -243,13 +253,12 @@ public class UserController {
                 BigDecimal precioVenta = pujoGanador != null ? pujoGanador.getImporte() : montoRecibido;
                 BigDecimal comisionEmpresa = precioVenta.multiply(new BigDecimal("0.15")).setScale(2, java.math.RoundingMode.HALF_UP);
                 BigDecimal pagoAlDuenio = precioVenta.subtract(comisionEmpresa).setScale(2, java.math.RoundingMode.HALF_UP);
+                trace.append("Monto a pagar al dueño: ").append(pagoAlDuenio).append(". ");
 
-                // 3. Acreditar al dueño
-                Optional<Usuario> duenioUsuarioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
+                Optional<Usuario> duenioUsuarioOpt = usuarioRepository.findByDuenio_Identificador(item.getProducto().getDuenio().getIdentificador());
                 if (duenioUsuarioOpt.isPresent()) {
                     Usuario duenioUsuario = duenioUsuarioOpt.get();
-                    
-                    // Buscar medio de pago del dueño para acreditarle
+                    trace.append("Usuario dueño encontrado. ");
                     if (duenioUsuario.getCliente() != null) {
                         List<MedioDePago> mpDuenio = medioDePagoRepository.findByCliente_Identificador(
                             duenioUsuario.getCliente().getIdentificador());
@@ -259,15 +268,15 @@ public class UserController {
                                 ? cuentaDuenio.getMontoGarantia() : BigDecimal.ZERO;
                             cuentaDuenio.setMontoGarantia(saldoDuenio.add(pagoAlDuenio));
                             medioDePagoRepository.save(cuentaDuenio);
+                            trace.append("Saldo dueño (").append(cuentaDuenio.getNumero()).append(") actualizado (+").append(pagoAlDuenio).append("). ");
 
-                            // Descontar de SubastasYa el pago al dueño
                             if (cuentaEmpresa != null) {
                                 BigDecimal saldoEmpresa = cuentaEmpresa.getMontoGarantia();
                                 cuentaEmpresa.setMontoGarantia(saldoEmpresa.subtract(pagoAlDuenio));
                                 medioDePagoRepository.save(cuentaEmpresa);
+                                trace.append("Saldo empresa descontado. ");
                             }
 
-                            // Notificar al dueño con montos reales
                             Notificacion notif = new Notificacion();
                             notif.setUsuario(duenioUsuario);
                             notif.setMensaje("¡Pago confirmado! Tu artículo '" + item.getProducto().getDescripcionCatalogo() +
@@ -278,18 +287,30 @@ public class UserController {
                             notif.setReferenciaId(itemId);
                             notif.setFechaCreacion(LocalDateTime.now());
                             notificacionRepository.save(notif);
+                            trace.append("Notificación enviada. Éxito total. ");
+                        } else {
+                            trace.append("Fallo: El dueño no tiene MedioDePago. ");
                         }
+                    } else {
+                        trace.append("Fallo: El usuario dueño no tiene Cliente asociado. ");
                     }
-
-                    // Marcar producto como vendido ("no" disponible)
                     item.getProducto().setDisponible("no");
                     productoRepository.save(item.getProducto());
+                } else {
+                    trace.append("Fallo: Usuario dueño no encontrado (findByDuenio falló). ");
                 }
+            } else {
+                trace.append("Deuda no contiene Subasta. ");
             }
         } catch (Exception e) {
-            System.err.println("Error en flujo de pago vía SubastasYa: " + e.getMessage());
-            e.printStackTrace();
+            trace.append("Excepcion: ").append(e.getMessage());
         }
+        return trace.toString();
+    }
+
+    private void procesarPagoViaSubastasYa(Deuda deuda, BigDecimal montoRecibido) {
+        String log = procesarPagoViaSubastasYaDiagnostic(deuda, montoRecibido);
+        System.out.println("LOG TRANSFERENCIA: " + log);
     }
 
     @GetMapping("/me/notifications")
