@@ -21,6 +21,7 @@ public class AuctionScheduler {
     private final UsuarioRepository usuarioRepository;
     private final NotificacionRepository notificacionRepository;
     private final AsistenteRepository asistenteRepository;
+    private final MedioDePagoRepository medioDePagoRepository;
 
     // Se ejecuta cada minuto
     @Scheduled(fixedRate = 60000)
@@ -75,12 +76,28 @@ public class AuctionScheduler {
                                     if (item.getProducto() != null && item.getProducto().getDuenio() != null) {
                                         java.util.Optional<Usuario> duenioOpt = usuarioRepository.findByDuenio(item.getProducto().getDuenio());
                                         if (duenioOpt.isPresent() && duenioOpt.get().getIdUsuario() != null) {
+                                            Usuario uDuenio = duenioOpt.get();
+                                            
+                                            // Realizar el movimiento de dinero (SubastasYa -> Duenio)
+                                            if (uDuenio.getCliente() != null) {
+                                                List<MedioDePago> medios = medioDePagoRepository.findByCliente_Identificador(uDuenio.getCliente().getIdentificador());
+                                                if (!medios.isEmpty()) {
+                                                    MedioDePago mp = medios.get(0);
+                                                    if (mp.getMontoGarantia() == null) {
+                                                        mp.setMontoGarantia(java.math.BigDecimal.ZERO);
+                                                    }
+                                                    // Agregar el valor base
+                                                    mp.setMontoGarantia(mp.getMontoGarantia().add(item.getPrecioBase()));
+                                                    medioDePagoRepository.save(mp);
+                                                }
+                                            }
+
                                             Notificacion notif = new Notificacion();
                                             // Usar referencia liviana con solo el ID para evitar errores de FK con entidades detached
                                             Usuario usuarioRef = new Usuario();
-                                            usuarioRef.setIdUsuario(duenioOpt.get().getIdUsuario());
+                                            usuarioRef.setIdUsuario(uDuenio.getIdUsuario());
                                             notif.setUsuario(usuarioRef);
-                                            notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de $" + item.getPrecioBase() + ". El pago se procesará a la brevedad.");
+                                            notif.setMensaje("Tu artículo '" + item.getProducto().getDescripcionCatalogo() + "' no recibió ofertas. La empresa ha adquirido el artículo por el valor base de $" + item.getPrecioBase() + ". El monto ha sido depositado en tu Medio de Pago.");
                                             notif.setTipo("articulo_vendido");
                                             notif.setReferenciaId(item.getIdentificador().longValue());
                                             notif.setFechaCreacion(java.time.LocalDateTime.now());
