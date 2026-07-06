@@ -144,20 +144,21 @@ public class UserController {
             }
         }
 
+        BigDecimal montoPujo = deuda.getMonto();
+        BigDecimal montoACobrar = montoPujo;
+        
+        if (deuda.getMotivo() != null && deuda.getMotivo().contains("Adjudicación Item de Subasta")) {
+            BigDecimal comision = montoPujo.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal envio = "domicilio".equals(metodoEnvio) ? new BigDecimal("50.00") : BigDecimal.ZERO;
+            montoACobrar = montoPujo.add(comision).add(envio);
+        }
+
         // VALIDACIÓN Y COBRO DEL MEDIO DE PAGO
         if (medioPagoId != null) {
             Optional<MedioDePago> mpOpt = medioDePagoRepository.findById(medioPagoId);
             if (mpOpt.isPresent()) {
                 MedioDePago mp = mpOpt.get();
                 BigDecimal saldoDisponible = mp.getMontoGarantia() != null ? mp.getMontoGarantia() : BigDecimal.ZERO;
-                BigDecimal montoPujo = deuda.getMonto();
-                BigDecimal montoACobrar = montoPujo;
-                
-                if (deuda.getMotivo() != null && deuda.getMotivo().contains("Adjudicación Item de Subasta")) {
-                    BigDecimal comision = montoPujo.multiply(new BigDecimal("0.10")).setScale(2, java.math.RoundingMode.HALF_UP);
-                    BigDecimal envio = "domicilio".equals(metodoEnvio) ? new BigDecimal("50.00") : BigDecimal.ZERO;
-                    montoACobrar = montoPujo.add(comision).add(envio);
-                }
 
                 if (saldoDisponible.compareTo(montoACobrar) < 0) {
                     // Generar multa del 10% automáticamente y suspender cuenta
@@ -176,15 +177,13 @@ public class UserController {
                 String ultimosCuatro = (mp.getNumero() != null && mp.getNumero().length() >= 4)
                     ? mp.getNumero().substring(mp.getNumero().length() - 4) : "****";
                 deuda.setMedioPagoUsado(mp.getTipo() + " " + (mp.getEntidad() != null ? mp.getEntidad() : "") + " ****" + ultimosCuatro);
-
-                // FLUJO REAL: Comprador → SubastasYa → Dueño
-                procesarPagoViaSubastasYa(deuda, montoACobrar);
-            } else if (body != null && body.containsKey("medioPagoNombre")) {
-                deuda.setMedioPagoUsado((String) body.get("medioPagoNombre"));
             }
         } else if (body != null && body.containsKey("medioPagoNombre")) {
             deuda.setMedioPagoUsado((String) body.get("medioPagoNombre"));
         }
+
+        // FLUJO REAL: Comprador → SubastasYa → Dueño (Aplica para medio interno o MercadoPago simulado)
+        procesarPagoViaSubastasYa(deuda, montoACobrar);
 
         deuda.setPagada(true);
         deuda.setFechaPago(LocalDateTime.now());

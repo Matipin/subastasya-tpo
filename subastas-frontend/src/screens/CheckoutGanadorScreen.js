@@ -58,8 +58,8 @@ export default function CheckoutGanadorScreen({ route, navigation }) {
   const totalPagado = isDeuda ? (valorPujado + costoEnvio) : (valorPujado + comision + costoEnvio);
 
   const handleConfirmar = () => {
-    if (!selectedMedioId && !showMPBrick && mediosPago.length > 0) {
-      Alert.alert('Error', 'Debes seleccionar un método de pago.');
+    if (!selectedMedioId && !showMPBrick) {
+      Alert.alert('Error', 'Debes seleccionar un método de pago o utilizar Mercado Pago.');
       return;
     }
     if (showMPBrick) {
