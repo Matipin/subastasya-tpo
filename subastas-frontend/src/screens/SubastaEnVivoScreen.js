@@ -152,7 +152,11 @@ export default function SubastaEnVivoScreen({ route, navigation }) {
       return;
     }
 
-    const amountToBid = parseFloat(customBid.replace(/,/g, ''));
+    let cleanStr = customBid.trim();
+    cleanStr = cleanStr.replace(/\.(?=\d{3})/g, ''); // Remover puntos separadores de miles
+    cleanStr = cleanStr.replace(/,(?=\d{3})/g, '');  // Remover comas separadoras de miles
+    cleanStr = cleanStr.replace(/,/g, '.');          // Reemplazar la coma decimal por punto
+    const amountToBid = parseFloat(cleanStr);
     const isOroOrPlatino = subasta?.categoria?.toLowerCase() === 'oro' || subasta?.categoria?.toLowerCase() === 'platino';
     const pujaMinima = status.puja_minima || (status.monto_actual + 1);
     
