@@ -5,11 +5,14 @@ import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, Info } from 'lucide-react-native';
 
+import { useAuthStore } from '@/store/useAuthStore';
+
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const isAuthenticated = useAuthStore(state => !!state.user);
 
   useEffect(() => {
     const fetchItem = async () => {
@@ -76,13 +79,23 @@ export default function ItemDetailScreen() {
           </View>
         </View>
         
-        <Text style={styles.price}>Precio Base: ${Number(item.starting_price).toLocaleString()}</Text>
-
-        <TouchableOpacity 
-            style={styles.liveButton} 
-            onPress={() => router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`)}>
-            <Text style={styles.liveButtonText}>Unirse a la Subasta en Vivo</Text>
-        </TouchableOpacity>
+        {isAuthenticated ? (
+          <>
+            <Text style={styles.price}>Precio Base: ${Number(item.starting_price).toLocaleString()} USD</Text>
+            <TouchableOpacity 
+                style={styles.liveButton} 
+                onPress={() => router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`)}>
+                <Text style={styles.liveButtonText}>Unirse a la Subasta en Vivo</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={{ paddingVertical: 20, alignItems: 'center', backgroundColor: Colors.light.border, borderRadius: 12, marginBottom: 24 }}>
+            <Text style={{ color: Colors.light.textSecondary, marginBottom: 10 }}>Iniciá sesión para ver el precio y participar</Text>
+            <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
+              <Text style={{ color: Colors.light.tint, fontWeight: 'bold' }}>Ir a Iniciar Sesión</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Descripción</Text>

@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/services/mockApi';
 import { Colors } from '@/constants/theme';
+import { supabase } from '@/lib/supabase';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('test@test.com');
@@ -18,10 +19,23 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      const response = await api.auth.login(email, password);
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password,
+      });
+      
+      if (authError) throw authError;
+
       // Fetch profile to get complete user data
-      const userProfile = await api.users.getProfile();
-      login(userProfile, response.token);
+      const { data: userProfile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single();
+        
+      if (profileError) throw profileError;
+      
+      login(userProfile, data.session.access_token);
       router.replace('/(main)');
     } catch (err: any) {
       setError(err.message || 'Error al iniciar sesión');

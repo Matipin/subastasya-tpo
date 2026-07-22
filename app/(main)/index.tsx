@@ -4,11 +4,13 @@ import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { Search, Bell, UserCircle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function HomeScreen() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const isAuthenticated = useAuthStore(state => !!state.user);
 
   useEffect(() => {
     const fetchCatalog = async () => {
@@ -40,7 +42,7 @@ export default function HomeScreen() {
           <TouchableOpacity style={styles.iconButton}>
             <Bell color={Colors.light.text} size={28} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(main)/profile')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push(isAuthenticated ? '/(main)/profile' : '/(auth)/login')}>
             <UserCircle color={Colors.light.text} size={32} />
           </TouchableOpacity>
         </View>
@@ -76,7 +78,11 @@ export default function HomeScreen() {
                 )}
                 <View style={styles.cardContent}>
                   <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
-                  <Text style={styles.itemPrice}>Base: ${item.starting_price.toLocaleString()}</Text>
+                  {isAuthenticated ? (
+                    <Text style={styles.itemPrice}>Base: ${item.starting_price.toLocaleString()}</Text>
+                  ) : (
+                    <Text style={[styles.itemPrice, { color: Colors.light.textSecondary, fontSize: 10 }]}>Iniciá sesión para ver precio</Text>
+                  )}
                 </View>
               </TouchableOpacity>
             ))}
