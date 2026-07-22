@@ -9,34 +9,34 @@ export default function RegisterStage2Screen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.stepText}>Etapa 2 de 3</Text>
+      <Text style={styles.stepText}>Etapa 2 de 3 - Investigación</Text>
       
       <View style={styles.content}>
         <View style={styles.iconContainer}>
           <MailCheck color={Colors.light.tint} size={64} />
         </View>
 
-        <Text style={styles.title}>Verificá tu correo</Text>
+        <Text style={styles.title}>Solicitud en Revisión</Text>
         <Text style={styles.message}>
-          Te enviamos un mail a <Text style={styles.bold}>juanperez@gmail.com</Text>
+          Tus datos (DNI, Domicilio) han sido recibidos y están siendo verificados por nuestra empresa mediante una investigación externa.
         </Text>
         <Text style={styles.message}>
-          Una vez que verifiquemos tus datos, te notificaremos para completar el registro.
+          Si eres aprobado, te enviaremos un correo electrónico con un enlace para que ingreses, generes tu clave personal y registres un medio de pago.
         </Text>
 
         <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>Categoría asignada: Pendiente</Text>
+          <Text style={styles.statusText}>Estado: En Investigación Externa</Text>
         </View>
 
         <TouchableOpacity 
           style={styles.button} 
           onPress={() => router.push('/(auth)/register-3')}
         >
-          <Text style={styles.buttonText}>Simular Aprobación (Ir a Etapa 3)</Text>
+          <Text style={styles.buttonText}>[Mock] Simular recibir correo e ir al paso 3</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.linkButton}>
-          <Text style={styles.linkText}>Reenviar mail</Text>
+        <TouchableOpacity style={styles.linkButton} onPress={() => router.replace('/(auth)/login')}>
+          <Text style={styles.linkText}>Volver al Inicio</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

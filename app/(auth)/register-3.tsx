@@ -44,15 +44,15 @@ export default function RegisterStage3Screen() {
             style={[styles.button, { marginTop: 40 }]} 
             onPress={() => {
               Alert.alert(
-                'Registro Exitoso',
-                'Tu cuenta ha sido creada. Te hemos enviado un email con un token para validar tu cuenta.\n\nNOTA: Una vez validado el email, tu cuenta pasará a "Aprobación Manual" por un administrador. Solo entonces podrás participar en subastas.',
+                'Registro Completo',
+                'Tu clave y medio de pago han sido registrados exitosamente. Ahora ya puedes ingresar a la aplicación y participar en las subastas con tu categoría asignada.',
                 [
-                  { text: 'Ir a Iniciar Sesión', onPress: () => router.replace('/(auth)/login') }
+                  { text: 'Ingresar', onPress: () => router.replace('/(auth)/login') }
                 ]
               );
             }}
           >
-            <Text style={styles.buttonText}>Finalizar Registro</Text>
+            <Text style={styles.buttonText}>Finalizar Registro (Ingresar)</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
