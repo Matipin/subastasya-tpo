@@ -7,9 +7,9 @@ const supabaseKey = 'sb_publishable_DNfQMI1Ndj55iV9PIg7z_g_COLWsUY7';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const accounts = [
-  { email: 'testcomun@test.com', password: 'comun', firstName: 'Usuario', lastName: 'Común', category: 'bronze' },
-  { email: 'testoro@test.com', password: 'oro', firstName: 'Usuario', lastName: 'Oro', category: 'gold' },
-  { email: 'testplatino@test.com', password: 'platino', firstName: 'Usuario', lastName: 'Platino', category: 'platinum' }
+  { email: 'testcomun@test.com', password: 'comun123', firstName: 'Usuario', lastName: 'Común', category: 'bronze' },
+  { email: 'testoro@test.com', password: 'oro12345', firstName: 'Usuario', lastName: 'Oro', category: 'gold' },
+  { email: 'testplatino@test.com', password: 'platino123', firstName: 'Usuario', lastName: 'Platino', category: 'platinum' }
 ];
 
 async function createAccounts() {

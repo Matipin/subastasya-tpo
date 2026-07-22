@@ -82,12 +82,11 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>Iniciá sesión para empezar a pujar.</Text>
         </View>
 
-        {/* Placeholder for illustration */}
         <View style={styles.illustrationContainer}>
           <Image 
-            source={require('@/assets/images/illustration.png')} 
+            source={require('@/assets/images/sinfondo.png')} 
             style={{width: '100%', height: '100%', borderRadius: 8}}
-            resizeMode="cover"
+            resizeMode="contain"
           />
         </View>
 
