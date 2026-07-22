@@ -6,7 +6,7 @@ import 'react-native-reanimated';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const unstable_settings = {
-  initialRouteName: '(auth)/login',
+  initialRouteName: '(auth)',
 };
 
 export default function RootLayout() {
