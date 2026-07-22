@@ -1,11 +1,69 @@
-import React from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { MailCheck } from 'lucide-react-native';
 
 export default function RegisterStage2Screen() {
   const router = useRouter();
+  const { email } = useLocalSearchParams<{ email: string }>();
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState('');
+  const [generatedToken, setGeneratedToken] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
+
+  useEffect(() => {
+    // Simulamos la investigación externa y mandamos el mail con el Google Apps Script original
+    const sendMail = async () => {
+      if (!email) {
+        setLoading(false);
+        return;
+      }
+      
+      const newToken = Math.random().toString(36).substring(2, 8).toUpperCase();
+      setGeneratedToken(newToken);
+      
+      try {
+        const scriptUrl = "https://script.google.com/macros/s/AKfycbxiIP0HRx_zcmGvui9FQr4ueyyB1vnHxee-dHH_NJEvx_aDh_Smh_AUmSBxZZSBp3OuIQ/exec";
+        const text = `¡Hola!\n\n` +
+          `Buenas noticias, tus datos han sido revisados y validados por nuestro equipo.\n\n` +
+          `Para activar tu cuenta y configurar tu contraseña, ingresá a la app y pegá el siguiente código de activación:\n\n` +
+          `<h1>${newToken}</h1>\n\n` +
+          `¡Te esperamos en las subastas!\n` +
+          `El equipo de SubastasYa.`;
+
+        const payload = {
+          to: email,
+          subject: "SubastasYa - Tu cuenta ha sido validada",
+          html: text.replace(/\n/g, "<br>")
+        };
+
+        await fetch(scriptUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        
+        setEmailSent(true);
+      } catch (err) {
+        console.error(err);
+        Alert.alert("Error", "No se pudo enviar el correo de validación.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    // Retraso de 3 segundos para simular el proceso de investigación
+    setTimeout(sendMail, 3000);
+  }, [email]);
+
+  const handleVerify = () => {
+    if (token.toUpperCase() === generatedToken) {
+      router.push({ pathname: '/(auth)/register-3', params: { email } });
+    } else {
+      Alert.alert('Error', 'Código incorrecto. Revisa tu correo electrónico.');
+    }
+  };
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
@@ -16,24 +74,40 @@ export default function RegisterStage2Screen() {
           <MailCheck color={Colors.light.tint} size={64} />
         </View>
 
-        <Text style={styles.title}>Solicitud en Revisión</Text>
-        <Text style={styles.message}>
-          Tus datos (DNI, Domicilio) han sido recibidos y están siendo verificados por nuestra empresa mediante una investigación externa.
-        </Text>
-        <Text style={styles.message}>
-          Si eres aprobado, te enviaremos un correo electrónico con un enlace para que ingreses, generes tu clave personal y registres un medio de pago.
-        </Text>
-
-        <View style={styles.statusBadge}>
-          <Text style={styles.statusText}>Estado: En Investigación Externa</Text>
-        </View>
-
-        <TouchableOpacity 
-          style={styles.button} 
-          onPress={() => router.push('/(auth)/register-3')}
-        >
-          <Text style={styles.buttonText}>[Mock] Simular recibir correo e ir al paso 3</Text>
-        </TouchableOpacity>
+        <Text style={styles.title}>Revisión de Seguridad</Text>
+        
+        {loading ? (
+          <>
+            <ActivityIndicator size="large" color={Colors.light.tint} style={{ marginVertical: 20 }} />
+            <Text style={styles.message}>
+              Estamos verificando tu documentación y cruzando datos... Por favor espera un momento.
+            </Text>
+          </>
+        ) : emailSent ? (
+          <>
+            <Text style={styles.message}>
+              ¡Aprobado! Te enviamos un correo electrónico a <Text style={styles.bold}>{email}</Text> con tu código de activación.
+            </Text>
+            
+            <View style={{width: '100%', marginTop: 20}}>
+              <Text style={styles.label}>Código de Validación:</Text>
+              <TextInput 
+                style={styles.input} 
+                placeholder="Ej: A4B8X9" 
+                value={token}
+                onChangeText={setToken}
+                autoCapitalize="characters"
+              />
+              <TouchableOpacity style={styles.button} onPress={handleVerify}>
+                <Text style={styles.buttonText}>Verificar Código</Text>
+              </TouchableOpacity>
+            </View>
+          </>
+        ) : (
+          <Text style={styles.message}>
+            No se detectó un correo electrónico válido para enviar el token.
+          </Text>
+        )}
 
         <TouchableOpacity style={styles.linkButton} onPress={() => router.replace('/(auth)/login')}>
           <Text style={styles.linkText}>Volver al Inicio</Text>
@@ -84,17 +158,22 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.light.text,
   },
-  statusBadge: {
-    backgroundColor: '#F59E0B',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    marginTop: 20,
-    marginBottom: 40,
+  label: {
+    color: Colors.light.text,
+    fontWeight: '500',
+    fontSize: 14,
+    marginBottom: 8,
   },
-  statusText: {
-    color: Colors.light.card,
-    fontWeight: 'bold',
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    textAlign: 'center',
+    letterSpacing: 2,
+    backgroundColor: Colors.light.card,
+    marginBottom: 16,
   },
   button: {
     backgroundColor: Colors.light.tint,
@@ -111,6 +190,7 @@ const styles = StyleSheet.create({
   },
   linkButton: {
     padding: 16,
+    marginTop: 20,
   },
   linkText: {
     color: Colors.light.tint,

@@ -10,9 +10,9 @@ export default function RegisterStage1Screen() {
   
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
+  const [email, setEmail] = useState('');
 
   const pickImage = async (side: 'front' | 'back') => {
-    // No permissions request is necessary for launching the image library
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -44,7 +44,14 @@ export default function RegisterStage1Screen() {
           <TextInput style={styles.input} placeholder="Ej: Perez" />
 
           <Text style={styles.label}>Correo electrónico</Text>
-          <TextInput style={styles.input} placeholder="Ej: juanperez@gmail.com" keyboardType="email-address" autoCapitalize="none" />
+          <TextInput 
+            style={styles.input} 
+            placeholder="Ej: juanperez@gmail.com" 
+            keyboardType="email-address" 
+            autoCapitalize="none"
+            value={email}
+            onChangeText={setEmail}
+          />
 
           <Text style={styles.label}>Domicilio legal</Text>
           <TextInput style={styles.input} placeholder="Ej: Av. Corrientes 1234" />
@@ -80,7 +87,13 @@ export default function RegisterStage1Screen() {
           </View>
           <Text style={styles.helperText}>Asegúrate de que las fotos sean nítidas y que todos los datos sean legibles. Tus datos serán verificados por nuestro equipo antes de activar la cuenta.</Text>
 
-          <TouchableOpacity style={styles.button} onPress={() => router.push('/(auth)/register-2')}>
+          <TouchableOpacity style={styles.button} onPress={() => {
+            if (!email) {
+              alert('Por favor ingresa un correo');
+              return;
+            }
+            router.push({ pathname: '/(auth)/register-2', params: { email } });
+          }}>
             <Text style={styles.buttonText}>Continuar a Etapa 2</Text>
           </TouchableOpacity>
         </View>
