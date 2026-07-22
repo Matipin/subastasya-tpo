@@ -66,6 +66,10 @@ CREATE POLICY "Permitir todo a autenticados en item_proposals" ON public.item_pr
 CREATE POLICY "Permitir todo a autenticados en debts" ON public.debts FOR ALL USING (auth.role() = 'authenticated');
 CREATE POLICY "Permitir todo a autenticados en transactions" ON public.transactions FOR ALL USING (auth.role() = 'authenticated');
 
+-- Corrección de permisos para que usuarios no logueados puedan ver el catálogo
+GRANT SELECT ON public.items TO anon;
+GRANT SELECT ON public.items TO authenticated;
+
 -- Trigger para actualizar updated_at en item_proposals
 CREATE TRIGGER update_item_proposals_modtime
     BEFORE UPDATE ON public.item_proposals
