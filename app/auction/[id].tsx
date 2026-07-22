@@ -1,37 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { api } from '@/services/mockApi';
-import { Item } from '@/types';
+import { supabase } from '@/lib/supabase';
 import { ChevronLeft, Info } from 'lucide-react-native';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
-  const [item, setItem] = useState<Item | null>(null);
+  const [item, setItem] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchItem = async () => {
       try {
-        const data = await api.items.getById(Number(id));
+        const { data, error } = await supabase
+          .from('items')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (error) throw error;
         if (data) {
           setItem(data);
-        } else {
-          // Mock fallback
-          setItem({
-            id: Number(id),
-            numero_pieza: `B-${id}`,
-            descripcion: 'Antigüedad / Artículo de Subasta',
-            historia: 'Un artículo con gran valor histórico y conservación excelente. Perteneció a una colección privada importante antes de salir a subasta pública.',
-            fecha_creacion: '1900',
-            artista: 'Autor Desconocido',
-            precio_base: 500000,
-            dueño_actual: 'Anónimo',
-            imagenes: [],
-            ubicacion_deposito: 'Sede Central CABA',
-          });
         }
       } catch (error) {
         console.error(error);
@@ -39,7 +30,7 @@ export default function ItemDetailScreen() {
         setLoading(false);
       }
     };
-    fetchItem();
+    if (id) fetchItem();
   }, [id]);
 
   if (loading) {
@@ -50,7 +41,14 @@ export default function ItemDetailScreen() {
     );
   }
 
-  if (!item) return null;
+  if (!item) return (
+    <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Text style={{color: Colors.light.text}}>Artículo no encontrado</Text>
+        <TouchableOpacity onPress={() => router.back()} style={{marginTop: 20}}>
+            <Text style={{color: Colors.light.tint}}>Volver</Text>
+        </TouchableOpacity>
+    </View>
+  );
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -63,38 +61,37 @@ export default function ItemDetailScreen() {
       </View>
 
       <View style={styles.imageCarouselPlaceholder}>
-        <Text style={{ color: Colors.light.textSecondary }}>Imágenes del artículo (1/6)</Text>
+        {item.images && item.images.length > 0 ? (
+            <Image source={{ uri: item.images[0] }} style={{width: '100%', height: '100%', resizeMode: 'cover'}} />
+        ) : (
+            <Text style={{ color: Colors.light.textSecondary }}>Sin foto</Text>
+        )}
       </View>
 
       <View style={styles.content}>
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{item.descripcion}</Text>
+          <Text style={styles.title}>{item.title}</Text>
           <View style={styles.badge}>
-            <Text style={styles.badgeText}>Lote #{item.numero_pieza}</Text>
+            <Text style={styles.badgeText}>Lote</Text>
           </View>
         </View>
         
-        <Text style={styles.price}>Precio Base: ${item.precio_base.toLocaleString()}</Text>
+        <Text style={styles.price}>Precio Base: ${Number(item.starting_price).toLocaleString()}</Text>
+
+        <TouchableOpacity 
+            style={styles.liveButton} 
+            onPress={() => router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`)}>
+            <Text style={styles.liveButtonText}>Unirse a la Subasta en Vivo</Text>
+        </TouchableOpacity>
 
         <View style={styles.infoCard}>
-          <Text style={styles.sectionTitle}>Descripción Técnica</Text>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Artista/Autor:</Text>
-            <Text style={styles.infoValue}>{item.artista || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Año de creación:</Text>
-            <Text style={styles.infoValue}>{item.fecha_creacion || 'N/A'}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Text style={styles.infoLabel}>Ubicación:</Text>
-            <Text style={styles.infoValue}>{item.ubicacion_deposito}</Text>
-          </View>
+          <Text style={styles.sectionTitle}>Descripción</Text>
+          <Text style={styles.infoValue}>{item.description}</Text>
         </View>
 
         <View style={styles.infoCard}>
           <Text style={styles.sectionTitle}>Historia y Contexto</Text>
-          <Text style={styles.historyText}>{item.historia || 'Sin historia registrada.'}</Text>
+          <Text style={styles.historyText}>{item.history || 'Sin historia registrada.'}</Text>
         </View>
 
         <View style={styles.verificationBanner}>
@@ -131,7 +128,7 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
   },
   imageCarouselPlaceholder: {
-    height: 250,
+    height: 300,
     backgroundColor: '#E2E8F0',
     justifyContent: 'center',
     alignItems: 'center',
@@ -167,7 +164,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: Colors.light.tint,
+    marginBottom: 16,
+  },
+  liveButton: {
+    backgroundColor: Colors.light.tint,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
     marginBottom: 24,
+  },
+  liveButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   infoCard: {
     backgroundColor: Colors.light.card,
@@ -183,19 +192,10 @@ const styles = StyleSheet.create({
     color: Colors.light.text,
     marginBottom: 12,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoLabel: {
-    color: Colors.light.textSecondary,
-    fontSize: 14,
-  },
   infoValue: {
     color: Colors.light.text,
-    fontWeight: '500',
     fontSize: 14,
+    lineHeight: 20,
   },
   historyText: {
     color: Colors.light.textSecondary,

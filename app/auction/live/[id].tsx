@@ -1,29 +1,44 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, ScrollView, Alert, Image } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, Clock, DollarSign, User } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
+import { supabase } from '@/lib/supabase';
 
 export default function LiveAuctionRoom() {
-  const { id } = useLocalSearchParams();
+  const { id, item_id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuthStore();
+  const [item, setItem] = useState<any | null>(null);
 
-  // Mock de estado de subasta en vivo
-  const [montoActual, setMontoActual] = useState(15000);
-  const [pujaMinima, setPujaMinima] = useState(15100);
-  const [pujaMaxima, setPujaMaxima] = useState(17000);
-  const [ultimoPostor, setUltimoPostor] = useState('Mernes, E.');
-  const [tiempoRestante, setTiempoRestante] = useState(300); // 5 minutos en segundos
+  // Estado de subasta en vivo
+  const [montoActual, setMontoActual] = useState(0);
+  const [pujaMinima, setPujaMinima] = useState(0);
+  const [pujaMaxima, setPujaMaxima] = useState(0);
+  const [ultimoPostor, setUltimoPostor] = useState('Nadie');
+  const [tiempoRestante, setTiempoRestante] = useState(300); // 5 minutos iniciales
   const [bidAmount, setBidAmount] = useState('');
+  const [history, setHistory] = useState<any[]>([]);
 
-  // Historial de pujas simulado
-  const [history, setHistory] = useState([
-    { id: 1, usuario: 'Mernes, E.', monto: 15000, time: '10:45:00' },
-    { id: 2, usuario: 'Gomez, P.', monto: 14500, time: '10:44:30' },
-    { id: 3, usuario: 'Perez, J.', monto: 14000, time: '10:43:10' },
-  ]);
+  useEffect(() => {
+    // Fetch real item
+    const fetchItem = async () => {
+      try {
+        if (!item_id) return;
+        const { data, error } = await supabase.from('items').select('*').eq('id', item_id).single();
+        if (data) {
+          setItem(data);
+          setMontoActual(Number(data.starting_price));
+          setPujaMinima(Number(data.starting_price) + 100);
+          setPujaMaxima(Number(data.starting_price) + 2000);
+        }
+      } catch (err) {
+        console.log(err);
+      }
+    };
+    fetchItem();
+  }, [item_id]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -40,12 +55,19 @@ export default function LiveAuctionRoom() {
 
   const handleBid = () => {
     const amount = Number(bidAmount);
+    
+    // Regla: No pujar contra ti mismo
+    if (ultimoPostor === (user?.first_name || 'Tú')) {
+      Alert.alert('Aviso', 'Ya eres el líder actual de esta subasta.');
+      return;
+    }
+
     if (!amount || isNaN(amount)) {
       Alert.alert('Error', 'Ingrese un monto válido');
       return;
     }
     
-    const isOroOrPlatino = user?.categoria === 'oro' || user?.categoria === 'platino';
+    const isOroOrPlatino = user?.category === 'gold' || user?.category === 'platinum';
     
     if (amount < pujaMinima) {
       Alert.alert('Puja inválida', `El monto debe ser de al menos $${pujaMinima}`);
@@ -59,17 +81,21 @@ export default function LiveAuctionRoom() {
 
     // Aceptar puja
     setMontoActual(amount);
-    setPujaMinima(amount + 100); // Simulando incremento minimo
-    setPujaMaxima(amount + 2000); // Simulando incremento maximo
-    setUltimoPostor(user?.nombre || 'Tú');
+    setPujaMinima(amount + 100);
+    setPujaMaxima(amount + 2000);
+    setUltimoPostor(user?.first_name || 'Tú');
     
     setHistory(prev => [
-      { id: Date.now(), usuario: user?.nombre || 'Tú', monto: amount, time: new Date().toLocaleTimeString() },
+      { id: Date.now(), usuario: user?.first_name || 'Tú', monto: amount, time: new Date().toLocaleTimeString() },
       ...prev
     ]);
     
+    // Regla de tiempo: Al pujar, el tiempo se establece a 1 minuto (60s) 
+    // si queda más de 1 minuto o si se quiere hacer "snipe protection"
+    setTiempoRestante(60); 
+
     setBidAmount('');
-    Alert.alert('Éxito', `Has pujado $${amount}`);
+    Alert.alert('Éxito', `Has pujado $${amount.toLocaleString()}`);
   };
 
   return (
@@ -86,10 +112,14 @@ export default function LiveAuctionRoom() {
       </View>
 
       <View style={styles.videoPlaceholder}>
-        <Text style={styles.videoText}>Transmisión en Vivo</Text>
+        {item?.images && item.images.length > 0 ? (
+          <Image source={{ uri: item.images[0] }} style={StyleSheet.absoluteFillObject} />
+        ) : (
+          <Text style={styles.videoText}>Transmisión en Vivo</Text>
+        )}
         <View style={styles.overlayInfo}>
-          <Text style={styles.itemTitle}>Reloj de pulsera años 60</Text>
-          <Text style={styles.itemLot}>Lote #A-123</Text>
+          <Text style={styles.itemTitle}>{item?.title || 'Cargando artículo...'}</Text>
+          <Text style={styles.itemLot}>Lote #{item_id?.slice(0, 8) || ''}</Text>
         </View>
       </View>
 
@@ -120,7 +150,7 @@ export default function LiveAuctionRoom() {
       <View style={styles.biddingSection}>
         <Text style={styles.biddingRules}>
           Puja Mínima: ${pujaMinima.toLocaleString()} 
-          {user?.categoria !== 'oro' && user?.categoria !== 'platino' && ` • Máxima: $${pujaMaxima.toLocaleString()}`}
+          {user?.category !== 'gold' && user?.category !== 'platinum' && ` • Máxima: $${pujaMaxima.toLocaleString()}`}
         </Text>
         
         <View style={styles.bidInputRow}>
@@ -136,7 +166,6 @@ export default function LiveAuctionRoom() {
           </TouchableOpacity>
         </View>
         
-        {/* Quick bids */}
         <View style={styles.quickBids}>
           <TouchableOpacity style={styles.quickBidBtn} onPress={() => setBidAmount(pujaMinima.toString())}>
             <Text style={styles.quickBidText}>+ Mínimo</Text>
@@ -149,6 +178,9 @@ export default function LiveAuctionRoom() {
 
       <ScrollView style={styles.historySection}>
         <Text style={styles.historyTitle}>Historial de Ofertas</Text>
+        {history.length === 0 ? (
+          <Text style={{textAlign: 'center', color: '#888', marginTop: 20}}>Sé el primero en pujar</Text>
+        ) : null}
         {history.map((h, i) => (
           <View key={h.id} style={[styles.historyItem, i === 0 && styles.historyItemLatest]}>
             <View>
@@ -175,7 +207,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 16,
-    backgroundColor: '#111', // Dark header for live view
+    backgroundColor: '#111',
   },
   backButton: {
     padding: 4,
@@ -222,6 +254,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 16,
     left: 16,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 10,
+    borderRadius: 8,
   },
   itemTitle: {
     color: '#FFF',

@@ -3,29 +3,26 @@ import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput,
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { Search, Bell, UserCircle } from 'lucide-react-native';
-import { api } from '@/services/mockApi';
-import { Item } from '@/types';
+import { supabase } from '@/lib/supabase';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [items, setItems] = useState<Item[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
-        // Fetching items from the first auction as a mock catalog
-        const catalog = await api.auctions.getCatalog(1);
+        const { data, error } = await supabase
+          .from('items')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (error) throw error;
         
-        // Simulating multiple items for the grid
-        const mockGrid = [
-          ...catalog,
-          { id: 101, numero_pieza: 'B-1', descripcion: 'Telefono vintage', precio_base: 1000000, dueño_actual: '', imagenes: [] },
-          { id: 102, numero_pieza: 'B-2', descripcion: 'Muñeca vintage', precio_base: 1000000, dueño_actual: '', imagenes: [] },
-          { id: 103, numero_pieza: 'B-3', descripcion: 'Juego de tazas vintage', precio_base: 1000000, dueño_actual: '', imagenes: [] },
-        ];
-        
-        setItems(mockGrid);
+        if (data) {
+          setItems(data);
+        }
       } catch (error) {
         console.error("Error fetching catalog", error);
       } finally {
@@ -38,7 +35,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Menu / Home</Text>
+        <Text style={styles.headerTitle}>SubastasYa</Text>
         <View style={styles.headerIcons}>
           <TouchableOpacity style={styles.iconButton}>
             <Bell color={Colors.light.text} size={28} />
@@ -58,7 +55,7 @@ export default function HomeScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Item Destacadas</Text>
+        <Text style={styles.sectionTitle}>Artículos Destacados</Text>
         
         {loading ? (
           <ActivityIndicator size="large" color={Colors.light.tint} style={{ marginTop: 50 }} />
@@ -70,15 +67,24 @@ export default function HomeScreen() {
                 style={styles.card}
                 onPress={() => router.push(`/auction/${item.id}`)}
               >
-                <View style={styles.imagePlaceholder}>
-                   {/* Imagen Placeholder */}
-                </View>
+                {item.images && item.images.length > 0 ? (
+                  <Image source={{ uri: item.images[0] }} style={styles.imagePlaceholder} />
+                ) : (
+                  <View style={styles.imagePlaceholder}>
+                     <Text style={{color: '#888', textAlign: 'center', marginTop: 50}}>Sin foto</Text>
+                  </View>
+                )}
                 <View style={styles.cardContent}>
-                  <Text style={styles.itemTitle}>{item.descripcion}</Text>
-                  <Text style={styles.itemPrice}>Precio base: {item.precio_base.toLocaleString()}$</Text>
+                  <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
+                  <Text style={styles.itemPrice}>Base: ${item.starting_price.toLocaleString()}</Text>
                 </View>
               </TouchableOpacity>
             ))}
+            {items.length === 0 && !loading && (
+              <Text style={{ textAlign: 'center', marginTop: 20, color: Colors.light.textSecondary, width: '100%' }}>
+                No hay artículos disponibles.
+              </Text>
+            )}
           </View>
         )}
       </ScrollView>
@@ -102,9 +108,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.light.border,
   },
   headerTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: Colors.light.text,
+    color: Colors.light.tint,
   },
   headerIcons: {
     flexDirection: 'row',
@@ -156,7 +162,9 @@ const styles = StyleSheet.create({
   },
   imagePlaceholder: {
     height: 120,
+    width: '100%',
     backgroundColor: '#E2E8F0',
+    resizeMode: 'cover',
   },
   cardContent: {
     padding: 12,
@@ -169,6 +177,7 @@ const styles = StyleSheet.create({
   },
   itemPrice: {
     fontSize: 12,
-    color: Colors.light.textSecondary,
+    color: Colors.light.tint,
+    fontWeight: '600',
   },
 });

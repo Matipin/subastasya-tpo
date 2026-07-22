@@ -27,6 +27,10 @@ export default function ProfileScreen() {
       </View>
 
       <View style={styles.actions}>
+        <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/profile/edit')}>
+          <Text style={styles.actionText}>Editar Perfil</Text>
+          <ChevronRight color={Colors.light.icon} size={20} />
+        </TouchableOpacity>
         <TouchableOpacity style={styles.actionButton} onPress={() => router.push('/profile/my-auctions')}>
           <Text style={styles.actionText}>Mis subastas</Text>
           <ChevronRight color={Colors.light.icon} size={20} />
