@@ -1,42 +1,37 @@
-# SubastasYa - Aplicación Móvil
+# 🔨 Subastas Ya
 
-Este repositorio contiene el código fuente de **SubastasYa**, una plataforma para participar en subastas dinámicas en tiempo real. 
+Welcome to **Subastas Ya**! A modern, fast, and multi-platform auction platform.
 
-## 🚀 Cómo ejecutar la aplicación
+This project is built as a Universal Application (iOS, Android, Web) using the **React Native** and **Expo** ecosystem. The web version is continuously deployed and hosted on **Vercel**, while the backend and security architecture are powered by **Supabase**.
 
-La arquitectura del proyecto está dividida en un Backend (Java/Spring Boot) y un Frontend (React Native/Expo). **Para facilitar la corrección y prueba, el Backend y la Base de Datos ya se encuentran desplegados y funcionando en la nube** (Render y Supabase). 
+## 🚀 Technologies Used
 
-Por lo tanto, **solo es necesario ejecutar el Frontend** de manera local para probar la aplicación completa.
+The application is built using a modern and highly scalable stack:
 
-### 📋 Requisitos previos
-* [Node.js](https://nodejs.org/) (versión 18 o superior recomendada)
-* Un teléfono móvil con la aplicación **Expo Go** instalada (disponible gratis en [Android/Play Store](https://play.google.com/store/apps/details?id=host.exp.exponent) y [iOS/App Store](https://apps.apple.com/us/app/expo-go/id982107779)).
+- **[React Native](https://reactnative.dev/) & [Expo](https://expo.dev/):** Main framework for universal development (Web and Mobile). Running on Expo SDK 54.
+- **[Expo Router](https://docs.expo.dev/router/introduction/):** Declarative, file-based routing system.
+- **[Supabase](https://supabase.com/):** Backend-as-a-Service providing PostgreSQL, Authentication (JWT), and Storage.
+- **[Zustand](https://github.com/pmndrs/zustand):** Global state management; lightweight, fast, and boilerplate-free.
+- **[TypeScript](https://www.typescriptlang.org/):** Ensures a typed and robust codebase, reducing runtime errors.
+- **[Reanimated](https://docs.swmansion.com/react-native-reanimated/) & [Gesture Handler](https://docs.swmansion.com/react-native-gesture-handler/):** Provide smooth 60fps animations and complex touch interactions.
+- **[Lucide Icons](https://lucide.dev/) / Expo Vector Icons:** Clean and optimized iconography for mobile apps.
 
-### 📱 Pasos para iniciar el Frontend
+## 📁 Project Structure
 
-1. **Abrir una terminal** y navegar hacia la carpeta del frontend:
-   ```bash
-   cd subastas-frontend
-   ```
+The source code is organized as follows to ensure maintainability and scalability:
 
-2. **Instalar las dependencias** del proyecto:
-   ```bash
-   npm install
-   ```
+- `/app` - Screens and routing structure (Expo Router).
+- `/components` - Reusable and atomic UI components.
+- `/store` - Global state management using Zustand (including Auth flows).
+- `/services` - External API integrations and backend logic.
+- `/lib` - Service configurations (e.g., Supabase client).
+- `/hooks` - Custom React hooks encapsulating component logic.
+- `/types` - Global TypeScript types and interfaces.
+- `/constants` - Configuration variables, color palettes, and themes.
 
-3. **Iniciar el servidor de desarrollo** de Expo:
-   ```bash
-   npx expo start
-   ```
+## 🌐 Deployment (Vercel)
 
-4. **Probar la app en tu dispositivo:**
-   * Al ejecutar el comando anterior, aparecerá un **código QR** en la terminal.
-   * Abre la aplicación **Expo Go** en tu celular.
-   * Selecciona "Scan QR Code" y escanea el código de la terminal.
-   * ¡Listo! La aplicación comenzará a construirse e iniciará en tu teléfono conectándose automáticamente al backend en la nube.
+The web version of this project is automatically deployed via **Vercel**. Every change merged into the main branch triggers a fast build and deployment, ensuring users always have access to the latest version without additional configuration.
 
 ---
-
-### ℹ️ Información Adicional
-* **Backend Url:** `https://subastasya-tpo.onrender.com/api/v1` (Ya configurado por defecto en la app móvil).
-
+*Developed with passion to provide the best online auction experience.*
