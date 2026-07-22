@@ -1,33 +1,66 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { ChevronLeft, PackageCheck } from 'lucide-react-native';
+import { ChevronLeft, PackageCheck, Plus } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function WonItemsScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
+  
+  const [wonItems, setWonItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const [wonItems, setWonItems] = useState([
-    {
-      item_id: 55,
-      titulo: "Reloj de pulsera años 60",
+  // Generamos un item simulado para probar el flujo financiero
+  const generateMockWonItem = () => {
+    const newItem = {
+      item_id: Math.floor(Math.random() * 1000),
+      titulo: "Reloj de pulsera simulado",
       monto_pujado: 12000.00,
       comisiones: 1200.00,
       envio: 500.00,
       total_a_pagar: 13700.00,
-      moneda: "ARS",
-      estado_pago: "pendiente"
-    }
-  ]);
+      estado_pago: 'pendiente'
+    };
+    setWonItems([newItem, ...wonItems]);
+  };
 
-  const handleCheckout = (id: number) => {
-    Alert.alert('Checkout', '¿Deseas pagar ahora y coordinar el retiro/envío?', [
+  const handleCheckout = (item: any) => {
+    Alert.alert('Checkout', `¿Deseas pagar $${item.total_a_pagar} ahora con tu método de pago principal?`, [
       { text: 'Cancelar', style: 'cancel' },
       { 
         text: 'Pagar', 
-        onPress: () => {
-          setWonItems(prev => prev.map(item => item.item_id === id ? { ...item, estado_pago: 'pagado' } : item));
-          Alert.alert('¡Felicidades!', 'El pago ha sido procesado exitosamente.');
+        onPress: async () => {
+          setLoading(true);
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Transaction para el pago del artículo (Venta)
+            await supabase.from('transactions').insert({
+              user_id: user.id,
+              type: 'sale_payment',
+              amount: item.total_a_pagar,
+              description: `Pago de subasta ganada: ${item.titulo}`
+            });
+
+            // 2. Transaction interna de comisión retenida por la plataforma
+            await supabase.from('transactions').insert({
+              user_id: user.id,
+              type: 'commission',
+              amount: item.comisiones,
+              description: `Comisión cobrada por: ${item.titulo}`
+            });
+
+            setWonItems(prev => prev.map(w => w.item_id === item.item_id ? { ...w, estado_pago: 'pagado' } : w));
+            Alert.alert('¡Felicidades!', 'El pago ha sido procesado exitosamente. La empresa retuvo su comisión.');
+          } catch(err) {
+             Alert.alert('Error', 'No se pudo procesar el pago.');
+          } finally {
+             setLoading(false);
+          }
         }
       }
     ]);
@@ -44,13 +77,15 @@ export default function WonItemsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        {loading && <ActivityIndicator size="large" color={Colors.light.tint} style={{marginBottom: 20}} />}
+
         {wonItems.length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={styles.emptyText}>Aún no has ganado ninguna subasta.</Text>
           </View>
         ) : (
-          wonItems.map(item => (
-            <View key={item.item_id} style={styles.card}>
+          wonItems.map((item, idx) => (
+            <View key={idx} style={styles.card}>
               <View style={styles.cardHeader}>
                 <PackageCheck color={Colors.light.tint} size={24} />
                 <Text style={styles.itemTitle}>{item.titulo}</Text>
@@ -71,12 +106,12 @@ export default function WonItemsScreen() {
                 </View>
                 <View style={[styles.row, styles.totalRow]}>
                   <Text style={styles.totalLabel}>Total a Pagar:</Text>
-                  <Text style={styles.totalValue}>${item.total_a_pagar.toLocaleString()} {item.moneda}</Text>
+                  <Text style={styles.totalValue}>${item.total_a_pagar.toLocaleString()} ARS</Text>
                 </View>
               </View>
 
               {item.estado_pago === 'pendiente' ? (
-                <TouchableOpacity style={styles.checkoutButton} onPress={() => handleCheckout(item.item_id)}>
+                <TouchableOpacity style={styles.checkoutButton} onPress={() => handleCheckout(item)}>
                   <Text style={styles.checkoutText}>Pagar y Coordinar Retiro</Text>
                 </TouchableOpacity>
               ) : (
@@ -87,6 +122,11 @@ export default function WonItemsScreen() {
             </View>
           ))
         )}
+
+        <TouchableOpacity style={styles.mockButton} onPress={generateMockWonItem}>
+           <Plus color={Colors.light.textSecondary} size={20} />
+           <Text style={styles.mockButtonText}>Simular ganar una subasta</Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
@@ -125,4 +165,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#E8F5E9', padding: 16, borderRadius: 8, alignItems: 'center', borderWidth: 1, borderColor: '#A5D6A7'
   },
   paidText: { color: '#2E7D32', fontWeight: 'bold', fontSize: 14 },
+  mockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginTop: 40,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+  },
+  mockButtonText: {
+    marginLeft: 8,
+    color: Colors.light.textSecondary,
+    fontWeight: '500',
+  },
 });

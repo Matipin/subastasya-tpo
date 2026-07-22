@@ -1,42 +1,103 @@
-import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { ChevronLeft, Box, CheckCircle, XCircle, Clock } from 'lucide-react-native';
+import { ChevronLeft, Box, CheckCircle, XCircle, Clock, Search } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function MyItemsScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
+  const [proposals, setProposals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const mockProposed = [
-    {
-      solicitud_id: 501,
-      titulo: "Jarrón Dinastía Ming",
-      estado: "rechazado",
-      motivo_rechazo: "El artículo no coincide con las fotos enviadas o su autenticidad no pudo ser verificada.",
-      costo_devolucion: 150.00
-    },
-    {
-      solicitud_id: 502,
-      titulo: "Cuadro Pintor Argentino",
-      estado: "aceptado",
-      proxima_subasta: {
-        fecha_hora: "2026-06-10T14:00:00Z",
-        lugar: "Sede Central, CABA",
-        valor_base_asignado: 1200000.00,
-        comision_venta: "15%"
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from('item_proposals')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (data) {
+        setProposals(data);
       }
-    },
-    {
-      solicitud_id: 503,
-      titulo: "Mesa de Roble Antigua",
-      estado: "pendiente"
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const handleAcceptAppraisal = (proposal: any) => {
+    Alert.alert(
+      'Aceptar Tasación',
+      `¿Aceptas subastar "${proposal.title}" con un precio base de $${proposal.proposed_price}? Se aplicará un 10% de comisión en caso de venta.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Aceptar', 
+          onPress: async () => {
+            try {
+              // 1. Update proposal status
+              await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposal.id);
+              
+              // 2. Insert into real items table (Assign to a default auction for the mock)
+              await supabase.from('items').insert({
+                auction_id: '11111111-1111-1111-1111-111111111111', // Dummy auction from seed
+                title: proposal.title,
+                description: proposal.description,
+                history: proposal.history,
+                images: proposal.images,
+                starting_price: proposal.proposed_price,
+                status: 'approved'
+              });
+
+              Alert.alert('Éxito', 'El artículo ha sido programado para la próxima subasta.');
+              fetchData();
+            } catch(err) {
+              Alert.alert('Error', 'No se pudo aceptar la tasación.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleRejectAppraisal = (proposalId: string) => {
+    Alert.alert(
+      'Rechazar Tasación',
+      'Si rechazas la tasación, el artículo no será subastado y deberás retirarlo pagando el costo de envío (Simulado).',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Rechazar', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await supabase.from('item_proposals').update({ status: 'rejected' }).eq('id', proposalId);
+              fetchData();
+            } catch(err) {}
+          }
+        }
+      ]
+    );
+  };
 
   const getStatusIcon = (estado: string) => {
     switch (estado) {
-      case 'aceptado': return <CheckCircle color="#2E7D32" size={24} />;
-      case 'rechazado': return <XCircle color={Colors.light.error} size={24} />;
+      case 'accepted': return <CheckCircle color="#2E7D32" size={24} />;
+      case 'rejected': return <XCircle color={Colors.light.error} size={24} />;
+      case 'appraised': return <Search color="#1976D2" size={24} />;
       default: return <Clock color="#ED6C02" size={24} />;
     }
   };
@@ -47,7 +108,7 @@ export default function MyItemsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis Productos</Text>
+        <Text style={styles.headerTitle}>Mis Productos (Seguimiento)</Text>
         <View style={{ width: 28 }} />
       </View>
 
@@ -56,52 +117,69 @@ export default function MyItemsScreen() {
           Seguimiento de los artículos que has propuesto para subastar.
         </Text>
 
-        {mockProposed.map(item => (
-          <View key={item.solicitud_id} style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Box color={Colors.light.textSecondary} size={24} />
-              <View style={styles.titleContainer}>
-                <Text style={styles.itemTitle}>{item.titulo}</Text>
-                <Text style={styles.solicitudId}>Solicitud #{item.solicitud_id}</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color={Colors.light.tint} />
+        ) : proposals.length === 0 ? (
+          <Text style={{ textAlign: 'center', color: '#888', marginTop: 40 }}>No tienes propuestas activas.</Text>
+        ) : (
+          proposals.map(item => (
+            <View key={item.id} style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Box color={Colors.light.textSecondary} size={24} />
+                <View style={styles.titleContainer}>
+                  <Text style={styles.itemTitle}>{item.title}</Text>
+                  <Text style={styles.solicitudId}>Solicitud #{item.id.slice(0, 8)}</Text>
+                </View>
+                {getStatusIcon(item.status)}
               </View>
-              {getStatusIcon(item.estado)}
+
+              <View style={styles.statusBox}>
+                <Text style={styles.statusLabel}>Estado Actual:</Text>
+                <Text style={[styles.statusValue, 
+                  item.status === 'accepted' && {color: '#2E7D32'},
+                  item.status === 'rejected' && {color: Colors.light.error},
+                  item.status === 'appraised' && {color: '#1976D2'},
+                  item.status === 'pending_review' && {color: '#ED6C02'},
+                ]}>
+                  {item.status.replace('_', ' ').toUpperCase()}
+                </Text>
+              </View>
+
+              {item.status === 'rejected' && (
+                <View style={styles.feedbackBox}>
+                  <Text style={styles.feedbackTitle}>Tasación rechazada</Text>
+                  <Text style={styles.feedbackTextError}>Costo de devolución: $150.00 (Ficticio)</Text>
+                </View>
+              )}
+
+              {item.status === 'appraised' && (
+                <View style={styles.successBox}>
+                  <Text style={styles.successTitle}>¡Tasación Lista!</Text>
+                  <Text style={styles.successText}>Nuestros expertos sugieren un precio base de:</Text>
+                  <Text style={styles.appraisedPrice}>${Number(item.proposed_price).toLocaleString()}</Text>
+                  <Text style={styles.feedbackText}>"{item.admin_feedback}"</Text>
+                  
+                  <View style={styles.actionButtonsRow}>
+                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#2E7D32'}]} onPress={() => handleAcceptAppraisal(item)}>
+                      <Text style={styles.actionButtonText}>Aceptar</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: Colors.light.error}]} onPress={() => handleRejectAppraisal(item.id)}>
+                      <Text style={styles.actionButtonText}>Rechazar</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              )}
+
+              {item.status === 'accepted' && (
+                <Text style={styles.pendingText}>Artículo aceptado e incluido en el catálogo de subastas.</Text>
+              )}
+
+              {item.status === 'pending_review' && (
+                <Text style={styles.pendingText}>El artículo está siendo evaluado por nuestros expertos. Te notificaremos pronto (5 segundos).</Text>
+              )}
             </View>
-
-            <View style={styles.statusBox}>
-              <Text style={styles.statusLabel}>Estado Actual:</Text>
-              <Text style={[styles.statusValue, 
-                item.estado === 'aceptado' && {color: '#2E7D32'},
-                item.estado === 'rechazado' && {color: Colors.light.error},
-                item.estado === 'pendiente' && {color: '#ED6C02'},
-              ]}>
-                {item.estado.toUpperCase()}
-              </Text>
-            </View>
-
-            {item.estado === 'rechazado' && (
-              <View style={styles.feedbackBox}>
-                <Text style={styles.feedbackTitle}>Motivo del rechazo:</Text>
-                <Text style={styles.feedbackText}>{item.motivo_rechazo}</Text>
-                <Text style={styles.feedbackTextError}>Costo de devolución: ${item.costo_devolucion}</Text>
-              </View>
-            )}
-
-            {item.estado === 'aceptado' && item.proxima_subasta && (
-              <View style={styles.successBox}>
-                <Text style={styles.successTitle}>¡Aprobado para subasta!</Text>
-                <Text style={styles.successText}>Valor base: ${item.proxima_subasta.valor_base_asignado.toLocaleString()}</Text>
-                <Text style={styles.successText}>Comisión de venta: {item.proxima_subasta.comision_venta}</Text>
-                <TouchableOpacity style={styles.actionButton}>
-                  <Text style={styles.actionButtonText}>Aceptar Condiciones</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-
-            {item.estado === 'pendiente' && (
-              <Text style={styles.pendingText}>El artículo está siendo evaluado por nuestros expertos. Te notificaremos pronto.</Text>
-            )}
-          </View>
-        ))}
+          ))
+        )}
       </ScrollView>
     </View>
   );
@@ -130,13 +208,15 @@ const styles = StyleSheet.create({
   statusLabel: { fontSize: 14, color: Colors.light.textSecondary, marginRight: 8 },
   statusValue: { fontSize: 14, fontWeight: 'bold' },
   feedbackBox: { backgroundColor: 'rgba(211,47,47,0.05)', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: 'rgba(211,47,47,0.2)' },
-  feedbackTitle: { fontSize: 12, fontWeight: 'bold', color: Colors.light.error, marginBottom: 4 },
-  feedbackText: { fontSize: 12, color: Colors.light.textSecondary, marginBottom: 4 },
+  feedbackTitle: { fontSize: 14, fontWeight: 'bold', color: Colors.light.error, marginBottom: 4 },
+  feedbackText: { fontSize: 13, color: Colors.light.textSecondary, fontStyle: 'italic', marginBottom: 12 },
   feedbackTextError: { fontSize: 12, fontWeight: 'bold', color: Colors.light.error },
-  successBox: { backgroundColor: '#F1F8E9', padding: 12, borderRadius: 8, borderWidth: 1, borderColor: '#C5E1A5' },
-  successTitle: { fontSize: 14, fontWeight: 'bold', color: '#2E7D32', marginBottom: 8 },
-  successText: { fontSize: 13, color: '#333', marginBottom: 4 },
-  actionButton: { backgroundColor: Colors.light.tint, padding: 10, borderRadius: 6, alignItems: 'center', marginTop: 8 },
+  successBox: { backgroundColor: '#E3F2FD', padding: 16, borderRadius: 8, borderWidth: 1, borderColor: '#90CAF9' },
+  successTitle: { fontSize: 16, fontWeight: 'bold', color: '#1565C0', marginBottom: 8 },
+  successText: { fontSize: 14, color: '#333', marginBottom: 4 },
+  appraisedPrice: { fontSize: 24, fontWeight: 'bold', color: '#1565C0', marginVertical: 8 },
+  actionButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  actionButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
   actionButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
   pendingText: { fontSize: 13, color: Colors.light.textSecondary, fontStyle: 'italic' },
 });

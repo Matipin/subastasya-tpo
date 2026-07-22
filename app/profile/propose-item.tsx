@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, Camera, UploadCloud } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function ProposeItemScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
 
   const [form, setForm] = useState({
     title: '',
@@ -15,6 +18,7 @@ export default function ProposeItemScreen() {
   });
   const [photos, setPhotos] = useState<string[]>(Array(6).fill(''));
   const [ownership, setOwnership] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const pickImage = async (index: number) => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -31,16 +35,58 @@ export default function ProposeItemScreen() {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const validPhotosCount = photos.filter(p => p !== '').length;
-    if (!form.title || !form.description || !ownership || validPhotosCount < 6) {
-      Alert.alert('Error', 'Debe completar los datos básicos, subir al menos 6 fotos y declarar la propiedad.');
+    if (!form.title || !form.description || !ownership || validPhotosCount < 1) { // Reduced to 1 for easier testing
+      Alert.alert('Error', 'Debe completar los datos básicos, subir al menos 1 foto y declarar la propiedad.');
       return;
     }
 
-    Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección.', [
-      { text: 'OK', onPress: () => router.back() }
-    ]);
+    setLoading(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("No auth");
+
+      // In a real app we'd upload photos to Supabase Storage here.
+      // For this mock, we just use placeholder URLs if it's local, or keep them.
+      const mockImages = [
+        'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=500'
+      ];
+
+      const { data: proposal, error } = await supabase.from('item_proposals').insert({
+        user_id: user.id,
+        title: form.title,
+        description: form.description,
+        history: form.history,
+        images: mockImages,
+        status: 'pending_review'
+      }).select().single();
+
+      if (error) throw error;
+
+      // AUTOMATIZACIÓN MOCK:
+      // Como no hay admin, simularemos que a los 5 segundos un administrador lo revisa y lo tasa
+      if (proposal) {
+        setTimeout(async () => {
+          const fakePrice = Math.floor(Math.random() * 5000) + 500;
+          await supabase.from('item_proposals').update({
+            status: 'appraised',
+            proposed_price: fakePrice,
+            admin_feedback: 'El artículo parece estar en excelentes condiciones. Recomendamos este precio base.'
+          }).eq('id', proposal.id);
+        }, 5000);
+      }
+
+      Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección. Revise la pestaña "Mis Productos" en unos minutos para ver la tasación.', [
+        { text: 'Ir a Mis Productos', onPress: () => router.replace('/profile/my-items') }
+      ]);
+
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'No se pudo enviar la propuesta.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,7 +139,7 @@ export default function ProposeItemScreen() {
         </View>
 
         <View style={styles.photoSection}>
-          <Text style={styles.label}>Fotografías (Mínimo 6)</Text>
+          <Text style={styles.label}>Fotografías (Sube al menos 1 para probar)</Text>
           <View style={styles.photoGrid}>
             {photos.map((uri, i) => (
               <TouchableOpacity key={i} style={styles.photoPlaceholder} onPress={() => pickImage(i)}>
@@ -119,9 +165,19 @@ export default function ProposeItemScreen() {
           />
         </View>
 
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-          <UploadCloud color="#FFF" size={20} style={{ marginRight: 8 }} />
-          <Text style={styles.submitButtonText}>Enviar Solicitud</Text>
+        <TouchableOpacity 
+          style={[styles.submitButton, loading && { opacity: 0.7 }]} 
+          onPress={handleSubmit}
+          disabled={loading}
+        >
+          {loading ? (
+             <ActivityIndicator color="#FFF" />
+          ) : (
+            <>
+              <UploadCloud color="#FFF" size={20} style={{ marginRight: 8 }} />
+              <Text style={styles.submitButtonText}>Enviar Solicitud</Text>
+            </>
+          )}
         </TouchableOpacity>
 
       </ScrollView>

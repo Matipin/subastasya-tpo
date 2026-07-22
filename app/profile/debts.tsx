@@ -1,38 +1,97 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { ChevronLeft, AlertOctagon } from 'lucide-react-native';
+import { ChevronLeft, AlertOctagon, Plus } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function DebtsScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
 
-  const [debts, setDebts] = useState([
-    {
-      id: 101,
-      tipo: "multa_impago",
-      concepto: "10% de oferta por Item #55 no abonada",
-      monto: 1200.00,
-      fecha_emision: "2026-04-20",
-      limite_pago_72hs: "2026-04-23"
-    },
-    {
-      id: 102,
-      tipo: "cargo_devolucion",
-      concepto: "Envío por bien rechazado - Solicitud #501",
-      monto: 150.00,
-      fecha_emision: "2026-04-21"
+  const [debts, setDebts] = useState<any[]>([]);
+  const [guarantee, setGuarantee] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const [debtsRes, profileRes] = await Promise.all([
+        supabase.from('debts').select('*').eq('user_id', user.id).eq('status', 'pending'),
+        supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single()
+      ]);
+
+      if (debtsRes.data) setDebts(debtsRes.data);
+      if (profileRes.data) setGuarantee(Number(profileRes.data.guarantee_balance || 0));
+
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
 
-  const handlePay = (id: number) => {
-    Alert.alert('Pagar Deuda', '¿Confirmas el pago usando tu método de pago principal?', [
+  const handleCreateMockDebt = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      await supabase.from('debts').insert({
+        user_id: user.id,
+        amount: 50.00,
+        reason: 'Abandono de subasta #999',
+        status: 'pending'
+      });
+      fetchData();
+      Alert.alert('Éxito', 'Se generó una multa de $50 ficticia para probar el flujo.');
+    } catch(err) {
+      console.error(err);
+    }
+  };
+
+  const handlePay = (debt: any) => {
+    Alert.alert('Pagar Deuda', `¿Confirmas el pago de $${debt.amount} deduciendo de tu garantía actual ($${guarantee})?`, [
       { text: 'Cancelar', style: 'cancel' },
       { 
         text: 'Pagar', 
-        onPress: () => {
-          setDebts(prev => prev.filter(d => d.id !== id));
-          Alert.alert('Éxito', 'Pago procesado. Tu cuenta se ha rehabilitado parcialmente.');
+        onPress: async () => {
+          if (guarantee < debt.amount) {
+             Alert.alert('Saldo Insuficiente', 'No tienes suficiente garantía para pagar esta multa. Agrega un método de pago.');
+             return;
+          }
+          
+          try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) return;
+
+            // 1. Mark debt as paid
+            await supabase.from('debts').update({ status: 'paid' }).eq('id', debt.id);
+            
+            // 2. Register transaction
+            await supabase.from('transactions').insert({
+              user_id: user.id,
+              type: 'fine',
+              amount: debt.amount,
+              description: 'Pago de multa: ' + debt.reason
+            });
+
+            // 3. Deduct guarantee
+            await supabase.from('profiles').update({ guarantee_balance: guarantee - debt.amount }).eq('id', user.id);
+
+            Alert.alert('Éxito', 'Pago procesado. Tu deuda está saldada.');
+            fetchData();
+          } catch(err) {
+            console.error(err);
+            Alert.alert('Error', 'No se pudo pagar la deuda');
+          }
         }
       }
     ]);
@@ -44,44 +103,54 @@ export default function DebtsScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Mis Deudas</Text>
+        <Text style={styles.headerTitle}>Mis Deudas y Multas</Text>
         <View style={{ width: 28 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {debts.length > 0 && (
-          <View style={styles.warningBanner}>
-            <AlertOctagon color={Colors.light.error} size={24} />
-            <Text style={styles.warningText}>
-              Tienes deudas pendientes. Tu capacidad de pujar puede estar restringida.
-            </Text>
-          </View>
-        )}
+        <View style={styles.balanceInfo}>
+          <Text style={styles.balanceText}>Garantía Disponible: ${guarantee.toLocaleString()}</Text>
+        </View>
 
-        {debts.length === 0 ? (
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyText}>No tienes deudas registradas.</Text>
-          </View>
+        {loading ? (
+           <ActivityIndicator size="large" color={Colors.light.tint} style={{marginTop: 50}} />
         ) : (
-          debts.map(debt => (
-            <View key={debt.id} style={styles.card}>
-              <View style={styles.cardHeader}>
-                <Text style={styles.debtType}>
-                  {debt.tipo === 'multa_impago' ? 'Multa por Impago' : 'Cargo Administrativo'}
+          <>
+            {debts.length > 0 && (
+              <View style={styles.warningBanner}>
+                <AlertOctagon color={Colors.light.error} size={24} />
+                <Text style={styles.warningText}>
+                  Tienes deudas pendientes. Tu capacidad de pujar puede estar restringida.
                 </Text>
-                <Text style={styles.debtAmount}>${debt.monto.toLocaleString()}</Text>
               </View>
-              <Text style={styles.debtConcept}>{debt.concepto}</Text>
-              <Text style={styles.debtDate}>Emitida: {debt.fecha_emision}</Text>
-              {debt.limite_pago_72hs && (
-                <Text style={styles.debtLimit}>Límite: {debt.limite_pago_72hs}</Text>
-              )}
-              
-              <TouchableOpacity style={styles.payButton} onPress={() => handlePay(debt.id)}>
-                <Text style={styles.payButtonText}>Pagar Ahora</Text>
-              </TouchableOpacity>
-            </View>
-          ))
+            )}
+
+            {debts.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyText}>No tienes deudas pendientes.</Text>
+              </View>
+            ) : (
+              debts.map(debt => (
+                <View key={debt.id} style={styles.card}>
+                  <View style={styles.cardHeader}>
+                    <Text style={styles.debtType}>Multa del Sistema</Text>
+                    <Text style={styles.debtAmount}>${Number(debt.amount).toLocaleString()}</Text>
+                  </View>
+                  <Text style={styles.debtConcept}>{debt.reason}</Text>
+                  <Text style={styles.debtDate}>Emitida: {new Date(debt.created_at).toLocaleDateString()}</Text>
+                  
+                  <TouchableOpacity style={styles.payButton} onPress={() => handlePay(debt)}>
+                    <Text style={styles.payButtonText}>Pagar con Garantía</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            )}
+
+            <TouchableOpacity style={styles.mockButton} onPress={handleCreateMockDebt}>
+               <Plus color={Colors.light.textSecondary} size={20} />
+               <Text style={styles.mockButtonText}>Simular Multa (Prueba)</Text>
+            </TouchableOpacity>
+          </>
         )}
       </ScrollView>
     </View>
@@ -107,6 +176,20 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   headerTitle: { fontSize: 18, fontWeight: 'bold', color: Colors.light.text },
   content: { padding: 20 },
+  balanceInfo: {
+    backgroundColor: '#E8F5E9',
+    padding: 16,
+    borderRadius: 8,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+  balanceText: {
+    color: '#2E7D32',
+    fontWeight: 'bold',
+    fontSize: 16,
+    textAlign: 'center',
+  },
   warningBanner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -164,14 +247,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: Colors.light.icon,
   },
-  debtLimit: {
-    fontSize: 12,
-    color: Colors.light.error,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
   payButton: {
-    backgroundColor: Colors.light.text, // Boton oscuro para contraste
+    backgroundColor: Colors.light.text,
     padding: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -181,5 +258,21 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  mockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    marginTop: 40,
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderStyle: 'dashed',
+    borderRadius: 8,
+  },
+  mockButtonText: {
+    marginLeft: 8,
+    color: Colors.light.textSecondary,
+    fontWeight: '500',
   },
 });

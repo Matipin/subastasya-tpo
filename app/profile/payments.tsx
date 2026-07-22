@@ -1,26 +1,102 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { ChevronLeft, CreditCard, Landmark, Plus, Trash2 } from 'lucide-react-native';
+import { ChevronLeft, CreditCard, Landmark, Plus, Trash2, ShieldCheck } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function PaymentsScreen() {
   const router = useRouter();
+  const { user: authUser } = useAuthStore();
+  
+  const [payments, setPayments] = useState<any[]>([]);
+  const [guarantee, setGuarantee] = useState(0);
+  const [loading, setLoading] = useState(true);
 
-  const [payments, setPayments] = useState([
-    { id: 1, type: 'CARD', provider: 'Visa', number: '**** **** **** 4242', expiration: '12/28' },
-    { id: 2, type: 'BANK', provider: 'Santander', number: 'CBU: ***1234', expiration: 'N/A' },
-  ]);
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const handleDelete = (id: number) => {
+  const fetchData = async () => {
+    try {
+      if (!authUser) return;
+      
+      // Fetch supabase user ID (assuming user state might just be the mock object, let's get the real session)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const [paymentsRes, profileRes] = await Promise.all([
+        supabase.from('payment_methods').select('*').eq('user_id', user.id),
+        supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single()
+      ]);
+
+      if (paymentsRes.data) setPayments(paymentsRes.data);
+      if (profileRes.data) setGuarantee(Number(profileRes.data.guarantee_balance || 0));
+
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddPayment = async () => {
+    Alert.alert(
+      'Agregar Tarjeta',
+      '¿Deseas agregar una tarjeta de crédito simulada y acreditar $1000 a tu saldo de garantía?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Agregar', 
+          onPress: async () => {
+            setLoading(true);
+            try {
+              const { data: { user } } = await supabase.auth.getUser();
+              if (!user) throw new Error("No user");
+
+              // 1. Insert Payment Method
+              await supabase.from('payment_methods').insert({
+                user_id: user.id,
+                provider: 'Visa',
+                card_number: '**** **** **** ' + Math.floor(1000 + Math.random() * 9000),
+                type: 'CARD'
+              });
+
+              // 2. Add $1000 to guarantee
+              await supabase.from('profiles').update({
+                guarantee_balance: guarantee + 1000
+              }).eq('id', user.id);
+
+              Alert.alert('Éxito', 'Tarjeta agregada y garantía fondeada con $1000');
+              fetchData();
+            } catch (err) {
+              Alert.alert('Error', 'No se pudo agregar el medio de pago');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleDelete = (id: string) => {
     Alert.alert('Eliminar', '¿Estás seguro que deseas eliminar este medio de pago?', [
       { text: 'Cancelar', style: 'cancel' },
       { 
         text: 'Eliminar', 
         style: 'destructive',
-        onPress: () => {
-          setPayments(prev => prev.filter(p => p.id !== id));
-          Alert.alert('Éxito', 'Medio de pago eliminado');
+        onPress: async () => {
+          try {
+            await supabase.from('payment_methods').delete().eq('id', id);
+            setPayments(prev => prev.filter(p => p.id !== id));
+            Alert.alert('Éxito', 'Medio de pago eliminado');
+          } catch(err) {
+            Alert.alert('Error', 'Error al eliminar');
+          }
         }
       }
     ]);
@@ -37,36 +113,48 @@ export default function PaymentsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.guaranteeCard}>
+          <ShieldCheck color={Colors.light.tint} size={32} />
+          <View style={styles.guaranteeDetails}>
+            <Text style={styles.guaranteeLabel}>Saldo de Garantía</Text>
+            <Text style={styles.guaranteeAmount}>${guarantee.toLocaleString()}</Text>
+          </View>
+        </View>
+
         <Text style={styles.description}>
-          Administra tus tarjetas y cuentas bancarias. Es necesario tener al menos un medio de pago verificado para participar en las subastas.
+          Administra tus tarjetas y cuentas bancarias. Es necesario tener al menos un medio de pago verificado y saldo de garantía para participar en las subastas.
         </Text>
 
-        {payments.map(payment => (
-          <View key={payment.id} style={styles.card}>
-            <View style={styles.cardIcon}>
-              {payment.type === 'CARD' ? (
-                <CreditCard color={Colors.light.tint} size={32} />
-              ) : (
-                <Landmark color={Colors.light.tint} size={32} />
-              )}
-            </View>
-            <View style={styles.cardDetails}>
-              <Text style={styles.cardProvider}>{payment.provider}</Text>
-              <Text style={styles.cardNumber}>{payment.number}</Text>
-              {payment.type === 'CARD' && (
-                <Text style={styles.cardExp}>Vence: {payment.expiration}</Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={() => handleDelete(payment.id)} style={styles.deleteButton}>
-              <Trash2 color={Colors.light.error} size={24} />
-            </TouchableOpacity>
-          </View>
-        ))}
+        {loading ? (
+          <ActivityIndicator size="large" color={Colors.light.tint} />
+        ) : (
+          <>
+            {payments.map(payment => (
+              <View key={payment.id} style={styles.card}>
+                <View style={styles.cardIcon}>
+                  {payment.type === 'CARD' ? (
+                    <CreditCard color={Colors.light.tint} size={32} />
+                  ) : (
+                    <Landmark color={Colors.light.tint} size={32} />
+                  )}
+                </View>
+                <View style={styles.cardDetails}>
+                  <Text style={styles.cardProvider}>{payment.provider}</Text>
+                  <Text style={styles.cardNumber}>{payment.card_number}</Text>
+                  <Text style={styles.cardExp}>Autenticado</Text>
+                </View>
+                <TouchableOpacity onPress={() => handleDelete(payment.id)} style={styles.deleteButton}>
+                  <Trash2 color={Colors.light.error} size={24} />
+                </TouchableOpacity>
+              </View>
+            ))}
 
-        <TouchableOpacity style={styles.addButton} onPress={() => Alert.alert('Añadir', 'Formulario para agregar método de pago (Mock)')}>
-          <Plus color={Colors.light.tint} size={24} />
-          <Text style={styles.addButtonText}>Agregar nuevo método</Text>
-        </TouchableOpacity>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddPayment}>
+              <Plus color={Colors.light.tint} size={24} />
+              <Text style={styles.addButtonText}>Agregar nueva tarjeta (Mock)</Text>
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
     </View>
   );
@@ -98,6 +186,30 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  guaranteeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2F1',
+    padding: 20,
+    borderRadius: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#B2DFDB',
+  },
+  guaranteeDetails: {
+    marginLeft: 16,
+  },
+  guaranteeLabel: {
+    fontSize: 14,
+    color: '#004D40',
+    fontWeight: '500',
+  },
+  guaranteeAmount: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#004D40',
+    marginTop: 4,
   },
   description: {
     fontSize: 14,
@@ -149,7 +261,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(133, 34, 33, 0.1)', // Fondo primario claro
+    backgroundColor: 'rgba(133, 34, 33, 0.1)',
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
