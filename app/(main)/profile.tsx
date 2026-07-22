@@ -20,9 +20,9 @@ export default function ProfileScreen() {
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
         <UserCircle size={80} color={Colors.light.text} />
-        <Text style={styles.userName}>{user.nombre}</Text>
+        <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
         <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>Categoría: {user.categoria.toUpperCase()}</Text>
+          <Text style={styles.categoryText}>Categoría: {(user.category || 'bronze').toUpperCase()}</Text>
         </View>
       </View>
 
@@ -56,11 +56,11 @@ export default function ProfileScreen() {
       <Text style={styles.sectionTitle}>Estadísticas</Text>
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{user.metricas.asistencias}</Text>
+          <Text style={styles.statValue}>0</Text>
           <Text style={styles.statLabel}>Asistencias</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{user.metricas.subastas_ganadas}</Text>
+          <Text style={styles.statValue}>0</Text>
           <Text style={styles.statLabel}>Ganadas</Text>
         </View>
       </View>

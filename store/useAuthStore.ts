@@ -1,18 +1,18 @@
 import { create } from 'zustand';
 
 export interface User {
-  id: number;
-  nombre: string;
-  categoria: string;
-  estado_cuenta: string;
-  puede_pujar: boolean;
-  metricas: {
-    asistencias: number;
-    subastas_ganadas: number;
-    total_ofertado: number;
-    total_pagado: number;
-    deuda_pendiente: number;
-  };
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  category: string;
+  id_card_front_url?: string;
+  id_card_back_url?: string;
+  status: string;
+  guarantee_balance: number;
+  is_approved: boolean;
+  phone?: string;
+  address?: string;
 }
 
 interface AuthState {

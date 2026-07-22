@@ -8,10 +8,10 @@ import { supabase } from '@/lib/supabase';
 
 export default function EditProfileScreen() {
   const router = useRouter();
-  const { user, login } = useAuthStore();
+  const { user, login, token } = useAuthStore();
   
-  const [firstName, setFirstName] = useState(user?.nombre?.split(', ')[1] || user?.nombre || '');
-  const [lastName, setLastName] = useState(user?.nombre?.split(', ')[0] || '');
+  const [firstName, setFirstName] = useState(user?.first_name || '');
+  const [lastName, setLastName] = useState(user?.last_name || '');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -68,9 +68,12 @@ export default function EditProfileScreen() {
       if (user) {
         const updatedUser = {
           ...user,
-          nombre: `${lastName}, ${firstName}`
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone,
+          address: address
         };
-        login(updatedUser);
+        login(updatedUser, token || '');
       }
       
       Alert.alert('Éxito', 'Perfil actualizado correctamente');

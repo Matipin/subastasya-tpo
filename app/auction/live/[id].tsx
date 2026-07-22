@@ -45,11 +45,11 @@ export default function LiveAuctionRoom() {
           const highestBid = bidsData[0];
           setMontoActual(Number(highestBid.amount));
           setPujaMinima(Number(highestBid.amount) + 100);
-          setUltimoPostor(highestBid.profiles?.first_name || 'Desconocido');
+          setUltimoPostor((highestBid.profiles as any)?.first_name || 'Desconocido');
           
           const formattedHistory = bidsData.map(b => ({
             id: b.id,
-            usuario: b.profiles?.first_name || 'Desconocido',
+            usuario: (b.profiles as any)?.first_name || 'Desconocido',
             monto: Number(b.amount),
             time: new Date(b.created_at).toLocaleTimeString()
           }));
@@ -139,14 +139,8 @@ export default function LiveAuctionRoom() {
     }
 
     try {
-      // 1. Validar fondos de garantía (Ej: El usuario no puede pujar más de su garantía total multiplicada por 5 o debe tener fondos suficientes)
-      // En las reglas: "sus compras no pueden superar dicho monto" (garantía)
-      // Asumiremos que el monto de la puja no puede superar el guarantee_balance * 5 (apalancamiento normal de subastas) o simplemente 1 a 1.
-      const maxAllowedBid = Number(user.guarantee_balance || 0) * 5; // Apalancamiento 5x sobre garantía
-      if (amount > maxAllowedBid) {
-        Alert.alert('Garantía Insuficiente', `Tu garantía actual no te permite pujar más de $${formatExorbitant(maxAllowedBid)}.`);
-        return;
-      }
+      // (Eliminado el límite de garantía a petición del usuario. 
+      // Se permite pujar más que la garantía, pero si gana y no paga se le cobra multa)
 
       // 2. Insertar en BD
       const { error } = await supabase.from('bids').insert({

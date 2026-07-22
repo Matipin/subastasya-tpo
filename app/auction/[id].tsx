@@ -112,10 +112,10 @@ export default function ItemDetailScreen() {
         return;
       }
       
-      // 4. Validar Fondos (20% del total de artículos de la subasta)
-      const requiredBalance = auctionTotal * 0.20;
+      // 4. Validar Fondos (100% del total de artículos de la subasta)
+      const requiredBalance = auctionTotal;
       if (Number(user.guarantee_balance || 0) < requiredBalance) {
-        Alert.alert('Fondos Insuficientes', `Necesitas una garantía de al menos $${requiredBalance.toLocaleString()} (20% del total de la subasta).`);
+        Alert.alert('Fondos Insuficientes', `Necesitas una garantía de al menos $${requiredBalance.toLocaleString()} (100% de la base de la subasta).`);
         setRegistering(false);
         return;
       }
@@ -240,11 +240,24 @@ export default function ItemDetailScreen() {
                 </View>
                 <TouchableOpacity 
                     style={[styles.liveButton, !isAuctionActive && { opacity: 0.5 }]} 
-                    onPress={() => {
+                    onPress={async () => {
                       if (!isAuctionActive) {
                         Alert.alert('Subasta no iniciada', 'La subasta aún no ha comenzado o ya finalizó.');
                         return;
                       }
+
+                      // Check if they got a fine AFTER registering
+                      const { data: debts } = await supabase
+                        .from('debts')
+                        .select('*')
+                        .eq('user_id', user.id)
+                        .eq('status', 'pending');
+                        
+                      if (debts && debts.length > 0) {
+                        Alert.alert('Acceso Denegado', 'No puedes ingresar porque tienes multas pendientes por pagar.');
+                        return;
+                      }
+
                       router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`);
                     }}>
                     <Text style={styles.liveButtonText}>Entrar a Sala en Vivo</Text>
