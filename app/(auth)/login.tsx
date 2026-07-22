@@ -1,16 +1,35 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/services/mockApi';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { Eye, EyeOff, CheckSquare, Square } from 'lucide-react-native';
+import * as SecureStore from 'expo-secure-store';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('test@test.com');
   const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+
+  useEffect(() => {
+    const loadCredentials = async () => {
+      try {
+        const savedEmail = await SecureStore.getItemAsync('saved_email');
+        const savedPassword = await SecureStore.getItemAsync('saved_password');
+        if (savedEmail && savedPassword) {
+          setEmail(savedEmail);
+          setPassword(savedPassword);
+          setRememberMe(true);
+        }
+      } catch (err) {}
+    };
+    loadCredentials();
+  }, []);
   
   const login = useAuthStore((state) => state.login);
   const router = useRouter();
@@ -35,6 +54,14 @@ export default function LoginScreen() {
         
       if (profileError) throw profileError;
       
+      if (rememberMe) {
+        await SecureStore.setItemAsync('saved_email', email);
+        await SecureStore.setItemAsync('saved_password', password);
+      } else {
+        await SecureStore.deleteItemAsync('saved_email');
+        await SecureStore.deleteItemAsync('saved_password');
+      }
+
       login(userProfile, data.session.access_token);
       router.replace('/(main)');
     } catch (err: any) {
@@ -57,7 +84,11 @@ export default function LoginScreen() {
 
         {/* Placeholder for illustration */}
         <View style={styles.illustrationContainer}>
-          <Text style={styles.illustrationText}>[Ilustración SubastasYa]</Text>
+          <Image 
+            source={require('@/assets/images/illustration.png')} 
+            style={{width: '100%', height: '100%', borderRadius: 8}}
+            resizeMode="cover"
+          />
         </View>
 
         <View style={styles.form}>
@@ -69,15 +100,39 @@ export default function LoginScreen() {
             autoCapitalize="none"
             keyboardType="email-address"
           />
-          <TextInput
-            style={styles.input}
-            placeholder="Contraseña"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <View style={styles.passwordContainer}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Contraseña"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+            />
+            <TouchableOpacity 
+              style={styles.eyeIcon} 
+              onPress={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? (
+                <EyeOff color={Colors.light.textSecondary} size={20} />
+              ) : (
+                <Eye color={Colors.light.textSecondary} size={20} />
+              )}
+            </TouchableOpacity>
+          </View>
           
           <View style={styles.optionsRow}>
+            <TouchableOpacity 
+              style={{ flexDirection: 'row', alignItems: 'center' }} 
+              onPress={() => setRememberMe(!rememberMe)}
+            >
+              {rememberMe ? (
+                <CheckSquare color={Colors.light.tint} size={20} style={{ marginRight: 8 }} />
+              ) : (
+                <Square color={Colors.light.textSecondary} size={20} style={{ marginRight: 8 }} />
+              )}
+              <Text style={{ color: Colors.light.textSecondary }}>Recordarme</Text>
+            </TouchableOpacity>
+
             <TouchableOpacity>
               <Text style={styles.linkText}>¿Olvidaste tu contraseña?</Text>
             </TouchableOpacity>
@@ -162,7 +217,8 @@ const styles = StyleSheet.create({
   },
   optionsRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
   },
   linkText: {
@@ -172,6 +228,23 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.light.error,
     fontSize: 14,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+    paddingVertical: 4,
+    marginBottom: 10,
+  },
+  passwordInput: {
+    flex: 1,
+    paddingVertical: 8,
+    fontSize: 16,
+    color: Colors.light.text,
+  },
+  eyeIcon: {
+    padding: 10,
   },
   button: {
     backgroundColor: Colors.light.tint,

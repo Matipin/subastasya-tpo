@@ -99,3 +99,34 @@ CREATE POLICY "Permitir delete participants a logueados" ON public.auction_parti
 ALTER TABLE public.items ALTER COLUMN starting_price TYPE NUMERIC(20, 2);
 ALTER TABLE public.bids ALTER COLUMN amount TYPE NUMERIC(20, 2);
 ALTER TABLE public.profiles ALTER COLUMN guarantee_balance TYPE NUMERIC(20, 2);
+
+-- ==========================================
+-- FUNCIONES DE NEGOCIO: MULTAS DEL 10%
+-- ==========================================
+
+-- Función para generar una multa si el ganador no posee fondos al finalizar
+CREATE OR REPLACE FUNCTION generate_fine_for_unpaid_bid(bid_id UUID)
+RETURNS VOID AS $$
+DECLARE
+    target_bid public.bids%ROWTYPE;
+    fine_amount NUMERIC(20, 2);
+BEGIN
+    -- Obtener la puja
+    SELECT * INTO target_bid FROM public.bids WHERE id = bid_id;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'Puja no encontrada';
+    END IF;
+
+    -- Calcular el 10% de recargo (multa)
+    fine_amount := target_bid.amount * 0.10;
+
+    -- Generar la deuda
+    INSERT INTO public.debts (user_id, amount, reason, status)
+    VALUES (
+        target_bid.bidder_id, 
+        fine_amount, 
+        'Multa del 10% por falta de fondos para lote subastado (Puja original: $' || target_bid.amount || ')',
+        'pending'
+    );
+END;
+$$ LANGUAGE plpgsql;

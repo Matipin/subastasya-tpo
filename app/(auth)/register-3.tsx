@@ -1,11 +1,13 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, Text, ScrollView, KeyboardAvoidingView, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { Plus } from 'lucide-react-native';
+import { Plus, Eye, EyeOff } from 'lucide-react-native';
 
 export default function RegisterStage3Screen() {
   const router = useRouter();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -17,10 +19,20 @@ export default function RegisterStage3Screen() {
           <Text style={styles.sectionTitle}>Crea tu clave</Text>
           
           <Text style={styles.label}>Contraseña</Text>
-          <TextInput style={styles.input} placeholder="Ej: Juan_Perez1234" secureTextEntry />
+          <View style={styles.passwordContainer}>
+            <TextInput style={styles.passwordInput} placeholder="Ej: Juan_Perez1234" secureTextEntry={!showPassword} />
+            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowPassword(!showPassword)}>
+              {showPassword ? <EyeOff color={Colors.light.textSecondary} size={20} /> : <Eye color={Colors.light.textSecondary} size={20} />}
+            </TouchableOpacity>
+          </View>
 
           <Text style={styles.label}>Confirmar Contraseña</Text>
-          <TextInput style={styles.input} placeholder="Ej: Juan_Perez1234" secureTextEntry />
+          <View style={styles.passwordContainer}>
+            <TextInput style={styles.passwordInput} placeholder="Ej: Juan_Perez1234" secureTextEntry={!showConfirmPassword} />
+            <TouchableOpacity style={styles.eyeIcon} onPress={() => setShowConfirmPassword(!showConfirmPassword)}>
+              {showConfirmPassword ? <EyeOff color={Colors.light.textSecondary} size={20} /> : <Eye color={Colors.light.textSecondary} size={20} />}
+            </TouchableOpacity>
+          </View>
 
           <Text style={[styles.sectionTitle, { marginTop: 24 }]}>Medios de pago</Text>
           <Text style={styles.subtitle}>Selecciona y registra un metodo de pago (Obligatorio)</Text>
@@ -107,6 +119,22 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 16,
     backgroundColor: Colors.light.card,
+  },
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 8,
+    backgroundColor: Colors.light.card,
+  },
+  passwordInput: {
+    flex: 1,
+    padding: 12,
+    fontSize: 16,
+  },
+  eyeIcon: {
+    padding: 12,
   },
   paymentOption: {
     flexDirection: 'row',

@@ -44,14 +44,19 @@ export default function DebtsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
+      // Simulamos que el usuario ganó una subasta pujando $150,000 y no pagó.
+      // La regla dicta una multa del 10%.
+      const bidAmount = 150000;
+      const fineAmount = bidAmount * 0.10; // 10% = 15,000
+
       await supabase.from('debts').insert({
         user_id: user.id,
-        amount: 50.00,
-        reason: 'Abandono de subasta #999',
+        amount: fineAmount,
+        reason: `Multa del 10% por falta de fondos (Puja original: $${bidAmount.toLocaleString()})`,
         status: 'pending'
       });
       fetchData();
-      Alert.alert('Éxito', 'Se generó una multa de $50 ficticia para probar el flujo.');
+      Alert.alert('Multa Generada', `Se generó una multa del 10% ($${fineAmount.toLocaleString()}) por una supuesta puja impaga de $${bidAmount.toLocaleString()}.`);
     } catch(err) {
       console.error(err);
     }
