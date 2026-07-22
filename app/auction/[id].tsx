@@ -1,31 +1,66 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
-import { ChevronLeft, Info } from 'lucide-react-native';
-
+import { ChevronLeft, Info, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function ItemDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [item, setItem] = useState<any | null>(null);
+  const [auction, setAuction] = useState<any | null>(null);
+  const [auctionTotal, setAuctionTotal] = useState(0);
   const [loading, setLoading] = useState(true);
-  const isAuthenticated = useAuthStore(state => !!state.user);
+  const [isRegistered, setIsRegistered] = useState(false);
+  const [registering, setRegistering] = useState(false);
+  
+  const user = useAuthStore(state => state.user);
 
   useEffect(() => {
-    const fetchItem = async () => {
+    const fetchItemAndAuction = async () => {
       try {
-        const { data, error } = await supabase
+        // Fetch Item
+        const { data: itemData, error: itemError } = await supabase
           .from('items')
           .select('*')
           .eq('id', id)
           .single();
           
-        if (error) throw error;
-        if (data) {
-          setItem(data);
+        if (itemError) throw itemError;
+        setItem(itemData);
+
+        if (itemData?.auction_id) {
+          // Fetch Auction
+          const { data: auctionData, error: auctionError } = await supabase
+            .from('auctions')
+            .select('*')
+            .eq('id', itemData.auction_id)
+            .single();
+          if (auctionError) throw auctionError;
+          setAuction(auctionData);
+
+          // Fetch all items to sum price
+          const { data: allItems } = await supabase
+            .from('items')
+            .select('starting_price')
+            .eq('auction_id', itemData.auction_id);
+            
+          const total = allItems?.reduce((sum, i) => sum + Number(i.starting_price), 0) || 0;
+          setAuctionTotal(total);
+
+          // Check if registered
+          if (user) {
+            const { data: regData } = await supabase
+              .from('auction_participants')
+              .select('*')
+              .eq('user_id', user.id)
+              .eq('auction_id', itemData.auction_id)
+              .single();
+              
+            if (regData) setIsRegistered(true);
+          }
         }
       } catch (error) {
         console.error(error);
@@ -33,8 +68,102 @@ export default function ItemDetailScreen() {
         setLoading(false);
       }
     };
-    if (id) fetchItem();
-  }, [id]);
+    if (id) fetchItemAndAuction();
+  }, [id, user]);
+
+  const handleRegister = async () => {
+    if (!user || !auction) return;
+    setRegistering(true);
+    
+    try {
+      // 1. Validar Tiempo: 1 hora antes de que inicie
+      const now = new Date();
+      const startDate = new Date(auction.start_date);
+      const diffMs = startDate.getTime() - now.getTime();
+      const diffHours = diffMs / (1000 * 60 * 60);
+      
+      if (diffHours < 1 && diffHours > 0) {
+        Alert.alert('Registro Cerrado', 'La inscripción cierra 1 hora antes de comenzar la subasta.');
+        setRegistering(false);
+        return;
+      }
+      
+      // 2. Validar Multas Pendientes
+      const { data: debts } = await supabase
+        .from('debts')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('status', 'pending');
+        
+      if (debts && debts.length > 0) {
+        Alert.alert('Multas Pendientes', 'No puedes inscribirte porque tienes multas pendientes por artículos no retirados.');
+        setRegistering(false);
+        return;
+      }
+      
+      // 3. Validar Categoría Mínima
+      const categories = ['bronze', 'silver', 'gold', 'platinum'];
+      const userLevel = categories.indexOf(user.category || 'bronze');
+      const auctionLevel = categories.indexOf(auction.minimum_category || 'bronze');
+      
+      if (userLevel < auctionLevel) {
+        Alert.alert('Nivel Insuficiente', `Esta subasta requiere ser nivel ${auction.minimum_category}. Eres nivel ${user.category}.`);
+        setRegistering(false);
+        return;
+      }
+      
+      // 4. Validar Fondos (20% del total de artículos de la subasta)
+      const requiredBalance = auctionTotal * 0.20;
+      if (Number(user.guarantee_balance || 0) < requiredBalance) {
+        Alert.alert('Fondos Insuficientes', `Necesitas una garantía de al menos $${requiredBalance.toLocaleString()} (20% del total de la subasta).`);
+        setRegistering(false);
+        return;
+      }
+      
+      // 5. Validar Solapamiento de Horario (1h de diferencia mínima)
+      const { data: myInscriptions } = await supabase
+        .from('auction_participants')
+        .select('auction_id')
+        .eq('user_id', user.id);
+        
+      if (myInscriptions && myInscriptions.length > 0) {
+        const myAuctionIds = myInscriptions.map(i => i.auction_id);
+        const { data: overlappingAuctions } = await supabase
+          .from('auctions')
+          .select('id, title, start_date')
+          .in('id', myAuctionIds);
+          
+        if (overlappingAuctions) {
+          for (const oa of overlappingAuctions) {
+            const oaStart = new Date(oa.start_date).getTime();
+            const thisStart = startDate.getTime();
+            const diffInHours = Math.abs(oaStart - thisStart) / (1000 * 60 * 60);
+            if (diffInHours < 1) {
+              Alert.alert('Solapamiento de Horario', `Ya estás inscripto en la subasta '${oa.title}' que inicia al mismo tiempo (debe haber 1 hora de diferencia).`);
+              setRegistering(false);
+              return;
+            }
+          }
+        }
+      }
+      
+      // Inscribir
+      const { error: insertError } = await supabase
+        .from('auction_participants')
+        .insert({ user_id: user.id, auction_id: auction.id });
+        
+      if (insertError) throw insertError;
+      
+      setIsRegistered(true);
+      Alert.alert('¡Inscripción Exitosa!', 'Te has inscripto correctamente a esta subasta.');
+      
+    } catch (err: any) {
+      console.error(err);
+      Alert.alert('Error', err.message || 'No se pudo completar la inscripción.');
+    } finally {
+      setRegistering(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -52,6 +181,9 @@ export default function ItemDetailScreen() {
         </TouchableOpacity>
     </View>
   );
+
+  const now = new Date();
+  const isAuctionActive = auction && new Date(auction.start_date) <= now && new Date(auction.end_date) >= now;
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
@@ -79,14 +211,46 @@ export default function ItemDetailScreen() {
           </View>
         </View>
         
-        {isAuthenticated ? (
+        {user ? (
           <>
             <Text style={styles.price}>Precio Base: ${Number(item.starting_price).toLocaleString()} USD</Text>
-            <TouchableOpacity 
-                style={styles.liveButton} 
-                onPress={() => router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`)}>
-                <Text style={styles.liveButtonText}>Unirse a la Subasta en Vivo</Text>
-            </TouchableOpacity>
+            
+            {auction && (
+              <View style={styles.auctionContextCard}>
+                <Text style={styles.auctionTitle}>Subasta: {auction.title}</Text>
+                <Text style={styles.auctionDate}>Inicio: {new Date(auction.start_date).toLocaleString()}</Text>
+                <Text style={styles.auctionCat}>Categoría Mínima: {auction.minimum_category}</Text>
+              </View>
+            )}
+
+            {!isRegistered ? (
+              <TouchableOpacity 
+                  style={[styles.liveButton, { backgroundColor: Colors.light.icon }]} 
+                  onPress={handleRegister}
+                  disabled={registering}>
+                  <Text style={styles.liveButtonText}>
+                    {registering ? 'Validando...' : 'Inscribirse a la Subasta'}
+                  </Text>
+              </TouchableOpacity>
+            ) : (
+              <View>
+                <View style={styles.registeredBanner}>
+                  <CheckCircle2 color="#059669" size={20} />
+                  <Text style={styles.registeredText}>Estás inscripto en esta subasta</Text>
+                </View>
+                <TouchableOpacity 
+                    style={[styles.liveButton, !isAuctionActive && { opacity: 0.5 }]} 
+                    onPress={() => {
+                      if (!isAuctionActive) {
+                        Alert.alert('Subasta no iniciada', 'La subasta aún no ha comenzado o ya finalizó.');
+                        return;
+                      }
+                      router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`);
+                    }}>
+                    <Text style={styles.liveButtonText}>Entrar a Sala en Vivo</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </>
         ) : (
           <View style={{ paddingVertical: 20, alignItems: 'center', backgroundColor: Colors.light.border, borderRadius: 12, marginBottom: 24 }}>
@@ -178,6 +342,40 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: Colors.light.tint,
     marginBottom: 16,
+  },
+  auctionContextCard: {
+    backgroundColor: '#F1F5F9',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  auctionTitle: {
+    fontWeight: 'bold',
+    color: '#334155',
+  },
+  auctionDate: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 4,
+  },
+  auctionCat: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  registeredBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#D1FAE5',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  registeredText: {
+    marginLeft: 8,
+    color: '#065F46',
+    fontWeight: '600',
   },
   liveButton: {
     backgroundColor: Colors.light.tint,

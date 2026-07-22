@@ -74,3 +74,28 @@ GRANT SELECT ON public.items TO authenticated;
 CREATE TRIGGER update_item_proposals_modtime
     BEFORE UPDATE ON public.item_proposals
     FOR EACH ROW EXECUTE PROCEDURE update_modified_column();
+
+-- ==========================================
+-- ACTUALIZACIÓN: REGLAS AVANZADAS DE SUBASTAS
+-- ==========================================
+
+-- Añadir categoría mínima a subastas si no existe
+ALTER TABLE public.auctions ADD COLUMN IF NOT EXISTS minimum_category TEXT DEFAULT 'bronze' CHECK (minimum_category IN ('bronze', 'silver', 'gold', 'platinum'));
+
+-- Tabla de Participantes de Subasta (Inscripciones)
+CREATE TABLE IF NOT EXISTS public.auction_participants (
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    auction_id UUID NOT NULL REFERENCES public.auctions(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    PRIMARY KEY (user_id, auction_id)
+);
+
+ALTER TABLE public.auction_participants ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Permitir lectura publica participants" ON public.auction_participants FOR SELECT USING (true);
+CREATE POLICY "Permitir insercion participants a logueados" ON public.auction_participants FOR INSERT WITH CHECK (auth.role() = 'authenticated');
+CREATE POLICY "Permitir delete participants a logueados" ON public.auction_participants FOR DELETE USING (auth.role() = 'authenticated');
+
+-- Aumentar límites numéricos para soportar "montos exorbitantes" (ej. miles de millones)
+ALTER TABLE public.items ALTER COLUMN starting_price TYPE NUMERIC(20, 2);
+ALTER TABLE public.bids ALTER COLUMN amount TYPE NUMERIC(20, 2);
+ALTER TABLE public.profiles ALTER COLUMN guarantee_balance TYPE NUMERIC(20, 2);

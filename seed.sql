@@ -3,12 +3,12 @@
 -- ==========================================
 
 -- 1. CREACIÓN DE SUBASTAS (4 Subastas de Prueba)
-INSERT INTO public.auctions (id, title, description, start_date, end_date, currency, status)
+INSERT INTO public.auctions (id, title, description, start_date, end_date, currency, status, minimum_category)
 VALUES 
-('11111111-1111-1111-1111-111111111111', 'Subasta de Arte Contemporáneo', 'Obras exclusivas de artistas emergentes.', NOW() - INTERVAL '1 day', NOW() + INTERVAL '5 days', 'USD', 'active'),
-('22222222-2222-2222-2222-222222222222', 'Relojería Fina y Joyas', 'Colección privada de relojes suizos.', NOW() + INTERVAL '2 days', NOW() + INTERVAL '10 days', 'USD', 'upcoming'),
-('33333333-3333-3333-3333-333333333333', 'Antigüedades Europeas', 'Muebles y decoración del siglo XIX.', NOW() - INTERVAL '5 days', NOW() - INTERVAL '1 day', 'USD', 'ended'),
-('44444444-4444-4444-4444-444444444444', 'Coches Clásicos de Colección', 'Vehículos históricos restaurados.', NOW(), NOW() + INTERVAL '30 days', 'USD', 'active')
+('11111111-1111-1111-1111-111111111111', 'Subasta de Arte Contemporáneo', 'Obras exclusivas.', NOW() - INTERVAL '1 hour', NOW() + INTERVAL '5 days', 'USD', 'active', 'bronze'),
+('22222222-2222-2222-2222-222222222222', 'Relojería Fina y Joyas', 'Relojes suizos.', NOW() + INTERVAL '2 hours', NOW() + INTERVAL '10 days', 'USD', 'upcoming', 'gold'),
+('33333333-3333-3333-3333-333333333333', 'Antigüedades Europeas', 'Muebles.', NOW() - INTERVAL '5 days', NOW() - INTERVAL '1 day', 'USD', 'ended', 'silver'),
+('44444444-4444-4444-4444-444444444444', 'Coches Clásicos de Colección', 'Vehículos históricos.', NOW() + INTERVAL '24 hours', NOW() + INTERVAL '30 days', 'USD', 'upcoming', 'platinum')
 ON CONFLICT (id) DO NOTHING;
 
 -- 2. CREACIÓN DE ARTÍCULOS (Items)

@@ -15,29 +15,85 @@ export default function LiveAuctionRoom() {
   // Estado de subasta en vivo
   const [montoActual, setMontoActual] = useState(0);
   const [pujaMinima, setPujaMinima] = useState(0);
-  const [pujaMaxima, setPujaMaxima] = useState(0);
   const [ultimoPostor, setUltimoPostor] = useState('Nadie');
   const [tiempoRestante, setTiempoRestante] = useState(300); // 5 minutos iniciales
   const [bidAmount, setBidAmount] = useState('');
   const [history, setHistory] = useState<any[]>([]);
+  const [channel, setChannel] = useState<any>(null);
 
   useEffect(() => {
-    // Fetch real item
-    const fetchItem = async () => {
+    if (!item_id) return;
+    
+    // 1. Fetch Item details
+    const fetchItemAndBids = async () => {
       try {
-        if (!item_id) return;
-        const { data, error } = await supabase.from('items').select('*').eq('id', item_id).single();
-        if (data) {
-          setItem(data);
-          setMontoActual(Number(data.starting_price));
-          setPujaMinima(Number(data.starting_price) + 100);
-          setPujaMaxima(Number(data.starting_price) + 2000);
+        const { data: itemData } = await supabase.from('items').select('*').eq('id', item_id).single();
+        if (itemData) {
+          setItem(itemData);
+          setMontoActual(Number(itemData.starting_price));
+          setPujaMinima(Number(itemData.starting_price) + 100);
+        }
+
+        // 2. Fetch historic bids
+        const { data: bidsData } = await supabase
+          .from('bids')
+          .select('id, amount, created_at, profiles(first_name, last_name)')
+          .eq('item_id', item_id)
+          .order('amount', { ascending: false });
+
+        if (bidsData && bidsData.length > 0) {
+          const highestBid = bidsData[0];
+          setMontoActual(Number(highestBid.amount));
+          setPujaMinima(Number(highestBid.amount) + 100);
+          setUltimoPostor(highestBid.profiles?.first_name || 'Desconocido');
+          
+          const formattedHistory = bidsData.map(b => ({
+            id: b.id,
+            usuario: b.profiles?.first_name || 'Desconocido',
+            monto: Number(b.amount),
+            time: new Date(b.created_at).toLocaleTimeString()
+          }));
+          setHistory(formattedHistory);
         }
       } catch (err) {
         console.log(err);
       }
     };
-    fetchItem();
+    fetchItemAndBids();
+
+    // 3. Setup Supabase Realtime para capturar nuevas pujas en vivo
+    const myChannel = supabase.channel(`public:bids:item_id=eq.${item_id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'bids', filter: `item_id=eq.${item_id}` },
+        async (payload) => {
+          const newBidAmount = Number(payload.new.amount);
+          
+          // Obtener nombre del postor
+          const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', payload.new.bidder_id).single();
+          const bidderName = profile?.first_name || 'Alguien';
+
+          // Actualizar UI
+          setMontoActual(newBidAmount);
+          setPujaMinima(newBidAmount + 100);
+          setUltimoPostor(bidderName);
+          
+          setHistory(prev => [
+            { id: payload.new.id, usuario: bidderName, monto: newBidAmount, time: new Date(payload.new.created_at).toLocaleTimeString() },
+            ...prev
+          ]);
+          
+          // Resetear tiempo (Snipe protection 1 min)
+          setTiempoRestante(60);
+        }
+      )
+      .subscribe();
+      
+    setChannel(myChannel);
+
+    return () => {
+      supabase.removeChannel(myChannel);
+    };
   }, [item_id]);
 
   useEffect(() => {
@@ -53,11 +109,21 @@ export default function LiveAuctionRoom() {
     return `${m}:${s}`;
   };
 
-  const handleBid = () => {
-    const amount = Number(bidAmount);
+  const formatExorbitant = (num: number) => {
+    if (num >= 1000000) {
+       return num.toLocaleString('en-US'); // Utiliza separadores de miles
+    }
+    return num.toLocaleString();
+  };
+
+  const handleBid = async () => {
+    if (!user) return;
     
-    // Regla: No pujar contra ti mismo
-    if (ultimoPostor === (user?.first_name || 'Tú')) {
+    // Parseo seguro
+    const amountStr = bidAmount.replace(/,/g, '');
+    const amount = Number(amountStr);
+    
+    if (ultimoPostor === user.first_name) {
       Alert.alert('Aviso', 'Ya eres el líder actual de esta subasta.');
       return;
     }
@@ -67,35 +133,38 @@ export default function LiveAuctionRoom() {
       return;
     }
     
-    const isOroOrPlatino = user?.category === 'gold' || user?.category === 'platinum';
-    
     if (amount < pujaMinima) {
-      Alert.alert('Puja inválida', `El monto debe ser de al menos $${pujaMinima}`);
-      return;
-    }
-    
-    if (!isOroOrPlatino && amount > pujaMaxima) {
-      Alert.alert('Puja inválida', `El monto no puede superar $${pujaMaxima} (límite del 20%)`);
+      Alert.alert('Puja inválida', `El monto debe ser de al menos $${formatExorbitant(pujaMinima)}`);
       return;
     }
 
-    // Aceptar puja
-    setMontoActual(amount);
-    setPujaMinima(amount + 100);
-    setPujaMaxima(amount + 2000);
-    setUltimoPostor(user?.first_name || 'Tú');
-    
-    setHistory(prev => [
-      { id: Date.now(), usuario: user?.first_name || 'Tú', monto: amount, time: new Date().toLocaleTimeString() },
-      ...prev
-    ]);
-    
-    // Regla de tiempo: Al pujar, el tiempo se establece a 1 minuto (60s) 
-    // si queda más de 1 minuto o si se quiere hacer "snipe protection"
-    setTiempoRestante(60); 
+    try {
+      // 1. Validar fondos de garantía (Ej: El usuario no puede pujar más de su garantía total multiplicada por 5 o debe tener fondos suficientes)
+      // En las reglas: "sus compras no pueden superar dicho monto" (garantía)
+      // Asumiremos que el monto de la puja no puede superar el guarantee_balance * 5 (apalancamiento normal de subastas) o simplemente 1 a 1.
+      const maxAllowedBid = Number(user.guarantee_balance || 0) * 5; // Apalancamiento 5x sobre garantía
+      if (amount > maxAllowedBid) {
+        Alert.alert('Garantía Insuficiente', `Tu garantía actual no te permite pujar más de $${formatExorbitant(maxAllowedBid)}.`);
+        return;
+      }
 
-    setBidAmount('');
-    Alert.alert('Éxito', `Has pujado $${amount.toLocaleString()}`);
+      // 2. Insertar en BD
+      const { error } = await supabase.from('bids').insert({
+        item_id: item_id,
+        bidder_id: user.id,
+        amount: amount
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      setBidAmount('');
+      // Nota: La UI se actualizará automáticamente a través de la suscripción Realtime
+      
+    } catch (err: any) {
+      Alert.alert('Error al pujar', err.message);
+    }
   };
 
   return (
@@ -128,7 +197,7 @@ export default function LiveAuctionRoom() {
           <View style={styles.statusBox}>
             <DollarSign color={Colors.light.tint} size={24} />
             <Text style={styles.statusLabel}>Oferta Actual</Text>
-            <Text style={styles.currentBid}>${montoActual.toLocaleString()}</Text>
+            <Text style={styles.currentBid} numberOfLines={1} adjustsFontSizeToFit>${formatExorbitant(montoActual)}</Text>
           </View>
           <View style={styles.statusBox}>
             <Clock color={tiempoRestante < 60 ? Colors.light.error : Colors.light.text} size={24} />
@@ -149,8 +218,7 @@ export default function LiveAuctionRoom() {
 
       <View style={styles.biddingSection}>
         <Text style={styles.biddingRules}>
-          Puja Mínima: ${pujaMinima.toLocaleString()} 
-          {user?.category !== 'gold' && user?.category !== 'platinum' && ` • Máxima: $${pujaMaxima.toLocaleString()}`}
+          Puja Mínima: ${formatExorbitant(pujaMinima)} 
         </Text>
         
         <View style={styles.bidInputRow}>
@@ -170,8 +238,11 @@ export default function LiveAuctionRoom() {
           <TouchableOpacity style={styles.quickBidBtn} onPress={() => setBidAmount(pujaMinima.toString())}>
             <Text style={styles.quickBidText}>+ Mínimo</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.quickBidBtn} onPress={() => setBidAmount((pujaMinima + 500).toString())}>
-            <Text style={styles.quickBidText}>+ $500</Text>
+          <TouchableOpacity style={styles.quickBidBtn} onPress={() => setBidAmount((pujaMinima + 50000).toString())}>
+            <Text style={styles.quickBidText}>+ 50k</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickBidBtn} onPress={() => setBidAmount((pujaMinima + 1000000).toString())}>
+            <Text style={styles.quickBidText}>+ 1 Millón</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -187,7 +258,7 @@ export default function LiveAuctionRoom() {
               <Text style={styles.historyUser}>{h.usuario}</Text>
               <Text style={styles.historyTime}>{h.time}</Text>
             </View>
-            <Text style={styles.historyAmount}>${h.monto.toLocaleString()}</Text>
+            <Text style={styles.historyAmount}>${formatExorbitant(h.monto)}</Text>
           </View>
         ))}
       </ScrollView>
@@ -257,6 +328,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 10,
     borderRadius: 8,
+    right: 16,
   },
   itemTitle: {
     color: '#FFF',
@@ -295,7 +367,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   currentBid: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
     color: Colors.light.tint,
     marginTop: 4,
@@ -326,10 +398,11 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.light.border,
   },
   biddingRules: {
-    fontSize: 12,
+    fontSize: 13,
     color: Colors.light.textSecondary,
     marginBottom: 12,
     textAlign: 'center',
+    fontWeight: '500'
   },
   bidInputRow: {
     flexDirection: 'row',
@@ -360,11 +433,12 @@ const styles = StyleSheet.create({
   quickBids: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 12,
+    flexWrap: 'wrap',
+    gap: 8,
   },
   quickBidBtn: {
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: Colors.light.tint,
@@ -372,6 +446,7 @@ const styles = StyleSheet.create({
   quickBidText: {
     color: Colors.light.tint,
     fontWeight: '600',
+    fontSize: 13,
   },
   historySection: {
     flex: 1,
