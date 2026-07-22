@@ -6,7 +6,7 @@
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS guarantee_balance NUMERIC DEFAULT 0.00;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS address TEXT;
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE; -- Para validación manual
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT TRUE; -- Automatizado para testing rápido
 
 -- 2. Métodos de Pago
 CREATE TABLE IF NOT EXISTS public.payment_methods (
