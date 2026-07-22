@@ -2,8 +2,11 @@
 -- ACTUALIZACIÓN DE ESQUEMA: LÓGICA DE NEGOCIOS AVANZADA
 -- ==========================================
 
--- 1. Añadir saldo de garantía al perfil de usuario
+-- 1. Añadir campos al perfil de usuario
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS guarantee_balance NUMERIC DEFAULT 0.00;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone VARCHAR(50);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_approved BOOLEAN DEFAULT FALSE; -- Para validación manual
 
 -- 2. Métodos de Pago
 CREATE TABLE IF NOT EXISTS public.payment_methods (

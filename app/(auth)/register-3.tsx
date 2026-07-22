@@ -42,9 +42,17 @@ export default function RegisterStage3Screen() {
 
           <TouchableOpacity 
             style={[styles.button, { marginTop: 40 }]} 
-            onPress={() => router.replace('/(auth)/login')}
+            onPress={() => {
+              Alert.alert(
+                'Registro Exitoso',
+                'Tu cuenta ha sido creada. Te hemos enviado un email con un token para validar tu cuenta.\n\nNOTA: Una vez validado el email, tu cuenta pasará a "Aprobación Manual" por un administrador. Solo entonces podrás participar en subastas.',
+                [
+                  { text: 'Ir a Iniciar Sesión', onPress: () => router.replace('/(auth)/login') }
+                ]
+              );
+            }}
           >
-            <Text style={styles.buttonText}>Finalizar Registro (Ingresar)</Text>
+            <Text style={styles.buttonText}>Finalizar Registro</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

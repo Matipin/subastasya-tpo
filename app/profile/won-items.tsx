@@ -106,7 +106,7 @@ export default function WonItemsScreen() {
                 </View>
                 <View style={[styles.row, styles.totalRow]}>
                   <Text style={styles.totalLabel}>Total a Pagar:</Text>
-                  <Text style={styles.totalValue}>${item.total_a_pagar.toLocaleString()} ARS</Text>
+                  <Text style={styles.totalValue}>${item.total_a_pagar.toLocaleString()} USD</Text>
                 </View>
               </View>
 

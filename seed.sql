@@ -28,6 +28,11 @@ ON CONFLICT (id) DO NOTHING;
 -- 1. Regístrate en la app con los correos testcomun@test.com, testoro@test.com y testplatino@test.com.
 -- 2. Una vez registrados, vuelve aquí y ejecuta las siguientes 3 líneas seleccionándolas y dándole a "Run".
 
-UPDATE public.profiles SET category = 'bronze', status = 'active' WHERE email = 'testcomun@test.com';
-UPDATE public.profiles SET category = 'gold', status = 'active' WHERE email = 'testoro@test.com';
-UPDATE public.profiles SET category = 'platinum', status = 'active' WHERE email = 'testplatino@test.com';
+UPDATE public.profiles SET category = 'bronze', status = 'active', is_approved = true, guarantee_balance = 100000.00 WHERE email = 'testcomun@test.com';
+UPDATE public.profiles SET category = 'gold', status = 'active', is_approved = true, guarantee_balance = 100000.00 WHERE email = 'testoro@test.com';
+UPDATE public.profiles SET category = 'platinum', status = 'active', is_approved = true, guarantee_balance = 100000.00 WHERE email = 'testplatino@test.com';
+
+-- Crearles una tarjeta validada automáticamente
+INSERT INTO public.payment_methods (user_id, provider, card_number, type)
+SELECT id, 'Visa Black', '**** **** **** 9999', 'CARD' FROM auth.users WHERE email IN ('testcomun@test.com', 'testoro@test.com', 'testplatino@test.com')
+ON CONFLICT DO NOTHING;
