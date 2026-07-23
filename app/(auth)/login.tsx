@@ -38,14 +38,9 @@ export default function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      let finalPassword = password;
-      if (email === 'testcomun@test.com' && password === 'comun') finalPassword = 'comun123';
-      if (email === 'testoro@test.com' && password === 'oro') finalPassword = 'oro12345';
-      if (email === 'testplatino@test.com' && password === 'platino') finalPassword = 'platino123';
-
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email: email,
-        password: finalPassword,
+        password: password,
       });
       
       if (authError) throw authError;

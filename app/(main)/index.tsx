@@ -5,6 +5,7 @@ import { Colors } from '@/constants/theme';
 import { Search, Bell, UserCircle } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
+import { finalizeAuctions } from '@/lib/auctionFinalizer';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -15,6 +16,8 @@ export default function HomeScreen() {
   useEffect(() => {
     const fetchCatalog = async () => {
       try {
+        await finalizeAuctions(); // Finaliza subastas vencidas antes de listar
+
         const { data, error } = await supabase
           .from('items')
           .select('*')

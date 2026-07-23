@@ -6,7 +6,7 @@ import { MailCheck } from 'lucide-react-native';
 
 export default function RegisterStage2Screen() {
   const router = useRouter();
-  const { email } = useLocalSearchParams<{ email: string }>();
+  const { email, firstName, lastName, address, country } = useLocalSearchParams<{ email: string, firstName: string, lastName: string, address: string, country: string }>();
   const [loading, setLoading] = useState(true);
   const [token, setToken] = useState('');
   const [generatedToken, setGeneratedToken] = useState('');
@@ -59,7 +59,10 @@ export default function RegisterStage2Screen() {
 
   const handleVerify = () => {
     if (token.toUpperCase() === generatedToken) {
-      router.push({ pathname: '/(auth)/register-3', params: { email } });
+      router.push({ 
+        pathname: '/(auth)/register-3', 
+        params: { email, firstName, lastName, address, country } 
+      });
     } else {
       Alert.alert('Error', 'Código incorrecto. Revisa tu correo electrónico.');
     }

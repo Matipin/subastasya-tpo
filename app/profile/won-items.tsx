@@ -13,19 +13,45 @@ export default function WonItemsScreen() {
   const [wonItems, setWonItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Generamos un item simulado para probar el flujo financiero
-  const generateMockWonItem = () => {
-    const newItem = {
-      item_id: Math.floor(Math.random() * 1000),
-      titulo: "Reloj de pulsera simulado",
-      monto_pujado: 12000.00,
-      comisiones: 1200.00,
-      envio: 500.00,
-      total_a_pagar: 13700.00,
-      estado_pago: 'pendiente'
+  useEffect(() => {
+    const fetchWonItems = async () => {
+      if (!authUser) return;
+      setLoading(true);
+      try {
+        // Find items that are sold and where this user has the highest bid
+        const { data: allBids } = await supabase.from('bids').select('item_id').eq('user_id', authUser.id);
+        if (!allBids || allBids.length === 0) return;
+        
+        const uniqueItems = new Set(allBids.map(b => b.item_id));
+        const { data: items } = await supabase.from('items').select('*').in('id', Array.from(uniqueItems)).eq('status', 'sold');
+        
+        if (items) {
+          const wonList = [];
+          for (const item of items) {
+            const { data: maxBid } = await supabase.from('bids').select('amount, user_id').eq('item_id', item.id).order('amount', { ascending: false }).limit(1);
+            if (maxBid && maxBid[0].user_id === authUser.id) {
+              const amount = Number(maxBid[0].amount);
+              wonList.push({
+                item_id: item.id,
+                titulo: item.title,
+                monto_pujado: amount,
+                comisiones: amount * 0.1,
+                envio: 500.00,
+                total_a_pagar: amount + (amount * 0.1) + 500,
+                estado_pago: 'pendiente' // idealmente saldria de una tabla transactions, simplificado por ahora
+              });
+            }
+          }
+          setWonItems(wonList);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     };
-    setWonItems([newItem, ...wonItems]);
-  };
+    fetchWonItems();
+  }, [authUser]);
 
   const handleCheckout = (item: any) => {
     Alert.alert('Checkout', `¿Deseas pagar $${item.total_a_pagar} ahora con tu método de pago principal?`, [
@@ -38,7 +64,21 @@ export default function WonItemsScreen() {
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) return;
 
-            // 1. Transaction para el pago del artículo (Venta)
+            // 1. Validar fondos
+            const { data: profile } = await supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single();
+            if (Number(profile?.guarantee_balance || 0) < item.total_a_pagar) {
+              // Multa por falta de fondos (10% del total a pagar o monto pujado)
+              const multa = item.monto_pujado * 0.1;
+              await supabase.from('debts').insert({
+                user_id: user.id,
+                amount: multa,
+                status: 'pending'
+              });
+              Alert.alert('Transacción Rechazada', `Fondos insuficientes. Se te ha aplicado una multa de $${multa} por incumplimiento de pago.`);
+              return;
+            }
+
+            // 2. Transaction para el pago del artículo (Venta)
             await supabase.from('transactions').insert({
               user_id: user.id,
               type: 'sale_payment',
@@ -123,10 +163,6 @@ export default function WonItemsScreen() {
           ))
         )}
 
-        <TouchableOpacity style={styles.mockButton} onPress={generateMockWonItem}>
-           <Plus color={Colors.light.textSecondary} size={20} />
-           <Text style={styles.mockButtonText}>Simular ganar una subasta</Text>
-        </TouchableOpacity>
       </ScrollView>
     </View>
   );

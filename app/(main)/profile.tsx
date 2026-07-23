@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors } from '@/constants/theme';
 import { UserCircle, LogOut, ChevronRight } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
   const { user, logout } = useAuthStore();
@@ -13,6 +14,63 @@ export default function ProfileScreen() {
     logout();
     router.replace('/(auth)/login');
   };
+
+  const [stats, setStats] = useState({ asistencias: 0, ganadas: 0 });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (!user) return;
+      
+      try {
+        // 1. Asistencias: Unique items bid on
+        const { data: bids } = await supabase
+          .from('bids')
+          .select('item_id, amount')
+          .eq('bidder_id', user.id);
+          
+        if (bids) {
+          const uniqueItems = new Set(bids.map(b => b.item_id));
+          
+          // 2. Ganadas: Find out if user's max bid is the overall max bid for sold items
+          let wonCount = 0;
+          
+          // Fetch status of all unique items to check if they are 'sold'
+          const { data: items } = await supabase
+            .from('items')
+            .select('id, status')
+            .in('id', Array.from(uniqueItems));
+            
+          const soldItemIds = items?.filter(i => i.status === 'sold').map(i => i.id) || [];
+          
+          if (soldItemIds.length > 0) {
+            // For each sold item the user bid on, check if they are the winner
+            for (const itemId of soldItemIds) {
+              const { data: maxBid } = await supabase
+                .from('bids')
+                .select('bidder_id')
+                .eq('item_id', itemId)
+                .order('amount', { ascending: false })
+                .limit(1)
+                .single();
+                
+              if (maxBid?.bidder_id === user.id) {
+                wonCount++;
+              }
+            }
+          }
+          
+          setStats({
+            asistencias: uniqueItems.size,
+            ganadas: wonCount
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching stats:", err);
+      }
+    };
+    
+    fetchStats();
+  }, [user]);
 
   if (!user) return null;
 
@@ -56,11 +114,11 @@ export default function ProfileScreen() {
       <Text style={styles.sectionTitle}>Estadísticas</Text>
       <View style={styles.stats}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statValue}>{stats.asistencias}</Text>
           <Text style={styles.statLabel}>Asistencias</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>0</Text>
+          <Text style={styles.statValue}>{stats.ganadas}</Text>
           <Text style={styles.statLabel}>Ganadas</Text>
         </View>
       </View>

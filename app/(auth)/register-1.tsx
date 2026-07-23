@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, Text, ScrollView, KeyboardAvoidingView, Platform, Image } from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, Text, ScrollView, KeyboardAvoidingView, Platform, Image, Modal } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/constants/theme';
-import { ImagePlus } from 'lucide-react-native';
+import { ImagePlus, ChevronDown } from 'lucide-react-native';
+
+const PAISES_OPTIONS = ['Argentina', 'Brasil', 'Chile', 'Uruguay', 'Colombia', 'México', 'España', 'Estados Unidos'];
 
 export default function RegisterStage1Screen() {
   const router = useRouter();
@@ -11,6 +13,11 @@ export default function RegisterStage1Screen() {
   const [frontImage, setFrontImage] = useState<string | null>(null);
   const [backImage, setBackImage] = useState<string | null>(null);
   const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [address, setAddress] = useState('');
+  const [country, setCountry] = useState('');
+  const [modalPaisVisible, setModalPaisVisible] = useState(false);
 
   const pickImage = async (side: 'front' | 'back') => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -38,10 +45,10 @@ export default function RegisterStage1Screen() {
 
         <View style={styles.form}>
           <Text style={styles.label}>Nombre</Text>
-          <TextInput style={styles.input} placeholder="Ej: Juan" />
+          <TextInput style={styles.input} placeholder="Ej: Juan" value={firstName} onChangeText={setFirstName} />
 
           <Text style={styles.label}>Apellido</Text>
-          <TextInput style={styles.input} placeholder="Ej: Perez" />
+          <TextInput style={styles.input} placeholder="Ej: Perez" value={lastName} onChangeText={setLastName} />
 
           <Text style={styles.label}>Correo electrónico</Text>
           <TextInput 
@@ -54,10 +61,45 @@ export default function RegisterStage1Screen() {
           />
 
           <Text style={styles.label}>Domicilio legal</Text>
-          <TextInput style={styles.input} placeholder="Ej: Av. Corrientes 1234" />
+          <TextInput style={styles.input} placeholder="Ej: Av. Corrientes 1234" value={address} onChangeText={setAddress} />
 
           <Text style={styles.label}>País de Residencia</Text>
-          <TextInput style={styles.input} placeholder="Seleccionar..." />
+          <TouchableOpacity 
+            style={[styles.input, { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }]} 
+            onPress={() => setModalPaisVisible(true)}
+          >
+            <Text style={{ color: country ? Colors.light.text : '#999', fontSize: 16 }}>
+              {country || "Seleccionar..."}
+            </Text>
+            <ChevronDown color={Colors.light.textSecondary} size={20} />
+          </TouchableOpacity>
+
+          <Modal
+            visible={modalPaisVisible}
+            transparent={true}
+            animationType="slide"
+            onRequestClose={() => setModalPaisVisible(false)}
+          >
+            <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPressOut={() => setModalPaisVisible(false)}>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Seleccioná un País</Text>
+                <ScrollView>
+                  {PAISES_OPTIONS.map((paisOption, idx) => (
+                    <TouchableOpacity 
+                      key={idx} 
+                      style={styles.modalItem}
+                      onPress={() => {
+                        setCountry(paisOption);
+                        setModalPaisVisible(false);
+                      }}
+                    >
+                      <Text style={styles.modalItemText}>{paisOption}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            </TouchableOpacity>
+          </Modal>
 
           <Text style={styles.label}>Documentación de Identidad (DNI/Pasaporte)</Text>
           <View style={styles.photoRow}>
@@ -88,11 +130,14 @@ export default function RegisterStage1Screen() {
           <Text style={styles.helperText}>Asegúrate de que las fotos sean nítidas y que todos los datos sean legibles. Tus datos serán verificados por nuestro equipo antes de activar la cuenta.</Text>
 
           <TouchableOpacity style={styles.button} onPress={() => {
-            if (!email) {
-              alert('Por favor ingresa un correo');
+            if (!email || !firstName || !lastName || !country) {
+              alert('Por favor completa todos los campos requeridos (Nombre, Apellido, Email, País)');
               return;
             }
-            router.push({ pathname: '/(auth)/register-2', params: { email } });
+            router.push({ 
+              pathname: '/(auth)/register-2', 
+              params: { email, firstName, lastName, address, country } 
+            });
           }}>
             <Text style={styles.buttonText}>Continuar a Etapa 2</Text>
           </TouchableOpacity>
@@ -165,6 +210,35 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
+  },
+  modalOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.5)', 
+    justifyContent: 'center', 
+    padding: 20 
+  },
+  modalContent: { 
+    backgroundColor: '#FFF', 
+    borderRadius: 15, 
+    padding: 20, 
+    maxHeight: '80%' 
+  },
+  modalTitle: { 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 15, 
+    color: Colors.light.text, 
+    textAlign: 'center' 
+  },
+  modalItem: { 
+    paddingVertical: 15, 
+    borderBottomWidth: 1, 
+    borderBottomColor: '#EEE' 
+  },
+  modalItemText: { 
+    fontSize: 16, 
+    color: Colors.light.text, 
+    textAlign: 'center' 
   },
   photoUploadText: {
     marginTop: 8,
