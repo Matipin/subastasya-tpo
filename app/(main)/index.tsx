@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { Search, Bell, UserCircle } from 'lucide-react-native';
+import { Search, Bell, UserCircle, LogOut } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { finalizeAuctions } from '@/lib/auctionFinalizer';
@@ -12,6 +12,8 @@ export default function HomeScreen() {
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const isAuthenticated = useAuthStore(state => !!state.user);
+  const isGuest = useAuthStore(state => state.isGuest);
+  const logout = useAuthStore(state => state.logout);
 
   useEffect(() => {
     const fetchCatalog = async () => {
@@ -42,21 +44,26 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SubastasYa</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => {
-            if (isAuthenticated) router.push('/(main)/notifications');
-            else {
-              if (Platform.OS === 'web') {
-                if (window.confirm('Debes iniciar sesión para ver notificaciones. ¿Ir al Login?')) router.replace('/(auth)/login');
-              } else {
-                Alert.alert('Acceso Restringido', 'Debes iniciar sesión para ver notificaciones.', [{text: 'Cancelar', style: 'cancel'}, {text: 'Iniciar Sesión', onPress: () => router.replace('/(auth)/login')}]);
-              }
-            }
-          }}>
-            <Bell color={Colors.light.text} size={28} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push(isAuthenticated ? '/(main)/profile' : '/(auth)/login')}>
-            <UserCircle color={Colors.light.text} size={32} />
-          </TouchableOpacity>
+          {isGuest ? (
+            <TouchableOpacity style={styles.iconButton} onPress={() => {
+              logout();
+              router.replace('/(auth)/login');
+            }}>
+              <LogOut color={Colors.light.text} size={28} />
+            </TouchableOpacity>
+          ) : (
+            <>
+              <TouchableOpacity style={styles.iconButton} onPress={() => {
+                if (isAuthenticated) router.push('/(main)/notifications');
+                else router.replace('/(auth)/login');
+              }}>
+                <Bell color={Colors.light.text} size={28} />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.iconButton} onPress={() => router.push(isAuthenticated ? '/(main)/profile' : '/(auth)/login')}>
+                <UserCircle color={Colors.light.text} size={32} />
+              </TouchableOpacity>
+            </>
+          )}
         </View>
       </View>
 
