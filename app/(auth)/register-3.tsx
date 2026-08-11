@@ -17,26 +17,34 @@ export default function RegisterStage3Screen() {
   
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [mpToken, setMpToken] = useState<string | null>(null);
+  const [bankDetails, setBankDetails] = useState({ cbu: '', alias: '', titular: '' });
   
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleRegister = async () => {
     if (!password || password.length < 6) {
-      Alert.alert('Error', 'La contraseña debe tener al menos 6 caracteres');
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres');
       return;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Las contraseñas no coinciden');
+      setErrorMsg('Las contraseñas no coinciden');
       return;
     }
     if (!selectedPayment) {
-      Alert.alert('Error', 'Debes seleccionar un método de pago');
+      setErrorMsg('Debes seleccionar un método de pago');
       return;
     }
     if (selectedPayment === 'CARD' && !mpToken) {
-      Alert.alert('Error', 'Por favor completa y guarda los datos de la tarjeta con MercadoPago');
+      setErrorMsg('Por favor completa y guarda los datos de la tarjeta con MercadoPago');
       return;
     }
+    if (selectedPayment === 'BANK' && (!bankDetails.cbu || !bankDetails.alias || !bankDetails.titular)) {
+      setErrorMsg('Por favor completa todos los datos de tu cuenta bancaria');
+      return;
+    }
+    
+    setErrorMsg(null);
 
     setLoading(true);
     try {
@@ -78,16 +86,16 @@ export default function RegisterStage3Screen() {
 
       if (profileError) throw profileError;
 
-      // 3. Insertar método de pago si es tarjeta
-      if (selectedPayment === 'CARD') {
+      // 3. Insertar método de pago
+      if (selectedPayment === 'CARD' || selectedPayment === 'BANK') {
         const { error: pmError } = await supabase.from('payment_methods').insert({
           user_id: user.id,
-          provider: 'MercadoPago - Tarjeta',
-          type: 'CARD',
-          card_number: `Tokenizado por MP`,
+          provider: selectedPayment === 'CARD' ? 'MercadoPago - Tarjeta' : 'Transferencia Bancaria',
+          type: selectedPayment,
+          card_number: selectedPayment === 'CARD' ? `Tokenizado por MP` : bankDetails.cbu,
         });
         if (pmError) {
-          console.warn('Error guardando tarjeta', pmError);
+          console.warn('Error guardando medio de pago', pmError);
         }
       }
 
@@ -168,6 +176,23 @@ export default function RegisterStage3Screen() {
             {selectedPayment === 'BANK' ? <CheckCircle2 color={Colors.light.tint} size={20} /> : <Plus color={Colors.light.textSecondary} size={20} />}
           </TouchableOpacity>
 
+          {selectedPayment === 'BANK' && (
+            <View style={{ marginTop: 10, width: '100%', paddingHorizontal: 4 }}>
+               <Text style={styles.label}>Titular de la cuenta</Text>
+               <TextInput style={styles.input} placeholder="Ej: Juan Perez" value={bankDetails.titular} onChangeText={t => setBankDetails({...bankDetails, titular: t})} />
+               <Text style={styles.label}>CBU / CVU</Text>
+               <TextInput style={styles.input} placeholder="Ej: 00000031000..." keyboardType="numeric" value={bankDetails.cbu} onChangeText={t => setBankDetails({...bankDetails, cbu: t})} />
+               <Text style={styles.label}>Alias</Text>
+               <TextInput style={styles.input} placeholder="Ej: mi.alias.mp" value={bankDetails.alias} onChangeText={t => setBankDetails({...bankDetails, alias: t})} />
+            </View>
+          )}
+
+          {errorMsg && (
+            <Text style={{ color: 'red', fontWeight: 'bold', textAlign: 'center', marginTop: 16 }}>
+              {errorMsg}
+            </Text>
+          )}
+
           <TouchableOpacity 
             style={[styles.button, { marginTop: 40, opacity: loading ? 0.7 : 1 }]} 
             onPress={handleRegister}
@@ -233,6 +258,15 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 12,
     fontSize: 16,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: Colors.light.border,
+    borderRadius: 8,
+    backgroundColor: Colors.light.card,
+    padding: 12,
+    fontSize: 16,
+    marginTop: 4,
   },
   eyeIcon: {
     padding: 12,

@@ -92,12 +92,39 @@ export default function MercadoPagoBrick({ onSubmit, usuarioEmail }: MercadoPago
   };
 
   if (Platform.OS === 'web') {
+    // En Web usamos un iframe nativo inyectando el HTML para que cargue el script de MercadoPago.
+    // Reemplazamos la función de WebView de React Native por un window.parent.postMessage estándar.
     return (
       <View style={styles.container}>
-        <Text>El Card Brick en Web requiere usar @mercadopago/sdk-react. Por favor prueba en un emulador o Expo Go.</Text>
+        <iframe 
+          srcDoc={htmlContent.replace(/window\.ReactNativeWebView\.postMessage/g, 'window.parent.postMessage')}
+          style={{ width: '100%', height: '100%', border: 'none' }}
+        />
       </View>
     );
   }
+
+  // Effect para escuchar el mensaje en la Web
+  React.useEffect(() => {
+    if (Platform.OS === 'web') {
+      const listener = (event: MessageEvent) => {
+        try {
+          if (typeof event.data === 'string') {
+            const message = JSON.parse(event.data);
+            if (message.type === 'submit') {
+              onSubmit(message.data);
+            } else if (message.type === 'error') {
+              console.error('MercadoPago Brick Error:', message.error);
+            }
+          }
+        } catch (e) {
+          // Ignorar mensajes que no sean JSON
+        }
+      };
+      window.addEventListener('message', listener);
+      return () => window.removeEventListener('message', listener);
+    }
+  }, [onSubmit]);
 
   return (
     <View style={styles.container}>
@@ -118,7 +145,7 @@ export default function MercadoPagoBrick({ onSubmit, usuarioEmail }: MercadoPago
 
 const styles = StyleSheet.create({
   container: {
-    height: 500, // Fijar una altura explícita para evitar que se colapse
+    height: 850, // Fijar una altura mucho mayor para que el brick completo quepa sin doble scroll
     width: '100%',
     overflow: 'hidden',
     backgroundColor: '#fff',

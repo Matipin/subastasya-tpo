@@ -76,11 +76,16 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.header}>
-        <UserCircle size={80} color={Colors.light.text} />
-        <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
-        <View style={styles.categoryBadge}>
-          <Text style={styles.categoryText}>Categoría: {(user.category || 'bronze').toUpperCase()}</Text>
+      <View style={[styles.header, { flexDirection: 'row', alignItems: 'flex-start' }]}>
+        <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, zIndex: 10, marginTop: 10 }}>
+          <ChevronLeft color={Colors.light.text} size={32} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, alignItems: 'center', marginRight: 36 }}>
+          <UserCircle size={80} color={Colors.light.text} />
+          <Text style={styles.userName}>{user.first_name} {user.last_name}</Text>
+          <View style={styles.categoryBadge}>
+            <Text style={styles.categoryText}>Categoría: {(user.category || 'bronze').toUpperCase()}</Text>
+          </View>
         </View>
       </View>
 

@@ -19,6 +19,7 @@ export default function ProposeItemScreen() {
   const [photos, setPhotos] = useState<string[]>(Array(10).fill(''));
   const [ownership, setOwnership] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const pickImage = async (index: number) => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -38,9 +39,10 @@ export default function ProposeItemScreen() {
   const handleSubmit = async () => {
     const validPhotosCount = photos.filter(p => p !== '').length;
     if (!form.title || !form.description || !ownership || validPhotosCount < 6 || validPhotosCount > 10) {
-      Alert.alert('Error', 'Debe completar los datos básicos, subir entre 6 y 10 fotos y declarar la propiedad.');
+      setErrorMsg('Debe completar los datos básicos, subir entre 6 y 10 fotos y declarar la propiedad.');
       return;
     }
+    setErrorMsg(null);
 
     setLoading(true);
     try {
@@ -79,9 +81,9 @@ export default function ProposeItemScreen() {
         { text: 'Ir a Mis Productos', onPress: () => router.replace('/profile/my-items') }
       ]);
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      Alert.alert('Error', 'No se pudo enviar la propuesta.');
+      setErrorMsg(err.message || 'Error inesperado al enviar la propuesta.');
     } finally {
       setLoading(false);
     }
@@ -162,6 +164,12 @@ export default function ProposeItemScreen() {
             thumbColor={'#FFF'}
           />
         </View>
+
+        {errorMsg && (
+          <Text style={{ color: 'red', fontWeight: 'bold', textAlign: 'center', marginBottom: 16 }}>
+            {errorMsg}
+          </Text>
+        )}
 
         <TouchableOpacity 
           style={[styles.submitButton, loading && { opacity: 0.7 }]} 
