@@ -16,7 +16,7 @@ export default function ProposeItemScreen() {
     description: '',
     history: '',
   });
-  const [photos, setPhotos] = useState<string[]>(Array(6).fill(''));
+  const [photos, setPhotos] = useState<string[]>(Array(10).fill(''));
   const [ownership, setOwnership] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -37,8 +37,8 @@ export default function ProposeItemScreen() {
 
   const handleSubmit = async () => {
     const validPhotosCount = photos.filter(p => p !== '').length;
-    if (!form.title || !form.description || !ownership || validPhotosCount < 1) { // Reduced to 1 for easier testing
-      Alert.alert('Error', 'Debe completar los datos básicos, subir al menos 1 foto y declarar la propiedad.');
+    if (!form.title || !form.description || !ownership || validPhotosCount < 6 || validPhotosCount > 10) {
+      Alert.alert('Error', 'Debe completar los datos básicos, subir entre 6 y 10 fotos y declarar la propiedad.');
       return;
     }
 
@@ -59,22 +59,20 @@ export default function ProposeItemScreen() {
         description: form.description,
         history: form.history,
         images: mockImages,
-        status: 'pending_review'
+        status: 'pending_shipping' // Updated status
       }).select().single();
 
       if (error) throw error;
 
-      // AUTOMATIZACIÓN MOCK:
-      // Como no hay admin, simularemos que a los 5 segundos un administrador lo revisa y lo tasa
+      // AUTOMATIZACIÓN MOCK: Notificación "Mándalo a tal lado"
       if (proposal) {
-        setTimeout(async () => {
-          const fakePrice = Math.floor(Math.random() * 5000) + 500;
-          await supabase.from('item_proposals').update({
-            status: 'appraised',
-            proposed_price: fakePrice,
-            admin_feedback: 'El artículo parece estar en excelentes condiciones. Recomendamos este precio base.'
-          }).eq('id', proposal.id);
-        }, 5000);
+        await supabase.from('notifications').insert({
+          user_id: user.id,
+          title: 'Propuesta Aceptada (Pendiente de envío)',
+          message: `Envía tu artículo "${proposal.title}" a Av. Falsa 123, Buenos Aires para su tasación física.`,
+          type: 'SHIPPING_REQUEST',
+          metadata: { proposal_id: proposal.id }
+        });
       }
 
       Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección. Revise la pestaña "Mis Productos" en unos minutos para ver la tasación.', [
@@ -139,7 +137,7 @@ export default function ProposeItemScreen() {
         </View>
 
         <View style={styles.photoSection}>
-          <Text style={styles.label}>Fotografías (Sube al menos 1 para probar)</Text>
+          <Text style={styles.label}>Fotografías (Sube entre 6 y 10 fotos obligatoriamente)</Text>
           <View style={styles.photoGrid}>
             {photos.map((uri, i) => (
               <TouchableOpacity key={i} style={styles.photoPlaceholder} onPress={() => pickImage(i)}>

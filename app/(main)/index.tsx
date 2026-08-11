@@ -42,7 +42,7 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SubastasYa</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(main)/notifications')}>
             <Bell color={Colors.light.text} size={28} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={() => router.push(isAuthenticated ? '/(main)/profile' : '/(auth)/login')}>

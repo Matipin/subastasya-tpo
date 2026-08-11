@@ -87,6 +87,13 @@ export default function ItemDetailScreen() {
         setRegistering(false);
         return;
       }
+
+      // 1.5 Validar que no sea el dueño de la subasta (o del item)
+      if (item && user.id === item.owner_id) {
+        Alert.alert('Acceso Denegado', 'No puedes inscribirte a una subasta donde tú eres el propietario de los artículos.');
+        setRegistering(false);
+        return;
+      }
       
       // 2. Validar Multas Pendientes
       const { data: debts } = await supabase

@@ -6,7 +6,7 @@ import { api } from '@/services/mockApi';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { Eye, EyeOff, CheckSquare, Square } from 'lucide-react-native';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('test@test.com');
@@ -19,8 +19,8 @@ export default function LoginScreen() {
   useEffect(() => {
     const loadCredentials = async () => {
       try {
-        const savedEmail = await SecureStore.getItemAsync('saved_email');
-        const savedPassword = await SecureStore.getItemAsync('saved_password');
+        const savedEmail = await AsyncStorage.getItem('saved_email');
+        const savedPassword = await AsyncStorage.getItem('saved_password');
         if (savedEmail && savedPassword) {
           setEmail(savedEmail);
           setPassword(savedPassword);
@@ -55,11 +55,11 @@ export default function LoginScreen() {
       if (profileError) throw profileError;
       
       if (rememberMe) {
-        await SecureStore.setItemAsync('saved_email', email);
-        await SecureStore.setItemAsync('saved_password', password);
+        await AsyncStorage.setItem('saved_email', email);
+        await AsyncStorage.setItem('saved_password', password);
       } else {
-        await SecureStore.deleteItemAsync('saved_email');
-        await SecureStore.deleteItemAsync('saved_password');
+        await AsyncStorage.removeItem('saved_email');
+        await AsyncStorage.removeItem('saved_password');
       }
 
       login(userProfile, data.session.access_token);

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Platform } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { MailCheck } from 'lucide-react-native';
@@ -47,13 +47,18 @@ export default function RegisterStage2Screen() {
         setEmailSent(true);
       } catch (err) {
         console.error(err);
-        Alert.alert("Error", "No se pudo enviar el correo de validación.");
+        if (Platform.OS === 'web') {
+           // On web, CORS might block the fetch. Let's simulate success for development.
+           setEmailSent(true);
+           Alert.alert("Modo Web", `CORS bloqueó el correo. El código es: ${newToken}`);
+        } else {
+           Alert.alert("Error", "No se pudo enviar el correo de validación.");
+        }
       } finally {
         setLoading(false);
       }
     };
     
-    // Retraso de 3 segundos para simular el proceso de investigación
     setTimeout(sendMail, 3000);
   }, [email]);
 

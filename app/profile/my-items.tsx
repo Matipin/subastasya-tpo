@@ -139,7 +139,7 @@ export default function MyItemsScreen() {
                   item.status === 'accepted' && {color: '#2E7D32'},
                   item.status === 'rejected' && {color: Colors.light.error},
                   item.status === 'appraised' && {color: '#1976D2'},
-                  item.status === 'pending_review' && {color: '#ED6C02'},
+                  item.status === 'pending_shipping' && {color: '#ED6C02'},
                 ]}>
                   {item.status.replace('_', ' ').toUpperCase()}
                 </Text>
@@ -157,16 +157,10 @@ export default function MyItemsScreen() {
                   <Text style={styles.successTitle}>¡Tasación Lista!</Text>
                   <Text style={styles.successText}>Nuestros expertos sugieren un precio base de:</Text>
                   <Text style={styles.appraisedPrice}>${Number(item.proposed_price).toLocaleString()}</Text>
-                  <Text style={styles.feedbackText}>"{item.admin_feedback}"</Text>
-                  
-                  <View style={styles.actionButtonsRow}>
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: '#2E7D32'}]} onPress={() => handleAcceptAppraisal(item)}>
-                      <Text style={styles.actionButtonText}>Aceptar</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.actionButton, {backgroundColor: Colors.light.error}]} onPress={() => handleRejectAppraisal(item.id)}>
-                      <Text style={styles.actionButtonText}>Rechazar</Text>
-                    </TouchableOpacity>
-                  </View>
+                  <Text style={styles.feedbackText}>"{item.admin_feedback || 'Condiciones excelentes'}"</Text>
+                  <Text style={{fontSize: 12, color: Colors.light.tint, marginTop: 8, fontWeight: 'bold'}}>
+                    Revisa tus notificaciones para aceptar o rechazar esta tasación.
+                  </Text>
                 </View>
               )}
 
@@ -174,8 +168,8 @@ export default function MyItemsScreen() {
                 <Text style={styles.pendingText}>Artículo aceptado e incluido en el catálogo de subastas.</Text>
               )}
 
-              {item.status === 'pending_review' && (
-                <Text style={styles.pendingText}>El artículo está siendo evaluado por nuestros expertos. Te notificaremos pronto (5 segundos).</Text>
+              {item.status === 'pending_shipping' && (
+                <Text style={styles.pendingText}>Tu propuesta fue aprobada. Por favor, revisa tus notificaciones para ver las instrucciones de envío.</Text>
               )}
             </View>
           ))
