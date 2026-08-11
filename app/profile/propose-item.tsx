@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Switch, Alert, Image, ActivityIndicator, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/constants/theme';
@@ -77,9 +77,14 @@ export default function ProposeItemScreen() {
         });
       }
 
-      Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección. Revise la pestaña "Mis Productos" en unos minutos para ver la tasación.', [
-        { text: 'Ir a Mis Productos', onPress: () => router.replace('/profile/my-items') }
-      ]);
+      if (Platform.OS === 'web') {
+        alert('Éxito: La solicitud ha sido enviada para inspección.');
+        router.replace('/profile/my-items');
+      } else {
+        Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección. Revise la pestaña "Mis Productos" en unos minutos para ver la tasación.', [
+          { text: 'Ir a Mis Productos', onPress: () => router.replace('/profile/my-items') }
+        ]);
+      }
 
     } catch (err: any) {
       console.error(err);

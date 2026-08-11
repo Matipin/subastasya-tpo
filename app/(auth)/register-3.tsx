@@ -62,9 +62,9 @@ export default function RegisterStage3Screen() {
 
       if (authError) {
         if (authError.message.includes('rate limit')) {
-          Alert.alert('Límite excedido', 'Has intentado registrar demasiadas cuentas con este correo hoy. Por favor, intenta con un correo nuevo para continuar las pruebas.');
+          setErrorMsg('Límite excedido: Has intentado registrar demasiadas cuentas con este correo hoy. Por favor, intenta con un correo nuevo.');
         } else {
-          Alert.alert('Error al registrar', authError.message);
+          setErrorMsg('Error al registrar: ' + authError.message);
         }
         setLoading(false);
         return;
@@ -99,15 +99,20 @@ export default function RegisterStage3Screen() {
         }
       }
 
-      Alert.alert(
-        'Registro Completo',
-        'Tu clave y medio de pago han sido registrados exitosamente. Ahora ya puedes ingresar a la aplicación.',
-        [
-          { text: 'Ingresar', onPress: () => router.replace('/(auth)/login') }
-        ]
-      );
+      if (Platform.OS === 'web') {
+        alert('Registro Completo: Tu clave y medio de pago han sido registrados exitosamente.');
+        router.replace('/(auth)/login');
+      } else {
+        Alert.alert(
+          'Registro Completo',
+          'Tu clave y medio de pago han sido registrados exitosamente. Ahora ya puedes ingresar a la aplicación.',
+          [
+            { text: 'Ingresar', onPress: () => router.replace('/(auth)/login') }
+          ]
+        );
+      }
     } catch (err: any) {
-      Alert.alert('Error inesperado', err.message);
+      setErrorMsg('Error inesperado: ' + err.message);
     } finally {
       setLoading(false);
     }
