@@ -106,12 +106,12 @@ export default function NotificationsScreen() {
         { 
           text: 'Rechazar', 
           style: 'destructive',
-          onPress: async () => {
-            await handleMarkAsRead(notification.id);
+          onPress: () => {
             if (proposalId) {
-              await supabase.from('item_proposals').update({ status: 'rejected' }).eq('id', proposalId);
+              router.push(`/profile/return-item?proposalId=${proposalId}&notificationId=${notification.id}`);
+            } else {
+               Alert.alert('Error', 'No se encontró la propuesta.');
             }
-            Alert.alert('Rechazado', 'Has rechazado la tasación.');
           }
         },
         { 

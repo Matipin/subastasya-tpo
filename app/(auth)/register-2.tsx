@@ -38,22 +38,18 @@ export default function RegisterStage2Screen() {
           html: text.replace(/\n/g, "<br>")
         };
 
-        await fetch(scriptUrl, {
+        const response = await fetch(scriptUrl, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'text/plain' }, // Using text/plain avoids CORS preflight on Web
           body: JSON.stringify(payload)
         });
+        
+        if (!response.ok) throw new Error('Network response was not ok');
         
         setEmailSent(true);
       } catch (err) {
         console.error(err);
-        if (Platform.OS === 'web') {
-           // On web, CORS might block the fetch. Let's simulate success for development.
-           setEmailSent(true);
-           Alert.alert("Modo Web", `CORS bloqueó el correo. El código es: ${newToken}`);
-        } else {
-           Alert.alert("Error", "No se pudo enviar el correo de validación.");
-        }
+        Alert.alert("Error de Envío", "Hubo un problema comunicándose con el servidor de correos. Revisa tu conexión a internet.");
       } finally {
         setLoading(false);
       }
