@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors } from '@/constants/theme';
-import { UserCircle, LogOut, ChevronRight } from 'lucide-react-native';
+import { UserCircle, LogOut, ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
