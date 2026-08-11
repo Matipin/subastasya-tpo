@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { Search, Bell, UserCircle } from 'lucide-react-native';
@@ -42,7 +42,16 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SubastasYa</Text>
         <View style={styles.headerIcons}>
-          <TouchableOpacity style={styles.iconButton} onPress={() => router.push('/(main)/notifications')}>
+          <TouchableOpacity style={styles.iconButton} onPress={() => {
+            if (isAuthenticated) router.push('/(main)/notifications');
+            else {
+              if (Platform.OS === 'web') {
+                if (window.confirm('Debes iniciar sesión para ver notificaciones. ¿Ir al Login?')) router.replace('/(auth)/login');
+              } else {
+                Alert.alert('Acceso Restringido', 'Debes iniciar sesión para ver notificaciones.', [{text: 'Cancelar', style: 'cancel'}, {text: 'Iniciar Sesión', onPress: () => router.replace('/(auth)/login')}]);
+              }
+            }
+          }}>
             <Bell color={Colors.light.text} size={28} />
           </TouchableOpacity>
           <TouchableOpacity style={styles.iconButton} onPress={() => router.push(isAuthenticated ? '/(main)/profile' : '/(auth)/login')}>

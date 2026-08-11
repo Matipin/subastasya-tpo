@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ChevronLeft, BellOff, BellRing, Package, DollarSign, CheckCircle } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
@@ -49,117 +49,124 @@ export default function NotificationsScreen() {
   };
 
   const handleShippingAction = async (notification: any) => {
-    Alert.alert(
-      'Marcar como Enviado',
-      '¿Confirmas que ya enviaste el artículo a la dirección indicada?',
-      [
-        { text: 'Aún no', style: 'cancel' },
-        { 
-          text: 'Sí, ya lo envié', 
-          onPress: async () => {
-            try {
-              // Mark notification as read
-              await handleMarkAsRead(notification.id);
-              
-              // Note: The logic requested says the appraisal is ALWAYS 1500.
-              const fakePrice = 1500;
-              const proposalId = notification.metadata?.proposal_id;
+    const doShipping = async () => {
+      try {
+        await handleMarkAsRead(notification.id);
+        const fakePrice = 1500;
+        const proposalId = notification.metadata?.proposal_id;
 
-              if (proposalId) {
-                // Update proposal status to appraised
-                await supabase.from('item_proposals').update({
-                  status: 'appraised',
-                  proposed_price: fakePrice,
-                  admin_feedback: 'Tasación automática (1500) según lo solicitado.'
-                }).eq('id', proposalId);
+        if (proposalId) {
+          await supabase.from('item_proposals').update({
+            status: 'appraised',
+            proposed_price: fakePrice,
+            admin_feedback: 'Tasación automática (1500) según lo solicitado.'
+          }).eq('id', proposalId);
 
-                // Create second notification (Appraisal)
-                await supabase.from('notifications').insert({
-                  user_id: notification.user_id,
-                  title: 'Tasación Finalizada',
-                  message: `Hemos recibido y tasado tu artículo. Te ofrecemos $1500. ¿Aceptas?`,
-                  type: 'APPRAISAL_OFFER',
-                  metadata: { proposal_id: proposalId, price: fakePrice }
-                });
+          await supabase.from('notifications').insert({
+            user_id: notification.user_id,
+            title: 'Tasación Finalizada',
+            message: `Hemos recibido y tasado tu artículo. Te ofrecemos $1500. ¿Aceptas?`,
+            type: 'APPRAISAL_OFFER',
+            metadata: { proposal_id: proposalId, price: fakePrice }
+          });
 
-                Alert.alert('Simulación', 'Artículo marcado como enviado. Los expertos ya lo recibieron y tienes una nueva notificación con la tasación.');
-                fetchNotifications();
-              }
-            } catch (err) {
-              console.error(err);
-              Alert.alert('Error', 'No se pudo completar la acción.');
-            }
-          }
+          if (Platform.OS === 'web') alert('Artículo marcado como enviado. Tienes una nueva notificación.');
+          else Alert.alert('Simulación', 'Artículo marcado como enviado. Los expertos ya lo recibieron y tienes una nueva notificación con la tasación.');
+          fetchNotifications();
         }
-      ]
-    );
+      } catch (err) {
+        console.error(err);
+        if (Platform.OS === 'web') alert('No se pudo completar la acción.');
+        else Alert.alert('Error', 'No se pudo completar la acción.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm('¿Confirmas que ya enviaste el artículo a la dirección indicada?')) {
+        doShipping();
+      }
+    } else {
+      Alert.alert(
+        'Marcar como Enviado',
+        '¿Confirmas que ya enviaste el artículo a la dirección indicada?',
+        [
+          { text: 'Aún no', style: 'cancel' },
+          { text: 'Sí, ya lo envié', onPress: doShipping }
+        ]
+      );
+    }
   };
 
   const handleAppraisalAction = async (notification: any) => {
     const price = notification.metadata?.price || 1500;
     const proposalId = notification.metadata?.proposal_id;
 
-    Alert.alert(
-      'Tasación Lista',
-      `Te ofrecemos $${price} de base para subastar el artículo. Si aceptas, se incluirá en el próximo catálogo.`,
-      [
-        { 
-          text: 'Rechazar', 
-          style: 'destructive',
-          onPress: () => {
-            if (proposalId) {
-              router.push(`/profile/return-item?proposalId=${proposalId}&notificationId=${notification.id}`);
-            } else {
-               Alert.alert('Error', 'No se encontró la propuesta.');
-            }
-          }
-        },
-        { 
-          text: 'Aceptar Tasación', 
-          onPress: async () => {
-            try {
-              await handleMarkAsRead(notification.id);
-              if (proposalId) {
-                await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposalId);
-                
-                // Fetch proposal details to insert into items
-                const { data: proposal } = await supabase.from('item_proposals').select('*').eq('id', proposalId).single();
-                if (proposal) {
-                  // Create an auction for 1 month from now
-                  const startDate = new Date();
-                  startDate.setMonth(startDate.getMonth() + 1);
-                  const endDate = new Date(startDate);
-                  endDate.setHours(endDate.getHours() + 2); // 2 hours long
+    const doAccept = async () => {
+      try {
+        await handleMarkAsRead(notification.id);
+        if (proposalId) {
+          await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposalId);
+          
+          const { data: proposal } = await supabase.from('item_proposals').select('*').eq('id', proposalId).single();
+          if (proposal) {
+            const startDate = new Date();
+            startDate.setMonth(startDate.getMonth() + 1);
+            const endDate = new Date(startDate);
+            endDate.setHours(endDate.getHours() + 2);
 
-                  const { data: newAuction } = await supabase.from('auctions').insert({
-                    title: `Subasta de ${proposal.title}`,
-                    start_date: startDate.toISOString(),
-                    end_date: endDate.toISOString(),
-                    status: 'scheduled',
-                    minimum_category: 'bronze'
-                  }).select().single();
+            const { data: newAuction } = await supabase.from('auctions').insert({
+              title: `Subasta de ${proposal.title}`,
+              start_date: startDate.toISOString(),
+              end_date: endDate.toISOString(),
+              status: 'scheduled',
+              minimum_category: 'bronze'
+            }).select().single();
 
-                  await supabase.from('items').insert({
-                    auction_id: newAuction?.id || '11111111-1111-1111-1111-111111111111',
-                    owner_id: proposal.user_id, // Fix: Include owner_id
-                    title: proposal.title,
-                    description: proposal.description,
-                    history: proposal.history,
-                    images: proposal.images,
-                    starting_price: proposal.proposed_price,
-                    status: 'approved'
-                  });
-                }
-              }
-              Alert.alert('¡Excelente!', 'El artículo ha sido aceptado para la próxima subasta. Puedes ver su estado en "Mis Productos".');
-              fetchNotifications();
-            } catch (err) {
-              console.error(err);
-            }
+            await supabase.from('items').insert({
+              auction_id: newAuction?.id || '11111111-1111-1111-1111-111111111111',
+              owner_id: proposal.user_id,
+              title: proposal.title,
+              description: proposal.description,
+              history: proposal.history,
+              images: proposal.images,
+              starting_price: proposal.proposed_price,
+              status: 'approved'
+            });
           }
         }
-      ]
-    );
+        if (Platform.OS === 'web') alert('¡Excelente! El artículo ha sido aceptado para la próxima subasta.');
+        else Alert.alert('¡Excelente!', 'El artículo ha sido aceptado para la próxima subasta. Puedes ver su estado en "Mis Productos".');
+        fetchNotifications();
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    const doReject = () => {
+      if (proposalId) {
+        router.push(`/profile/return-item?proposalId=${proposalId}&notificationId=${notification.id}`);
+      } else {
+        if (Platform.OS === 'web') alert('No se encontró la propuesta.');
+        else Alert.alert('Error', 'No se encontró la propuesta.');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Te ofrecemos $${price} de base para subastar el artículo. Si aceptas, se incluirá en el próximo catálogo. ¿Aceptas? (Si cancelas, irás a devolución)`)) {
+        doAccept();
+      } else {
+        doReject();
+      }
+    } else {
+      Alert.alert(
+        'Tasación Lista',
+        `Te ofrecemos $${price} de base para subastar el artículo. Si aceptas, se incluirá en el próximo catálogo.`,
+        [
+          { text: 'Rechazar', style: 'destructive', onPress: doReject },
+          { text: 'Aceptar Tasación', onPress: doAccept }
+        ]
+      );
+    }
   };
 
   const renderIcon = (type: string) => {

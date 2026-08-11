@@ -30,8 +30,8 @@ export default function LoginScreen() {
     };
     loadCredentials();
   }, []);
-  
   const login = useAuthStore((state) => state.login);
+  const setGuest = useAuthStore((state) => state.setGuest);
   const router = useRouter();
 
   const handleLogin = async () => {
@@ -153,7 +153,13 @@ export default function LoginScreen() {
             <View style={styles.dividerLine} />
           </View>
 
-          <TouchableOpacity style={styles.outlineButton}>
+          <TouchableOpacity 
+            style={styles.outlineButton}
+            onPress={() => {
+              setGuest(true);
+              router.replace('/(main)');
+            }}
+          >
             <Text style={styles.outlineButtonText}>Entrar como invitado</Text>
           </TouchableOpacity>
         </View>

@@ -78,7 +78,6 @@ export default function ProposeItemScreen() {
       }
 
       if (Platform.OS === 'web') {
-        alert('Éxito: La solicitud ha sido enviada para inspección.');
         router.replace('/profile/my-items');
       } else {
         Alert.alert('Éxito', 'La solicitud ha sido enviada para inspección. Revise la pestaña "Mis Productos" en unos minutos para ver la tasación.', [

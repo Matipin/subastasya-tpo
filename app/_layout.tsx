@@ -10,7 +10,7 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isGuest } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
@@ -20,12 +20,12 @@ export default function RootLayout() {
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (!isAuthenticated && !inAuthGroup) {
+    if (!isAuthenticated && !isGuest && !inAuthGroup) {
       setTimeout(() => router.replace('/(auth)/login'), 0);
-    } else if (isAuthenticated && inAuthGroup) {
+    } else if ((isAuthenticated || isGuest) && inAuthGroup) {
       setTimeout(() => router.replace('/(main)'), 0);
     }
-  }, [isAuthenticated, segments, navigationState?.key]);
+  }, [isAuthenticated, isGuest, segments, navigationState?.key]);
 
   return (
     <>
