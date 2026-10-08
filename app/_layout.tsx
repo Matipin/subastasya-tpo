@@ -13,39 +13,14 @@ export const unstable_settings = {
 };
 
 export default function RootLayout() {
-  const { isAuthenticated, isGuest, isHydrated, setHydrated, login } = useAuthStore();
+  const { isAuthenticated, isGuest, isHydrated, initializeAuth } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
-  // Sync Supabase session on startup
+  // Initialize and synchronize auth on startup
   useEffect(() => {
-    let isMounted = true;
-    const syncSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user && isMounted) {
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          if (profile && isMounted) {
-            login(profile, session.access_token);
-          }
-        }
-      } catch (err) {
-        console.error('Error syncing session:', err);
-      } finally {
-        if (isMounted) {
-          setHydrated(true);
-        }
-      }
-    };
-    syncSession();
-    return () => {
-      isMounted = false;
-    };
+    initializeAuth();
   }, []);
 
   useEffect(() => {
