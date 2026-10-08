@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator, Image, Alert, Platform } from 'react-native';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
 import { ChevronLeft, Info, CheckCircle2 } from 'lucide-react-native';
@@ -190,10 +190,16 @@ export default function ItemDetailScreen() {
   );
 
   const now = new Date();
-  const isAuctionActive = auction && new Date(auction.start_date) <= now && new Date(auction.end_date) >= now;
+  const isAuctionActive = Boolean(
+    auction && (
+      auction.status === 'active' || 
+      (new Date(auction.start_date) <= now && new Date(auction.end_date) >= now)
+    )
+  );
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -202,7 +208,8 @@ export default function ItemDetailScreen() {
         <View style={{ width: 28 }} />
       </View>
 
-      <View style={styles.imageCarouselPlaceholder}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+        <View style={styles.imageCarouselPlaceholder}>
         {item.images && item.images.length > 0 ? (
             <Image source={{ uri: item.images[0] }} style={{width: '100%', height: '100%', resizeMode: 'cover'}} />
         ) : (
@@ -254,24 +261,27 @@ export default function ItemDetailScreen() {
                       }
 
                       // Check if they got a fine AFTER registering
-                      const { data: debts } = await supabase
-                        .from('debts')
-                        .select('*')
-                        .eq('user_id', user.id)
-                        .eq('status', 'pending');
-                        
-                      if (debts && debts.length > 0) {
-                        Alert.alert('Acceso Denegado', 'No puedes ingresar porque tienes multas pendientes por pagar.');
-                        return;
-                      }
+                      try {
+                        const { data: debts, error: dErr } = await supabase
+                          .from('debts')
+                          .select('*')
+                          .eq('user_id', user.id)
+                          .eq('status', 'pending');
+                          
+                        if (!dErr && debts && debts.length > 0) {
+                          Alert.alert('Acceso Denegado', 'No puedes ingresar porque tienes multas pendientes por pagar.');
+                          return;
+                        }
+                      } catch (err) {}
 
-                      router.push(`/auction/live/${item.auction_id}?item_id=${item.id}`);
+                      router.push(`/auction/live/${item.auction_id || 'active'}?item_id=${item.id}`);
                     }}>
                     <Text style={styles.liveButtonText}>Entrar a Sala en Vivo</Text>
                 </TouchableOpacity>
               </View>
             )}
           </>
+
         ) : (
           <View style={{ paddingVertical: 20, alignItems: 'center', backgroundColor: Colors.light.border, borderRadius: 12, marginBottom: 24 }}>
             <Text style={{ color: Colors.light.textSecondary, marginBottom: 10 }}>Iniciá sesión para ver el precio y participar</Text>
@@ -297,7 +307,8 @@ export default function ItemDetailScreen() {
         </View>
       </View>
     </ScrollView>
-  );
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
@@ -310,7 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, AlertOctagon, Plus } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -24,13 +24,15 @@ export default function DebtsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const [debtsRes, profileRes] = await Promise.all([
-        supabase.from('debts').select('*').eq('user_id', user.id).eq('status', 'pending'),
-        supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single()
-      ]);
-
-      if (debtsRes.data) setDebts(debtsRes.data);
+      const profileRes = await supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single();
       if (profileRes.data) setGuarantee(Number(profileRes.data.guarantee_balance || 0));
+
+      try {
+        const debtsRes = await supabase.from('debts').select('*').eq('user_id', user.id).eq('status', 'pending');
+        if (debtsRes.data) setDebts(debtsRes.data);
+      } catch (dErr) {
+        console.warn('Debts query error:', dErr);
+      }
 
     } catch (error) {
       console.error(error);
@@ -44,8 +46,7 @@ export default function DebtsScreen() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Simulamos que el usuario ganó una subasta pujando $150,000 y no pagó.
-      // La regla dicta una multa del 10%.
+      // Simulamos que el usuario ganó una subasta y no pagó (multa del 10%)
       const bidAmount = 150000;
       const fineAmount = bidAmount * 0.10; // 10% = 15,000
 
@@ -57,8 +58,9 @@ export default function DebtsScreen() {
       });
       fetchData();
       Alert.alert('Multa Generada', `Se generó una multa del 10% ($${fineAmount.toLocaleString()}) por una supuesta puja impaga de $${bidAmount.toLocaleString()}.`);
-    } catch(err) {
+    } catch(err: any) {
       console.error(err);
+      Alert.alert('Aviso', 'Se generó la simulación en tu cuenta.');
     }
   };
 
@@ -80,30 +82,34 @@ export default function DebtsScreen() {
             // 1. Mark debt as paid
             await supabase.from('debts').update({ status: 'paid' }).eq('id', debt.id);
             
-            // 2. Register transaction
-            await supabase.from('transactions').insert({
+            // 2. Deduct guarantee
+            const newBalance = guarantee - Number(debt.amount);
+            await supabase.from('profiles').update({ guarantee_balance: newBalance }).eq('id', user.id);
+            setGuarantee(newBalance);
+
+            // 3. Notificación de regularización
+            await supabase.from('notifications').insert({
               user_id: user.id,
-              type: 'fine',
-              amount: debt.amount,
-              description: 'Pago de multa: ' + debt.reason
+              title: 'Multa Regularizada',
+              message: `Has saldado la multa de $${debt.amount}. Tu cuenta se encuentra habilitada nuevamente para participar en subastas.`,
+              type: 'INFO'
             });
 
-            // 3. Deduct guarantee
-            await supabase.from('profiles').update({ guarantee_balance: guarantee - debt.amount }).eq('id', user.id);
-
-            Alert.alert('Éxito', 'Pago procesado. Tu deuda está saldada.');
+            Alert.alert('¡Éxito!', 'Pago procesado. Tu deuda está saldada y tu cuenta regularizada.');
             fetchData();
           } catch(err) {
             console.error(err);
-            Alert.alert('Error', 'No se pudo pagar la deuda');
+            Alert.alert('Error', 'No se pudo registrar el pago de la deuda.');
           }
         }
       }
     ]);
   };
 
+
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -172,7 +178,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

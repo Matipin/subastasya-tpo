@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -87,6 +87,7 @@ export default function EditProfileScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -167,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

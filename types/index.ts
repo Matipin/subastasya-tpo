@@ -1,3 +1,18 @@
+export interface User {
+  id: number;
+  nombre: string;
+  categoria: string;
+  estado_cuenta: string;
+  puede_pujar: boolean;
+  metricas?: {
+    asistencias: number;
+    subastas_ganadas: number;
+    total_ofertado: number;
+    total_pagado: number;
+    deuda_pendiente: number;
+  };
+}
+
 export interface Auction {
   id: number;
   titulo: string;
@@ -8,6 +23,7 @@ export interface Auction {
   status?: 'active' | 'upcoming' | 'ended';
   items?: Item[];
 }
+
 
 export interface Item {
   id: number;

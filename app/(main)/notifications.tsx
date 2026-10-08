@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ActivityIndicator, Alert, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { ChevronLeft, BellOff, BellRing, Package, DollarSign, CheckCircle } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -50,14 +50,15 @@ export default function NotificationsScreen() {
 
   const handleShippingAction = (notification: any) => {
     const proposalId = notification.metadata?.proposal_id;
-    router.push(`/profile/confirm-shipping?proposalId=${proposalId || ''}&notificationId=${notification.id}`);
+    router.push(`/profile/confirm-shipping?proposalId=${proposalId || ''}&notificationId=${notification.id}` as any);
   };
 
   const handleAppraisalAction = (notification: any) => {
     const price = notification.metadata?.price || 1500;
     const proposalId = notification.metadata?.proposal_id;
-    router.push(`/profile/appraisal-details?proposalId=${proposalId || ''}&notificationId=${notification.id}&price=${price}`);
+    router.push(`/profile/appraisal-details?proposalId=${proposalId || ''}&notificationId=${notification.id}&price=${price}` as any);
   };
+
 
   const renderIcon = (type: string) => {
     switch (type) {
@@ -69,6 +70,7 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 16,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

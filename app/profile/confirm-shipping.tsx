@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Package, ChevronLeft, CheckCircle2 } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -55,6 +55,7 @@ export default function ConfirmShippingScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 20,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

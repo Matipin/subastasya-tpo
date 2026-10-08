@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, ScrollView, Platform } from 'react-native';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { ChevronLeft, Info, DollarSign, Calendar } from 'lucide-react-native';
 import { Colors } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
@@ -20,63 +20,95 @@ export default function AppraisalDetailsScreen() {
     setLoading(true);
     setErrorMsg('');
     try {
-      // 1. Marcar notificación como leída
+      if (!proposalId) throw new Error('Identificador de propuesta no encontrado');
+
+      // 1. Obtener la propuesta
+      const { data: proposal, error: propErr } = await supabase
+        .from('item_proposals')
+        .select('*')
+        .eq('id', proposalId)
+        .single();
+
+      if (propErr || !proposal) throw new Error('No se encontró la información de la propuesta');
+
+      // 2. Marcar notificación como leída
       if (notificationId) {
         await supabase.from('notifications').update({ read: true }).eq('id', notificationId);
       }
 
-      // 2. Crear subasta si hay propuesta
-      if (proposalId) {
-        await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposalId);
-        
-        const { data: proposal } = await supabase.from('item_proposals').select('*').eq('id', proposalId).single();
-        if (proposal) {
-          const startDate = new Date();
-          startDate.setMonth(startDate.getMonth() + 1);
-          const endDate = new Date(startDate);
-          endDate.setHours(endDate.getHours() + 2);
+      // 3. Marcar propuesta como aceptada
+      await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposalId);
 
-          const { data: newAuction } = await supabase.from('auctions').insert({
-            title: `Subasta de ${proposal.title}`,
-            start_date: startDate.toISOString(),
-            end_date: endDate.toISOString(),
-            status: 'scheduled',
-            minimum_category: 'bronze'
-          }).select().single();
+      // 4. Buscar subasta activa a la cual asignar el artículo
+      const { data: activeAuctions } = await supabase
+        .from('auctions')
+        .select('id')
+        .eq('status', 'active')
+        .limit(1);
 
-          await supabase.from('items').insert({
-            auction_id: newAuction?.id || '11111111-1111-1111-1111-111111111111',
-            owner_id: proposal.user_id,
-            title: proposal.title,
-            description: proposal.description,
-            history: proposal.history,
-            images: proposal.images,
-            starting_price: proposal.proposed_price,
-            status: 'approved'
-          });
+      let targetAuctionId = activeAuctions && activeAuctions.length > 0 ? activeAuctions[0].id : null;
+      if (!targetAuctionId) {
+        const { data: anyAuction } = await supabase.from('auctions').select('id').limit(1);
+        if (anyAuction && anyAuction.length > 0) {
+          targetAuctionId = anyAuction[0].id;
         }
       }
 
-      // Redirigir a "Mis Productos" y que de ahí se vea todo sin alerts
+      // 5. Insertar el artículo en el catálogo (tabla items) con estado in_auction
+      const itemImages = proposal.images && proposal.images.length > 0
+        ? proposal.images
+        : ['https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=500'];
+
+      const finalStartingPrice = Number(proposal.proposed_price) || basePrice;
+
+      const { data: newItem, error: itemError } = await supabase.from('items').insert({
+        auction_id: targetAuctionId,
+        owner_id: proposal.user_id,
+        title: proposal.title,
+        description: proposal.description,
+        history: proposal.history || '',
+        images: itemImages,
+        starting_price: finalStartingPrice,
+        status: 'in_auction'
+      }).select().single();
+
+      if (itemError) {
+        console.error('Error insertando en items:', itemError);
+        throw itemError;
+      }
+
+      // 6. Notificar al usuario que su artículo ya está en vivo en el catálogo
+      await supabase.from('notifications').insert({
+        user_id: proposal.user_id,
+        title: '¡Artículo Publicado en Subasta!',
+        message: `Tu artículo "${proposal.title}" fue aceptado y ya figura en el catálogo oficial de SubastasYa con un precio base de $${finalStartingPrice.toLocaleString()}.`,
+        type: 'INFO',
+        metadata: { item_id: newItem?.id }
+      });
+
+      // Redirigir a "Mis Productos"
       router.replace('/profile/my-items');
     } catch (err: any) {
-      console.error(err);
-      setErrorMsg('Ocurrió un error al aceptar la tasación.');
+      console.error('Error al aceptar tasación:', err);
+      setErrorMsg(err.message || 'Ocurrió un error al aceptar la tasación.');
     } finally {
       setLoading(false);
     }
   };
 
+
   const handleReject = () => {
-    if (proposalId && notificationId) {
-      router.push(`/profile/return-item?proposalId=${proposalId}&notificationId=${notificationId}`);
+    if (proposalId) {
+      router.push(`/profile/return-item?proposalId=${proposalId}&notificationId=${notificationId || ''}` as any);
     } else {
       router.back();
     }
   };
 
+
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -165,7 +197,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
     paddingBottom: 20,
     backgroundColor: Colors.light.card,
     borderBottomWidth: 1,

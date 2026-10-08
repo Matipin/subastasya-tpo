@@ -1,6 +1,6 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, Gavel, ArrowRight } from 'lucide-react-native';
 
@@ -28,6 +28,7 @@ export default function MyAuctionsScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 16 : 56, paddingBottom: 16,
     backgroundColor: Colors.light.card, borderBottomWidth: 1, borderBottomColor: Colors.light.border,
   },
   backButton: { padding: 4 },

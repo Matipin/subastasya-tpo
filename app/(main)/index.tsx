@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform, Alert } from 'react-native';
-import { useRouter } from 'expo-router';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, StyleSheet, Text, ScrollView, TouchableOpacity, Image, TextInput, ActivityIndicator, Platform, Alert, RefreshControl } from 'react-native';
+import { useRouter, useFocusEffect, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { Search, Bell, UserCircle, LogOut } from 'lucide-react-native';
+import { Search, Bell, UserCircle, LogOut, RefreshCw } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/store/useAuthStore';
 import { finalizeAuctions } from '@/lib/auctionFinalizer';
@@ -11,36 +11,56 @@ export default function HomeScreen() {
   const router = useRouter();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const isAuthenticated = useAuthStore(state => !!state.user);
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const user = useAuthStore(state => state.user);
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated || !!state.user);
   const isGuest = useAuthStore(state => state.isGuest);
   const logout = useAuthStore(state => state.logout);
 
-  useEffect(() => {
-    const fetchCatalog = async () => {
-      try {
-        await finalizeAuctions(); // Finaliza subastas vencidas antes de listar
+  const fetchCatalog = async () => {
+    try {
+      await finalizeAuctions();
 
-        const { data, error } = await supabase
-          .from('items')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (error) throw error;
+      const { data, error } = await supabase
+        .from('items')
+        .select('*')
+        .order('created_at', { ascending: false });
         
-        if (data) {
-          setItems(data);
-        }
-      } catch (error) {
-        console.error("Error fetching catalog", error);
-      } finally {
-        setLoading(false);
+      if (error) throw error;
+      
+      if (data) {
+        setItems(data);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching catalog", error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCatalog();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
     fetchCatalog();
-  }, []);
+  };
+
+  const filteredItems = items.filter(item => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return item.title?.toLowerCase().includes(q) || item.description?.toLowerCase().includes(q);
+  });
+
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <Text style={styles.headerTitle}>SubastasYa</Text>
         <View style={styles.headerIcons}>
@@ -72,17 +92,35 @@ export default function HomeScreen() {
         <TextInput 
           style={styles.searchInput}
           placeholder="Buscar subastas, categorías..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
+        {searchQuery ? (
+          <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+            <Text style={{ color: Colors.light.textSecondary, fontWeight: 'bold' }}>✕</Text>
+          </TouchableOpacity>
+        ) : null}
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.sectionTitle}>Artículos Destacados</Text>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.light.tint]} tintColor={Colors.light.tint} />
+        }
+      >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <Text style={styles.sectionTitle}>Artículos Destacados</Text>
+          <TouchableOpacity onPress={onRefresh} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <RefreshCw color={Colors.light.tint} size={16} />
+            <Text style={{ color: Colors.light.tint, fontSize: 13, fontWeight: '600' }}>Actualizar</Text>
+          </TouchableOpacity>
+        </View>
         
         {loading ? (
           <ActivityIndicator size="large" color={Colors.light.tint} style={{ marginTop: 50 }} />
         ) : (
           <View style={styles.grid}>
-            {items.map((item) => (
+            {filteredItems.map((item) => (
               <TouchableOpacity 
                 key={item.id} 
                 style={styles.card}
@@ -98,21 +136,22 @@ export default function HomeScreen() {
                 <View style={styles.cardContent}>
                   <Text style={styles.itemTitle} numberOfLines={2}>{item.title}</Text>
                   {isAuthenticated ? (
-                    <Text style={styles.itemPrice}>Base: ${item.starting_price.toLocaleString()}</Text>
+                    <Text style={styles.itemPrice}>Base: ${Number(item.starting_price).toLocaleString()}</Text>
                   ) : (
                     <Text style={[styles.itemPrice, { color: Colors.light.textSecondary, fontSize: 10 }]}>Iniciá sesión para ver precio</Text>
                   )}
                 </View>
               </TouchableOpacity>
             ))}
-            {items.length === 0 && !loading && (
+            {filteredItems.length === 0 && !loading && (
               <Text style={{ textAlign: 'center', marginTop: 20, color: Colors.light.textSecondary, width: '100%' }}>
-                No hay artículos disponibles.
+                {searchQuery ? 'No se encontraron artículos con ese criterio.' : 'No hay artículos disponibles en este momento.'}
               </Text>
             )}
           </View>
         )}
       </ScrollView>
+
     </View>
   );
 }
@@ -121,7 +160,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
-    paddingTop: 40,
+    paddingTop: Platform.OS === 'web' ? 16 : 50,
   },
   header: {
     flexDirection: 'row',

@@ -1,22 +1,55 @@
 import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { View, ActivityIndicator } from 'react-native';
 import 'react-native-reanimated';
 
 import { useAuthStore } from '@/store/useAuthStore';
+import { supabase } from '@/lib/supabase';
+import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
-  initialRouteName: '(auth)',
+  initialRouteName: '(main)',
 };
 
 export default function RootLayout() {
-  const { isAuthenticated, isGuest } = useAuthStore();
+  const { isAuthenticated, isGuest, isHydrated, setHydrated, login } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
+  // Sync Supabase session on startup
   useEffect(() => {
-    if (!navigationState?.key) return;
+    let isMounted = true;
+    const syncSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user && isMounted) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+          if (profile && isMounted) {
+            login(profile, session.access_token);
+          }
+        }
+      } catch (err) {
+        console.error('Error syncing session:', err);
+      } finally {
+        if (isMounted) {
+          setHydrated(true);
+        }
+      }
+    };
+    syncSession();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!navigationState?.key || !isHydrated) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
@@ -25,19 +58,27 @@ export default function RootLayout() {
     } else if ((isAuthenticated || isGuest) && inAuthGroup) {
       setTimeout(() => router.replace('/(main)'), 0);
     }
-  }, [isAuthenticated, isGuest, segments, navigationState?.key]);
+  }, [isAuthenticated, isGuest, isHydrated, segments, navigationState?.key]);
+
+  if (!isHydrated) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.light.background }}>
+        <ActivityIndicator size="large" color={Colors.light.tint} />
+      </View>
+    );
+  }
 
   return (
     <>
-      <Stack>
+      <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(main)" options={{ headerShown: false }} />
-        <Stack.Screen name="auction/[id]" options={{ headerShown: false }} />
-        <Stack.Screen name="auction/live/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="auction" options={{ headerShown: false }} />
         <Stack.Screen name="profile" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+        <Stack.Screen name="modal" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
   );
 }
+

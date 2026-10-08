@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, PackageCheck, Plus } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -19,33 +19,46 @@ export default function WonItemsScreen() {
       setLoading(true);
       try {
         // Find items that are sold and where this user has the highest bid
-        const { data: allBids } = await supabase.from('bids').select('item_id').eq('user_id', authUser.id);
-        if (!allBids || allBids.length === 0) return;
+        const { data: allBids, error: bidsErr } = await supabase
+          .from('bids')
+          .select('item_id')
+          .eq('bidder_id', authUser.id);
+          
+        if (bidsErr || !allBids || allBids.length === 0) return;
         
-        const uniqueItems = new Set(allBids.map(b => b.item_id));
-        const { data: items } = await supabase.from('items').select('*').in('id', Array.from(uniqueItems)).eq('status', 'sold');
+        const uniqueItems = Array.from(new Set(allBids.map(b => b.item_id)));
+        const { data: items } = await supabase
+          .from('items')
+          .select('*')
+          .in('id', uniqueItems);
         
         if (items) {
           const wonList = [];
           for (const item of items) {
-            const { data: maxBid } = await supabase.from('bids').select('amount, user_id').eq('item_id', item.id).order('amount', { ascending: false }).limit(1);
-            if (maxBid && maxBid[0].user_id === authUser.id) {
+            const { data: maxBid } = await supabase
+              .from('bids')
+              .select('amount, bidder_id')
+              .eq('item_id', item.id)
+              .order('amount', { ascending: false })
+              .limit(1);
+
+            if (maxBid && maxBid[0].bidder_id === authUser.id) {
               const amount = Number(maxBid[0].amount);
               wonList.push({
                 item_id: item.id,
                 titulo: item.title,
                 monto_pujado: amount,
-                comisiones: amount * 0.1,
-                envio: 500.00,
-                total_a_pagar: amount + (amount * 0.1) + 500,
-                estado_pago: 'pendiente' // idealmente saldria de una tabla transactions, simplificado por ahora
+                comisiones: Math.round(amount * 0.1),
+                envio: 15000,
+                total_a_pagar: amount + Math.round(amount * 0.1),
+                estado_pago: item.status === 'sold' ? 'pagado' : 'pendiente'
               });
             }
           }
           setWonItems(wonList);
         }
       } catch (err) {
-        console.error(err);
+        console.error('Error fetching won items:', err);
       } finally {
         setLoading(false);
       }
@@ -54,60 +67,13 @@ export default function WonItemsScreen() {
   }, [authUser]);
 
   const handleCheckout = (item: any) => {
-    Alert.alert('Checkout', `¿Deseas pagar $${item.total_a_pagar} ahora con tu método de pago principal?`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { 
-        text: 'Pagar', 
-        onPress: async () => {
-          setLoading(true);
-          try {
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) return;
-
-            // 1. Validar fondos
-            const { data: profile } = await supabase.from('profiles').select('guarantee_balance').eq('id', user.id).single();
-            if (Number(profile?.guarantee_balance || 0) < item.total_a_pagar) {
-              // Multa por falta de fondos (10% del total a pagar o monto pujado)
-              const multa = item.monto_pujado * 0.1;
-              await supabase.from('debts').insert({
-                user_id: user.id,
-                amount: multa,
-                status: 'pending'
-              });
-              Alert.alert('Transacción Rechazada', `Fondos insuficientes. Se te ha aplicado una multa de $${multa} por incumplimiento de pago.`);
-              return;
-            }
-
-            // 2. Transaction para el pago del artículo (Venta)
-            await supabase.from('transactions').insert({
-              user_id: user.id,
-              type: 'sale_payment',
-              amount: item.total_a_pagar,
-              description: `Pago de subasta ganada: ${item.titulo}`
-            });
-
-            // 2. Transaction interna de comisión retenida por la plataforma
-            await supabase.from('transactions').insert({
-              user_id: user.id,
-              type: 'commission',
-              amount: item.comisiones,
-              description: `Comisión cobrada por: ${item.titulo}`
-            });
-
-            setWonItems(prev => prev.map(w => w.item_id === item.item_id ? { ...w, estado_pago: 'pagado' } : w));
-            Alert.alert('¡Felicidades!', 'El pago ha sido procesado exitosamente. La empresa retuvo su comisión.');
-          } catch(err) {
-             Alert.alert('Error', 'No se pudo procesar el pago.');
-          } finally {
-             setLoading(false);
-          }
-        }
-      }
-    ]);
+    router.push(`/auction/settlement?itemId=${item.item_id}&amount=${item.monto_pujado}`);
   };
+
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -172,7 +138,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 16 : 56, paddingBottom: 16,
     backgroundColor: Colors.light.card, borderBottomWidth: 1, borderBottomColor: Colors.light.border,
   },
   backButton: { padding: 4 },

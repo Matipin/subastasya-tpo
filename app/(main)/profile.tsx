@@ -3,7 +3,7 @@ import { View, StyleSheet, Text, ScrollView, TouchableOpacity } from 'react-nati
 import { useAuthStore } from '@/store/useAuthStore';
 import { Colors } from '@/constants/theme';
 import { UserCircle, LogOut, ChevronRight, ChevronLeft } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 export default function ProfileScreen() {
@@ -76,6 +76,7 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={[styles.header, { flexDirection: 'row', alignItems: 'flex-start' }]}>
         <TouchableOpacity onPress={() => router.back()} style={{ padding: 4, zIndex: 10, marginTop: 10 }}>
           <ChevronLeft color={Colors.light.text} size={32} />

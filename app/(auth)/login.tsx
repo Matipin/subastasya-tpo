@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, Text, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/services/mockApi';
 import { Colors } from '@/constants/theme';
@@ -76,6 +76,7 @@ export default function LoginScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
+      <Stack.Screen options={{ headerShown: false }} />
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <Text style={styles.title}>¡Hola de nuevo!</Text>

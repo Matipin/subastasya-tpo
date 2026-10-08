@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
 import { ChevronLeft, Box, CheckCircle, XCircle, Clock, Search } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
@@ -38,59 +38,67 @@ export default function MyItemsScreen() {
     }
   };
 
-  const handleAcceptAppraisal = (proposal: any) => {
-    Alert.alert(
-      'Aceptar Tasación',
-      `¿Aceptas subastar "${proposal.title}" con un precio base de $${proposal.proposed_price}? Se aplicará un 10% de comisión en caso de venta.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Aceptar', 
-          onPress: async () => {
-            try {
-              // 1. Update proposal status
-              await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposal.id);
-              
-              // 2. Insert into real items table (Assign to a default auction for the mock)
-              await supabase.from('items').insert({
-                auction_id: '11111111-1111-1111-1111-111111111111', // Dummy auction from seed
-                title: proposal.title,
-                description: proposal.description,
-                history: proposal.history,
-                images: proposal.images,
-                starting_price: proposal.proposed_price,
-                status: 'approved'
-              });
+  const handleAcceptAppraisal = async (proposal: any) => {
+    try {
+      setLoading(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('No estás autenticado');
 
-              Alert.alert('Éxito', 'El artículo ha sido programado para la próxima subasta.');
-              fetchData();
-            } catch(err) {
-              Alert.alert('Error', 'No se pudo aceptar la tasación.');
-            }
-          }
-        }
-      ]
-    );
-  };
+      // 1. Update proposal status
+      await supabase.from('item_proposals').update({ status: 'accepted' }).eq('id', proposal.id);
 
-  const handleRejectAppraisal = (proposalId: string) => {
-    Alert.alert(
-      'Rechazar Tasación',
-      'Si rechazas la tasación, el artículo no será subastado y deberás retirarlo pagando el costo de envío (Simulado).',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Rechazar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await supabase.from('item_proposals').update({ status: 'rejected' }).eq('id', proposalId);
-              fetchData();
-            } catch(err) {}
-          }
+      // 2. Find active auction
+      const { data: activeAuctions } = await supabase
+        .from('auctions')
+        .select('id')
+        .eq('status', 'active')
+        .limit(1);
+
+      let targetAuctionId = activeAuctions && activeAuctions.length > 0 ? activeAuctions[0].id : null;
+      if (!targetAuctionId) {
+        const { data: anyAuction } = await supabase.from('auctions').select('id').limit(1);
+        if (anyAuction && anyAuction.length > 0) {
+          targetAuctionId = anyAuction[0].id;
         }
-      ]
-    );
+      }
+
+      // 3. Insert into items table
+      const itemImages = proposal.images && proposal.images.length > 0 
+        ? proposal.images 
+        : ['https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=500'];
+
+      const finalPrice = Number(proposal.proposed_price) || 1500;
+
+      const { data: newItem, error: itemError } = await supabase.from('items').insert({
+        auction_id: targetAuctionId,
+        owner_id: user.id,
+        title: proposal.title,
+        description: proposal.description,
+        history: proposal.history || '',
+        images: itemImages,
+        starting_price: finalPrice,
+        status: 'in_auction'
+      }).select().single();
+
+      if (itemError) throw itemError;
+
+      // 4. Send notification
+      await supabase.from('notifications').insert({
+        user_id: user.id,
+        title: '¡Artículo Publicado en Catálogo!',
+        message: `Tu artículo "${proposal.title}" fue aceptado e incorporado a la subasta activa.`,
+        type: 'INFO',
+        metadata: { item_id: newItem?.id }
+      });
+
+      Alert.alert('¡Éxito!', 'El artículo ha sido aceptado e incorporado al catálogo de subastas.');
+      fetchData();
+    } catch(err: any) {
+      console.error(err);
+      Alert.alert('Error', err.message || 'No se pudo aceptar la tasación.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getStatusIcon = (estado: string) => {
@@ -104,6 +112,7 @@ export default function MyItemsScreen() {
 
   return (
     <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <ChevronLeft color={Colors.light.text} size={28} />
@@ -148,28 +157,66 @@ export default function MyItemsScreen() {
               {item.status === 'rejected' && (
                 <View style={styles.feedbackBox}>
                   <Text style={styles.feedbackTitle}>Tasación rechazada</Text>
-                  <Text style={styles.feedbackTextError}>Costo de devolución: $150.00 (Ficticio)</Text>
+                  <Text style={styles.feedbackText}>
+                    {item.admin_feedback || 'Se gestionó la devolución del artículo hacia su propietario.'}
+                  </Text>
+                  <TouchableOpacity 
+                    style={[styles.actionBtnOutline, { marginTop: 8 }]}
+                    onPress={() => router.push(`/profile/return-item?proposalId=${item.id}` as any)}
+                  >
+                    <Text style={styles.actionBtnOutlineText}>Ver Detalles de Devolución</Text>
+                  </TouchableOpacity>
+
                 </View>
               )}
 
               {item.status === 'appraised' && (
                 <View style={styles.successBox}>
                   <Text style={styles.successTitle}>¡Tasación Lista!</Text>
-                  <Text style={styles.successText}>Nuestros expertos sugieren un precio base de:</Text>
-                  <Text style={styles.appraisedPrice}>${Number(item.proposed_price).toLocaleString()}</Text>
-                  <Text style={styles.feedbackText}>"{item.admin_feedback || 'Condiciones excelentes'}"</Text>
-                  <Text style={{fontSize: 12, color: Colors.light.tint, marginTop: 8, fontWeight: 'bold'}}>
-                    Revisa tus notificaciones para aceptar o rechazar esta tasación.
-                  </Text>
+                  <Text style={styles.successText}>Nuestros peritos tasaron este bien en:</Text>
+                  <Text style={styles.appraisedPrice}>${Number(item.proposed_price || 1500).toLocaleString()} USD</Text>
+                  <Text style={styles.feedbackText}>"{item.admin_feedback || 'Pieza auténtica en óptimas condiciones'}"</Text>
+                  
+                  <View style={styles.actionButtonsRow}>
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: '#2E7D32' }]} 
+                      onPress={() => router.push(`/profile/appraisal-details?proposalId=${item.id}&price=${item.proposed_price || 1500}` as any)}
+                    >
+                      <Text style={styles.actionButtonText}>Ver y Aceptar</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity 
+                      style={[styles.actionButton, { backgroundColor: Colors.light.error }]} 
+                      onPress={() => router.push(`/profile/return-item?proposalId=${item.id}` as any)}
+                    >
+                      <Text style={styles.actionButtonText}>Rechazar</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
 
               {item.status === 'accepted' && (
-                <Text style={styles.pendingText}>Artículo aceptado e incluido en el catálogo de subastas.</Text>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.pendingText}>Artículo aceptado e incorporado en el catálogo oficial de subastas.</Text>
+                  <TouchableOpacity 
+                    style={[styles.actionBtnOutline, { marginTop: 10 }]}
+                    onPress={() => router.push('/(main)' as any)}
+                  >
+                    <Text style={styles.actionBtnOutlineText}>Ver en Catálogo</Text>
+                  </TouchableOpacity>
+                </View>
               )}
 
               {item.status === 'pending_shipping' && (
-                <Text style={styles.pendingText}>Tu propuesta fue aprobada. Por favor, revisa tus notificaciones para ver las instrucciones de envío.</Text>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.pendingText}>Propuesta en revisión. Por favor confirma el despacho hacia nuestra central.</Text>
+                  <TouchableOpacity 
+                    style={[styles.actionBtnOutline, { marginTop: 10 }]}
+                    onPress={() => router.push(`/profile/confirm-shipping?proposalId=${item.id}` as any)}
+                  >
+                    <Text style={styles.actionBtnOutlineText}>Confirmar Envío a Central</Text>
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
           ))
@@ -183,7 +230,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.light.background },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingTop: 60, paddingBottom: 16,
+    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 16 : 56, paddingBottom: 16,
     backgroundColor: Colors.light.card, borderBottomWidth: 1, borderBottomColor: Colors.light.border,
   },
   backButton: { padding: 4 },
@@ -210,7 +257,23 @@ const styles = StyleSheet.create({
   successText: { fontSize: 14, color: '#333', marginBottom: 4 },
   appraisedPrice: { fontSize: 24, fontWeight: 'bold', color: '#1565C0', marginVertical: 8 },
   actionButtonsRow: { flexDirection: 'row', gap: 10, marginTop: 16 },
-  actionButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center' },
-  actionButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
+  actionButton: { flex: 1, padding: 12, borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
+  actionButtonText: { color: '#FFF', fontWeight: 'bold', fontSize: 13, textAlign: 'center' },
   pendingText: { fontSize: 13, color: Colors.light.textSecondary, fontStyle: 'italic' },
+  actionBtnOutline: {
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.light.tint,
+    alignItems: 'center',
+    backgroundColor: 'rgba(133, 34, 33, 0.05)',
+  },
+  actionBtnOutlineText: {
+    color: Colors.light.tint,
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
 });
+
+

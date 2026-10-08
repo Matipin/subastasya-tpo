@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TextInput, TouchableOpacity, Text, ScrollView, KeyboardAvoidingView, Platform, Image, Modal } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors } from '@/constants/theme';
-import { ImagePlus, ChevronDown } from 'lucide-react-native';
+import { ImagePlus, ChevronDown, ChevronLeft } from 'lucide-react-native';
 
 const PAISES_OPTIONS = ['Argentina', 'Brasil', 'Chile', 'Uruguay', 'Colombia', 'México', 'España', 'Estados Unidos'];
 
@@ -37,8 +37,17 @@ export default function RegisterStage1Screen() {
   };
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+    <View style={styles.container}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ChevronLeft color={Colors.light.text} size={28} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Crear Cuenta</Text>
+        <View style={{ width: 28 }} />
+      </View>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
         <Text style={styles.stepText}>Etapa 1 de 3</Text>
         <Text style={styles.title}>Datos Personales</Text>
         <Text style={styles.subtitle}>Comencemos con tus datos básicos para verificar tu identidad como postor.</Text>
@@ -144,13 +153,33 @@ export default function RegisterStage1Screen() {
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
-  );
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.light.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
+    paddingBottom: 16,
+    backgroundColor: Colors.light.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
   },
   scrollContent: {
     padding: 24,

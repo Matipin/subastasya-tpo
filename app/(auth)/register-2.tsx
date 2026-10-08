@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, StyleSheet, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, TextInput, Platform } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { MailCheck } from 'lucide-react-native';
+import { MailCheck, ChevronLeft } from 'lucide-react-native';
 
 export default function RegisterStage2Screen() {
   const router = useRouter();
@@ -70,8 +70,17 @@ export default function RegisterStage2Screen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.stepText}>Etapa 2 de 3 - Investigación</Text>
+    <View style={styles.screenContainer}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.header}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+          <ChevronLeft color={Colors.light.text} size={28} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Validación de Identidad</Text>
+        <View style={{ width: 28 }} />
+      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.stepText}>Etapa 2 de 3 - Investigación</Text>
       
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -117,11 +126,35 @@ export default function RegisterStage2Screen() {
           <Text style={styles.linkText}>Volver al Inicio</Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screenContainer: {
+    flex: 1,
+    backgroundColor: Colors.light.background,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
+    paddingBottom: 16,
+    backgroundColor: Colors.light.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
+  backButton: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
+  },
   container: {
     flexGrow: 1,
     backgroundColor: Colors.light.background,

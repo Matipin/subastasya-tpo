@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, Alert, KeyboardAvoidingView, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Colors } from '@/constants/theme';
-import { ArrowLeft, Mail } from 'lucide-react-native';
+import { ChevronLeft, Mail } from 'lucide-react-native';
 
 export default function ForgotPasswordScreen() {
   const router = useRouter();
@@ -26,9 +26,14 @@ export default function ForgotPasswordScreen() {
       style={styles.container} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-        <ArrowLeft color={Colors.light.text} size={28} />
-      </TouchableOpacity>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <ChevronLeft color={Colors.light.text} size={28} />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Recuperar Cuenta</Text>
+        <View style={{ width: 28 }} />
+      </View>
 
       <View style={styles.content}>
         <Text style={styles.title}>Recuperar Cuenta</Text>
@@ -61,12 +66,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.light.background,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'web' ? 16 : 56,
+    paddingBottom: 16,
+    backgroundColor: Colors.light.card,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.light.border,
+  },
   backButton: {
-    marginTop: 60,
-    marginLeft: 20,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: Colors.light.text,
   },
   content: {
     flex: 1,
