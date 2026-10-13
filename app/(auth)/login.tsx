@@ -9,7 +9,7 @@ import { Eye, EyeOff, CheckSquare, Square } from 'lucide-react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function LoginScreen() {
-  const [email, setEmail] = useState('test@test.com');
+  const [email, setEmail] = useState('testoro@test.com');
   const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,6 +25,10 @@ export default function LoginScreen() {
           setEmail(savedEmail);
           setPassword(savedPassword);
           setRememberMe(true);
+        } else {
+          // Credenciales predeterminadas para Usuario Oro
+          setEmail('testoro@test.com');
+          setPassword('123456');
         }
       } catch (err) {}
     };

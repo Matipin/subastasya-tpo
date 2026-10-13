@@ -7,69 +7,94 @@ import { ChevronLeft, Info, CheckCircle2 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function ItemDetailScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, initialTitle, initialPrice, initialImage, initialDesc } = useLocalSearchParams<{
+    id: string;
+    initialTitle?: string;
+    initialPrice?: string;
+    initialImage?: string;
+    initialDesc?: string;
+  }>();
   const router = useRouter();
-  const [item, setItem] = useState<any | null>(null);
+  
+  // Renderizado optimista instantáneo si venimos desde el catálogo
+  const [item, setItem] = useState<any | null>(initialTitle ? {
+    id,
+    title: initialTitle,
+    starting_price: Number(initialPrice || 0),
+    images: initialImage ? [initialImage] : [],
+    description: initialDesc || ''
+  } : null);
+  
   const [auction, setAuction] = useState<any | null>(null);
   const [auctionTotal, setAuctionTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialTitle);
   const [isRegistered, setIsRegistered] = useState(false);
   const [registering, setRegistering] = useState(false);
   
   const user = useAuthStore(state => state.user);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchItemAndAuction = async () => {
       try {
-        // Fetch Item
+        // 1. Obtener artículo y subasta asociada en una sola consulta relacional optimizada
         const { data: itemData, error: itemError } = await supabase
           .from('items')
-          .select('*')
+          .select('*, auctions(*)')
           .eq('id', id)
           .single();
           
         if (itemError) throw itemError;
+        if (!isMounted) return;
+
         setItem(itemData);
 
         if (itemData?.auction_id) {
-          // Fetch Auction
-          const { data: auctionData, error: auctionError } = await supabase
-            .from('auctions')
-            .select('*')
-            .eq('id', itemData.auction_id)
-            .single();
-          if (auctionError) throw auctionError;
-          setAuction(auctionData);
+          const auctionData = (itemData as any).auctions;
+          if (auctionData) setAuction(auctionData);
 
-          // Fetch all items to sum price
-          const { data: allItems } = await supabase
-            .from('items')
-            .select('starting_price')
-            .eq('auction_id', itemData.auction_id);
-            
-          const total = allItems?.reduce((sum, i) => sum + Number(i.starting_price), 0) || 0;
-          setAuctionTotal(total);
+          // 2. Ejecutar consultas complementarias en paralelo (total de la subasta e inscripción)
+          const [allItemsRes, regRes] = await Promise.all([
+            supabase
+              .from('items')
+              .select('starting_price')
+              .eq('auction_id', itemData.auction_id),
+            user?.id
+              ? supabase
+                  .from('auction_participants')
+                  .select('id')
+                  .eq('user_id', user.id)
+                  .eq('auction_id', itemData.auction_id)
+                  .maybeSingle()
+              : Promise.resolve({ data: null, error: null })
+          ]);
 
-          // Check if registered
-          if (user) {
-            const { data: regData } = await supabase
-              .from('auction_participants')
-              .select('*')
-              .eq('user_id', user.id)
-              .eq('auction_id', itemData.auction_id)
-              .single();
-              
-            if (regData) setIsRegistered(true);
+          if (isMounted) {
+            if (allItemsRes.data) {
+              const total = allItemsRes.data.reduce((sum, i) => sum + Number(i.starting_price), 0);
+              setAuctionTotal(total);
+            }
+            if (regRes.data) {
+              setIsRegistered(true);
+            } else {
+              setIsRegistered(false);
+            }
           }
         }
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching item details:', error);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
+
     if (id) fetchItemAndAuction();
-  }, [id, user]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [id, user?.id]);
 
   const handleRegister = async () => {
     if (!user || !auction) return;
@@ -191,10 +216,10 @@ export default function ItemDetailScreen() {
 
   const now = new Date();
   const isAuctionActive = Boolean(
-    auction && (
-      auction.status === 'active' || 
-      (new Date(auction.start_date) <= now && new Date(auction.end_date) >= now)
-    )
+    auction && 
+    auction.status === 'active' && 
+    new Date(auction.start_date) <= now && 
+    new Date(auction.end_date) >= now
   );
 
   return (

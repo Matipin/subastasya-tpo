@@ -82,36 +82,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   initializeAuth: async () => {
     try {
-      // 1. Try local cache first for instant hydration
-      const cached = await AsyncStorage.getItem(AUTH_STORAGE_KEY);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed?.user) {
-            set({
-              user: parsed.user,
-              token: parsed.token || null,
-              isAuthenticated: true,
-              isGuest: false,
-            });
-          }
-        } catch (e) {}
-      }
-
-      // 2. Sync with Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-        if (profile) {
-          get().login(profile, session.access_token);
-        }
-      } else if (!cached) {
-        set({ user: null, token: null, isAuthenticated: false });
-      }
+      // Siempre comenzar en la pantalla de login para que cualquier usuario
+      // pueda ver el flujo de registro o iniciar sesión con las credenciales precargadas
+      set({ user: null, token: null, isAuthenticated: false, isGuest: false });
     } catch (err) {
       console.error('Error during auth initialization:', err);
     } finally {

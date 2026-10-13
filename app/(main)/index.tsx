@@ -124,7 +124,16 @@ export default function HomeScreen() {
               <TouchableOpacity 
                 key={item.id} 
                 style={styles.card}
-                onPress={() => router.push(`/auction/${item.id}`)}
+                onPress={() => router.push({
+                  pathname: '/auction/[id]',
+                  params: {
+                    id: item.id,
+                    initialTitle: item.title,
+                    initialPrice: String(item.starting_price || 0),
+                    initialImage: item.images && item.images.length > 0 ? item.images[0] : '',
+                    initialDesc: item.description || ''
+                  }
+                })}
               >
                 {item.images && item.images.length > 0 ? (
                   <Image source={{ uri: item.images[0] }} style={styles.imagePlaceholder} />

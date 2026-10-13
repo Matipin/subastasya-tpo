@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/theme';
 
 export const unstable_settings = {
-  initialRouteName: '(main)',
+  initialRouteName: '(auth)',
 };
 
 export default function RootLayout() {
